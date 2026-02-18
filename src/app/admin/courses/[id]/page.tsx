@@ -1,0 +1,284 @@
+'use client';
+
+import { useEffect, useState, use } from 'react';
+import Link from 'next/link';
+import type { Course, Lesson } from '@/types';
+
+type CourseWithLessons = Course & { lessons: Lesson[] };
+
+export default function AdminCourseDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: courseId } = use(params);
+  const [course, setCourse] = useState<CourseWithLessons | null>(null);
+  const [allLessons, setAllLessons] = useState<Lesson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  const fetchCourse = async () => {
+    try {
+      const res = await fetch(`/api/courses/${courseId}`);
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      setCourse(data);
+      setTitle(data.title);
+      setDescription(data.description);
+    } catch {
+      setCourse(null);
+    }
+  };
+
+  const fetchAllLessons = async () => {
+    try {
+      const res = await fetch('/api/lessons');
+      const data = await res.json();
+      setAllLessons(Array.isArray(data) ? data : []);
+    } catch {
+      setAllLessons([]);
+    }
+  };
+
+  useEffect(() => {
+    Promise.all([fetchCourse(), fetchAllLessons()]).finally(() =>
+      setLoading(false)
+    );
+  }, [courseId]);
+
+  const handleSave = async () => {
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description }),
+      });
+      if (res.ok) {
+        setEditing(false);
+        fetchCourse();
+      }
+    } catch (err) {
+      console.error('Failed to update course:', err);
+    }
+  };
+
+  const addLesson = async (lessonId: string) => {
+    const currentLessons = course?.lessons ?? [];
+    const nextPosition = currentLessons.length;
+    try {
+      await fetch(`/api/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId, positionInCourse: nextPosition }),
+      });
+      fetchCourse();
+    } catch (err) {
+      console.error('Failed to add lesson:', err);
+    }
+  };
+
+  const removeLesson = async (lessonId: string) => {
+    try {
+      await fetch(`/api/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId: null, positionInCourse: null }),
+      });
+      fetchCourse();
+    } catch (err) {
+      console.error('Failed to remove lesson:', err);
+    }
+  };
+
+  const moveLesson = async (lessonId: string, direction: 'up' | 'down') => {
+    if (!course) return;
+    const lessons = [...course.lessons];
+    const idx = lessons.findIndex((l) => l.id === lessonId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= lessons.length) return;
+
+    // Swap positions
+    try {
+      await Promise.all([
+        fetch(`/api/lessons/${lessons[idx].id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positionInCourse: swapIdx }),
+        }),
+        fetch(`/api/lessons/${lessons[swapIdx].id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positionInCourse: idx }),
+        }),
+      ]);
+      fetchCourse();
+    } catch (err) {
+      console.error('Failed to reorder:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="h-8 w-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-bold text-gray-900">Course not found</h2>
+        <Link href="/admin/courses" className="text-blue-600 mt-2 inline-block">
+          Back to courses
+        </Link>
+      </div>
+    );
+  }
+
+  // Available lessons = all lessons not already in this course
+  const courselesionIds = new Set(course.lessons.map((l) => l.id));
+  const availableLessons = allLessons.filter((l) => !courselesionIds.has(l.id));
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <Link
+          href="/admin/courses"
+          className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block"
+        >
+          &larr; Back to Courses
+        </Link>
+
+        {/* Course header */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+          {editing ? (
+            <div className="space-y-3">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-lg font-bold"
+              />
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+              />
+              <div className="flex gap-2">
+                <button onClick={handleSave} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  Save
+                </button>
+                <button onClick={() => setEditing(false)} className="px-4 py-1.5 text-sm border rounded-lg text-gray-600">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
+                {course.description && (
+                  <p className="text-gray-500 mt-1">{course.description}</p>
+                )}
+              </div>
+              <button
+                onClick={() => setEditing(true)}
+                className="px-3 py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-50"
+              >
+                Edit
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Course Lessons */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Lessons ({course.lessons.length})
+          </h2>
+          {course.lessons.length === 0 ? (
+            <p className="text-sm text-gray-500">No lessons in this course yet. Add lessons below.</p>
+          ) : (
+            <div className="space-y-2">
+              {course.lessons.map((lesson, i) => (
+                <div
+                  key={lesson.id}
+                  className="flex items-center justify-between border border-gray-100 rounded-lg p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-400 w-6">
+                      {i + 1}.
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{lesson.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {lesson.difficulty} &middot; {lesson.estimatedDurationMinutes} min
+                        &middot; {lesson.status}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => moveLesson(lesson.id, 'up')}
+                      disabled={i === 0}
+                      className="px-2 py-1 text-xs border rounded text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                    >
+                      &uarr;
+                    </button>
+                    <button
+                      onClick={() => moveLesson(lesson.id, 'down')}
+                      disabled={i === course.lessons.length - 1}
+                      className="px-2 py-1 text-xs border rounded text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                    >
+                      &darr;
+                    </button>
+                    <button
+                      onClick={() => removeLesson(lesson.id)}
+                      className="px-2 py-1 text-xs bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Add lessons */}
+        {availableLessons.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Add Lessons
+            </h2>
+            <div className="space-y-2">
+              {availableLessons.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  className="flex items-center justify-between border border-gray-100 rounded-lg p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{lesson.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {lesson.difficulty} &middot; {lesson.status}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => addLesson(lesson.id)}
+                    className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Add to Course
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
