@@ -25,7 +25,7 @@ import type { Lesson, ContentBlock, QuizQuestion, LessonPage, Course, StudentSes
 function mapContentBlock(cb: ContentBlockRow): ContentBlock {
   return {
     id: cb.id,
-    type: cb.type,
+    type: cb.type as ContentBlock['type'],
     content: cb.content,
     metadata: cb.metadata ?? undefined,
     order: cb.order,
@@ -36,7 +36,7 @@ function mapContentBlock(cb: ContentBlockRow): ContentBlock {
 function mapQuizQuestion(qq: QuizQuestionRow): QuizQuestion {
   return {
     id: qq.id,
-    type: qq.type,
+    type: qq.type as QuizQuestion['type'],
     question: qq.question,
     options: qq.options ?? undefined,
     correctAnswer: qq.correct_answer,
@@ -45,6 +45,8 @@ function mapQuizQuestion(qq: QuizQuestionRow): QuizQuestion {
     points: qq.points,
     pageId: qq.page_id ?? undefined,
     scope: qq.scope,
+    bloomLevel: (qq.bloom_level as QuizQuestion['bloomLevel']) ?? undefined,
+    metadata: qq.metadata ?? undefined,
   };
 }
 
@@ -94,8 +96,32 @@ export function assembleLesson(
         checkQuestions: quizQuestions
           .filter((qq) => qq.page_id === pr.id && qq.scope === 'check')
           .map(mapQuizQuestion),
+        teachingFlow: pr.teaching_flow ? {
+          introduction: pr.teaching_flow.introduction ?? '',
+          coreExplanation: pr.teaching_flow.core_explanation ?? '',
+          practiceHint: pr.teaching_flow.practice_hint ?? '',
+          reflectionPrompt: pr.teaching_flow.reflection_prompt ?? '',
+        } : undefined,
+        prerequisites: pr.prerequisites ?? undefined,
+        conceptsIntroduced: pr.concepts_introduced ?? undefined,
+        difficultyLevel: pr.difficulty_level as LessonPage['difficultyLevel'],
+        bridgeFromPrevious: pr.bridge_from_previous ?? undefined,
+        commonMisconceptions: pr.common_misconceptions ?? undefined,
+        realWorldApplications: pr.real_world_applications ?? undefined,
       }));
     lesson.totalPages = lesson.pages.length;
+  }
+
+  // Map lesson-level pedagogical fields
+  if (row.concept_map) {
+    lesson.conceptMap = row.concept_map.map(n => ({
+      conceptId: n.concept_id,
+      label: n.label,
+      prerequisiteIds: n.prerequisite_ids,
+    }));
+  }
+  if (row.learning_path) {
+    lesson.learningPath = row.learning_path;
   }
 
   return lesson;
@@ -121,6 +147,12 @@ export async function saveLesson(supabase: SupabaseClient, lesson: Lesson): Prom
     tags: lesson.tags ?? [],
     course_id: lesson.courseId ?? null,
     position_in_course: lesson.positionInCourse ?? null,
+    concept_map: lesson.conceptMap?.map(n => ({
+      concept_id: n.conceptId,
+      label: n.label,
+      prerequisite_ids: n.prerequisiteIds,
+    })) ?? null,
+    learning_path: lesson.learningPath ?? null,
   });
 
   if (lessonError) throw new Error(`Failed to save lesson: ${lessonError.message}`);
@@ -155,6 +187,8 @@ export async function saveLesson(supabase: SupabaseClient, lesson: Lesson): Prom
       difficulty: qq.difficulty,
       points: qq.points,
       scope: qq.scope ?? 'final',
+      bloom_level: qq.bloomLevel ?? null,
+      metadata: qq.metadata ?? null,
     }));
     const { error: questionsError } = await supabase.from('quiz_questions').insert(questions);
     if (questionsError) throw new Error(`Failed to save quiz questions: ${questionsError.message}`);
@@ -600,6 +634,18 @@ export async function saveLessonPages(
     page_number: p.pageNumber,
     title: p.title,
     key_concepts: p.keyConcepts,
+    teaching_flow: p.teachingFlow ? {
+      introduction: p.teachingFlow.introduction,
+      core_explanation: p.teachingFlow.coreExplanation,
+      practice_hint: p.teachingFlow.practiceHint,
+      reflection_prompt: p.teachingFlow.reflectionPrompt,
+    } : null,
+    prerequisites: p.prerequisites ?? null,
+    concepts_introduced: p.conceptsIntroduced ?? null,
+    difficulty_level: p.difficultyLevel ?? null,
+    bridge_from_previous: p.bridgeFromPrevious ?? null,
+    common_misconceptions: p.commonMisconceptions ?? null,
+    real_world_applications: p.realWorldApplications ?? null,
   }));
   const { error: pagesError } = await supabase.from('lesson_pages').insert(pageRows);
   if (pagesError) throw new Error(`Failed to save lesson pages: ${pagesError.message}`);
@@ -634,6 +680,8 @@ export async function saveLessonPages(
         difficulty: qq.difficulty,
         points: qq.points,
         scope: 'check',
+        bloom_level: qq.bloomLevel ?? null,
+        metadata: qq.metadata ?? null,
       }));
       const { error } = await supabase.from('quiz_questions').insert(questions);
       if (error) throw new Error(`Failed to save check questions: ${error.message}`);
@@ -669,6 +717,18 @@ export async function getLessonPage(
     keyConcepts: pr.key_concepts,
     contentBlocks: ((blocks ?? []) as ContentBlockRow[]).map(mapContentBlock),
     checkQuestions: ((questions ?? []) as QuizQuestionRow[]).map(mapQuizQuestion),
+    teachingFlow: pr.teaching_flow ? {
+      introduction: pr.teaching_flow.introduction ?? '',
+      coreExplanation: pr.teaching_flow.core_explanation ?? '',
+      practiceHint: pr.teaching_flow.practice_hint ?? '',
+      reflectionPrompt: pr.teaching_flow.reflection_prompt ?? '',
+    } : undefined,
+    prerequisites: pr.prerequisites ?? undefined,
+    conceptsIntroduced: pr.concepts_introduced ?? undefined,
+    difficultyLevel: pr.difficulty_level as LessonPage['difficultyLevel'],
+    bridgeFromPrevious: pr.bridge_from_previous ?? undefined,
+    commonMisconceptions: pr.common_misconceptions ?? undefined,
+    realWorldApplications: pr.real_world_applications ?? undefined,
   };
 }
 

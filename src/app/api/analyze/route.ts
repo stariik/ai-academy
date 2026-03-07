@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/server';
 import { saveLesson, getLesson } from '@/lib/supabase/db';
 import type { Lesson, ContentBlock, QuizQuestion, LessonPage, AnalysisResult } from '@/types';
 
-export const maxDuration = 60; // Allow up to 60s for AI processing
+export const maxDuration = 300; // Allow up to 5 min for large document chunked generation
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -129,9 +129,9 @@ export async function POST(request: NextRequest) {
         pageId,
       }));
 
-      const checkQuestions: QuizQuestion[] = page.check_questions.map((q, idx) => ({
+      const checkQuestions: QuizQuestion[] = (page.check_questions || []).map((q, idx) => ({
         id: `${pageId}-cq-${idx}`,
-        type: q.type,
+        type: q.type as QuizQuestion['type'],
         question: q.question,
         options: q.options,
         correctAnswer: q.correct_answer,
@@ -140,6 +140,8 @@ export async function POST(request: NextRequest) {
         points: q.points || 5,
         pageId,
         scope: 'check' as const,
+        bloomLevel: q.bloom_level as QuizQuestion['bloomLevel'],
+        metadata: q.metadata,
       }));
 
       return {
@@ -147,17 +149,29 @@ export async function POST(request: NextRequest) {
         lessonId,
         pageNumber: page.page_number,
         title: page.title,
-        keyConcepts: page.key_concepts,
+        keyConcepts: page.key_concepts || [],
         contentBlocks: pageBlocks,
         checkQuestions,
+        teachingFlow: page.teaching_flow ? {
+          introduction: page.teaching_flow.introduction,
+          coreExplanation: page.teaching_flow.core_explanation,
+          practiceHint: page.teaching_flow.practice_hint,
+          reflectionPrompt: page.teaching_flow.reflection_prompt,
+        } : undefined,
+        prerequisites: page.prerequisites,
+        conceptsIntroduced: page.concepts_introduced,
+        difficultyLevel: page.difficulty_level as LessonPage['difficultyLevel'],
+        bridgeFromPrevious: page.bridge_from_previous,
+        commonMisconceptions: page.common_misconceptions,
+        realWorldApplications: page.real_world_applications,
       };
     });
 
     // Build final quiz questions
-    const quizQuestions: QuizQuestion[] = geminiResponse.final_quiz_questions.map(
+    const quizQuestions: QuizQuestion[] = (geminiResponse.final_quiz_questions || []).map(
       (q, index) => ({
         id: `${lessonId}-fq-${index}`,
-        type: q.type,
+        type: q.type as QuizQuestion['type'],
         question: q.question,
         options: q.options,
         correctAnswer: q.correct_answer,
@@ -165,6 +179,8 @@ export async function POST(request: NextRequest) {
         difficulty: q.difficulty,
         points: q.points || 10,
         scope: 'final' as const,
+        bloomLevel: q.bloom_level as QuizQuestion['bloomLevel'],
+        metadata: q.metadata,
       })
     );
 
@@ -189,6 +205,12 @@ export async function POST(request: NextRequest) {
       courseId: courseId ?? undefined,
       pages,
       totalPages: pages.length,
+      conceptMap: geminiResponse.concept_map?.map(n => ({
+        conceptId: n.concept_id,
+        label: n.label,
+        prerequisiteIds: n.prerequisite_ids,
+      })),
+      learningPath: geminiResponse.learning_path,
     };
 
     // ---- 5. Save lesson to Supabase ----
@@ -234,24 +256,56 @@ function generateId(): string {
   return `lesson_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
-function normalizeBlockType(
-  type: string
-): 'heading' | 'text' | 'key_concepts' | 'code' | 'callout' | 'summary' {
+function normalizeBlockType(type: string): ContentBlock['type'] {
   const typeMap: Record<string, ContentBlock['type']> = {
+    // Original 6 types (direct match)
     heading: 'heading',
     text: 'text',
     key_concepts: 'key_concepts',
     code: 'code',
     callout: 'callout',
     summary: 'summary',
+
+    // New 10 types (direct match)
+    table: 'table',
+    list: 'list',
+    example: 'example',
+    analogy: 'analogy',
+    step_by_step: 'step_by_step',
+    diagram_description: 'diagram_description',
+    definition: 'definition',
+    warning: 'warning',
+    tip: 'tip',
+    quote: 'quote',
+
+    // Aliases that map to canonical types
     paragraph: 'text',
     note: 'callout',
-    tip: 'callout',
-    warning: 'callout',
     important: 'callout',
-    definition: 'key_concepts',
     concepts: 'key_concepts',
     overview: 'summary',
+    numbered_list: 'list',
+    bulleted_list: 'list',
+    ordered_list: 'list',
+    unordered_list: 'list',
+    bullet_list: 'list',
+    worked_example: 'example',
+    comparison: 'analogy',
+    procedure: 'step_by_step',
+    steps: 'step_by_step',
+    visual: 'diagram_description',
+    diagram: 'diagram_description',
+    illustration: 'diagram_description',
+    caution: 'warning',
+    danger: 'warning',
+    best_practice: 'tip',
+    hint: 'tip',
+    advice: 'tip',
+    blockquote: 'quote',
+    citation: 'quote',
+    data_table: 'table',
+    glossary: 'definition',
+    term: 'definition',
   };
 
   return typeMap[type.toLowerCase()] || 'text';

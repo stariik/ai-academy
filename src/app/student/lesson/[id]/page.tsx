@@ -6,7 +6,7 @@
 // Supports both paged lessons (new) and legacy single-page layout
 // ============================================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
@@ -118,6 +118,9 @@ export default function StudentLessonPage({
 // PAGED LESSON VIEW - Multi-page tutor-guided experience
 // ============================================================
 
+// Unlock signal marker used by the AI tutor
+const QUIZ_UNLOCK_MARKER = '[READY_FOR_QUIZ]';
+
 function PagedLessonView({
   lesson,
   lessonId,
@@ -134,7 +137,24 @@ function PagedLessonView({
   const [showQuiz, setShowQuiz] = useState(false);
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [recommended, setRecommended] = useState<Lesson | null>(null);
+  // Track which pages have their check questions unlocked by the tutor
+  const [unlockedPages, setUnlockedPages] = useState<Set<number>>(new Set());
   const contentRef = useRef<HTMLDivElement>(null);
+  const checkQuestionsRef = useRef<HTMLDivElement>(null);
+
+  const isCheckUnlocked = completedPages.includes(currentPage) || unlockedPages.has(currentPage);
+
+  const handleCheckUnlocked = useCallback((pageNum: number) => {
+    setUnlockedPages((prev) => {
+      const next = new Set(prev);
+      next.add(pageNum);
+      return next;
+    });
+    // Scroll check questions into view after a short delay
+    setTimeout(() => {
+      checkQuestionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
 
   // Load progress on mount
   useEffect(() => {
@@ -299,11 +319,33 @@ function PagedLessonView({
           {currentPageData ? (
             <div className="mx-auto max-w-3xl animate-fade-in-up" key={currentPage}>
               <div className="content-surface p-8 mb-8">
+                {/* Bridge from previous page */}
+                {currentPageData.bridgeFromPrevious && currentPage > 1 && (
+                  <div className="rounded-lg bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-100 p-3 mb-4 text-sm text-teal-800 italic">
+                    {currentPageData.bridgeFromPrevious}
+                  </div>
+                )}
+
                 {/* Page header */}
                 <div className="mb-8 pb-6 border-b border-gray-100">
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600 mb-3">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                    Page {currentPage} of {totalPages}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    {currentPageData.difficultyLevel && (
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
+                        currentPageData.difficultyLevel === 'foundational'
+                          ? 'bg-green-100 text-green-700'
+                          : currentPageData.difficultyLevel === 'intermediate'
+                          ? 'bg-amber-100 text-amber-700'
+                          : currentPageData.difficultyLevel === 'advanced'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {currentPageData.difficultyLevel}
+                      </span>
+                    )}
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{currentPageData.title}</h2>
                 </div>
@@ -317,6 +359,46 @@ function PagedLessonView({
                     ))}
                 </div>
               </div>
+
+              {/* Common misconceptions */}
+              {currentPageData.commonMisconceptions && currentPageData.commonMisconceptions.length > 0 && (
+                <div className="rounded-lg border-l-4 border-orange-400 bg-orange-50 p-4 mb-6">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 mb-2">
+                    Common Misconceptions
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-orange-900 space-y-1">
+                    {currentPageData.commonMisconceptions.map((m, i) => (
+                      <li key={i}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Real-world applications */}
+              {currentPageData.realWorldApplications && currentPageData.realWorldApplications.length > 0 && (
+                <div className="rounded-lg bg-green-50 border border-green-200 p-4 mb-6">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-green-700 mb-2">
+                    Real-World Applications
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-green-900 space-y-1">
+                    {currentPageData.realWorldApplications.map((app, i) => (
+                      <li key={i}>{app}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Reflection prompt */}
+              {currentPageData.teachingFlow?.reflectionPrompt && (
+                <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 mb-6">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-yellow-700 mb-1">
+                    Reflect
+                  </p>
+                  <p className="text-sm text-yellow-900 italic">
+                    {currentPageData.teachingFlow.reflectionPrompt}
+                  </p>
+                </div>
+              )}
 
               {/* Key concepts for this page */}
               {currentPageData.keyConcepts.length > 0 && (
@@ -340,25 +422,35 @@ function PagedLessonView({
 
               {/* Check Questions */}
               {currentPageData.checkQuestions.length > 0 && (
-                <CheckQuestions
-                  lessonId={lessonId}
-                  pageNumber={currentPage}
-                  questions={currentPageData.checkQuestions}
-                  alreadyPassed={completedPages.includes(currentPage)}
-                  onPass={() => handleCheckPassed(currentPage)}
-                />
+                <div ref={checkQuestionsRef}>
+                  <CheckQuestions
+                    lessonId={lessonId}
+                    pageNumber={currentPage}
+                    questions={currentPageData.checkQuestions}
+                    alreadyPassed={completedPages.includes(currentPage)}
+                    locked={!isCheckUnlocked}
+                    onPass={() => handleCheckPassed(currentPage)}
+                  />
+                </div>
               )}
 
-              {/* If page has no check questions, show a continue button */}
+              {/* If page has no check questions, show a continue button only after tutor unlocks */}
               {currentPageData.checkQuestions.length === 0 &&
                 !completedPages.includes(currentPage) && (
                   <div className="mt-8 text-center">
-                    <button
-                      onClick={() => handleCheckPassed(currentPage)}
-                      className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
-                    >
-                      I understand this page - Continue
-                    </button>
+                    {isCheckUnlocked ? (
+                      <button
+                        onClick={() => handleCheckPassed(currentPage)}
+                        className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
+                      >
+                        I understand this page - Continue
+                      </button>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-5 py-2.5 text-sm text-gray-500">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Work through the material with your AI tutor to continue
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -449,6 +541,7 @@ function PagedLessonView({
               lessonId={lessonId}
               lesson={lesson}
               pageNumber={currentPage}
+              onUnlockCheck={() => handleCheckUnlocked(currentPage)}
             />
           </aside>
         )}
@@ -604,12 +697,14 @@ function CheckQuestions({
   pageNumber,
   questions,
   alreadyPassed,
+  locked,
   onPass,
 }: {
   lessonId: string;
   pageNumber: number;
   questions: QuizQuestion[];
   alreadyPassed: boolean;
+  locked: boolean;
   onPass: () => void;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -636,6 +731,66 @@ function CheckQuestions({
             <div>
               <h3 className="text-white font-semibold">Check Questions Completed</h3>
               <p className="text-emerald-100 text-sm">You can proceed to the next page</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Locked state: show questions with lock overlay
+  if (locked) {
+    return (
+      <div className="content-surface p-0 overflow-hidden relative">
+        <div className="bg-linear-to-r from-gray-500 to-gray-600 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold">Check Questions Locked</h3>
+              <p className="text-gray-200 text-sm">Work through the material with your AI tutor to unlock</p>
+            </div>
+          </div>
+        </div>
+        <div className="relative">
+          {/* Blurred preview of questions */}
+          <div className="p-6 space-y-4 blur-[3px] select-none pointer-events-none opacity-50">
+            {questions.map((q, i) => (
+              <div key={q.id} className="rounded-xl bg-white p-5 border border-gray-200 shadow-sm">
+                <p className="font-medium text-gray-900 mb-3">
+                  {i + 1}. {q.question}
+                </p>
+                {q.type === 'mcq' && q.options && (
+                  <div className="space-y-2">
+                    {q.options.map((option, j) => (
+                      <div key={j} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                        <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+                        <span className="text-sm text-gray-700">{option}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {q.type === 'true_false' && (
+                  <div className="flex gap-4">
+                    {['True', 'False'].map((val) => (
+                      <div key={val} className="flex-1 rounded-lg border border-gray-200 p-3 text-center text-sm text-gray-600">
+                        {val}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {/* Lock overlay */}
+          <div className="absolute inset-0 flex items-center justify-center bg-white/30">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-3">
+                <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+              </div>
+              <p className="text-sm font-medium text-gray-600">Complete the tutor session to unlock</p>
+              <p className="text-xs text-gray-400 mt-1">Your AI tutor will unlock these when you&apos;re ready</p>
             </div>
           </div>
         </div>
@@ -780,6 +935,63 @@ function CheckQuestions({
                 </div>
               )}
 
+              {q.type === 'ordering' && q.options && (
+                <OrderingQuestion
+                  questionId={q.id}
+                  options={q.options}
+                  submitted={submitted}
+                  result={result}
+                  currentAnswer={answers[q.id]}
+                  onAnswer={(answer) =>
+                    !submitted && setAnswers((prev) => ({ ...prev, [q.id]: answer }))
+                  }
+                />
+              )}
+
+              {q.type === 'fill_in_blank' && (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-700 leading-relaxed">
+                    {q.question.split('___').map((part, partIdx, arr) => (
+                      <span key={partIdx}>
+                        {part}
+                        {partIdx < arr.length - 1 && (
+                          <input
+                            type="text"
+                            value={answers[q.id] || ''}
+                            onChange={(e) =>
+                              !submitted &&
+                              setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))
+                            }
+                            disabled={submitted}
+                            className={`inline-block w-32 border-b-2 mx-1 px-1 py-0.5 text-center
+                              ${submitted
+                                ? result?.isCorrect
+                                  ? 'border-green-500 bg-green-50'
+                                  : 'border-red-500 bg-red-50'
+                                : 'border-blue-300 focus:border-blue-500'
+                              } outline-none text-sm`}
+                            placeholder="..."
+                          />
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {q.type === 'matching' && q.options && Boolean(q.metadata?.matches) && (
+                <MatchingQuestion
+                  questionId={q.id}
+                  terms={q.options}
+                  definitions={Object.values((q.metadata!.matches ?? {}) as Record<string, string>)}
+                  submitted={submitted}
+                  result={result}
+                  onAnswer={(answer) =>
+                    !submitted && setAnswers((prev) => ({ ...prev, [q.id]: answer }))
+                  }
+                />
+              )}
+
               {/* Result feedback */}
               {result && (
                 <div
@@ -843,6 +1055,162 @@ function CheckQuestions({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ORDERING QUESTION - Drag-to-reorder with up/down fallback
+// ============================================================
+
+function OrderingQuestion({
+  questionId,
+  options,
+  submitted,
+  result,
+  currentAnswer,
+  onAnswer,
+}: {
+  questionId: string;
+  options: string[];
+  submitted: boolean;
+  result?: { isCorrect: boolean; correctAnswer: string; explanation: string } | null;
+  currentAnswer?: string;
+  onAnswer: (answer: string) => void;
+}) {
+  const [items, setItems] = useState<string[]>(options);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    onAnswer(items.join(', '));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  const moveItem = (fromIndex: number, toIndex: number) => {
+    if (submitted || toIndex < 0 || toIndex >= items.length) return;
+    const newItems = [...items];
+    const [moved] = newItems.splice(fromIndex, 1);
+    newItems.splice(toIndex, 0, moved);
+    setItems(newItems);
+  };
+
+  const handleDragStart = (index: number) => {
+    if (submitted) return;
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === index || submitted) return;
+    const newItems = [...items];
+    const [dragged] = newItems.splice(dragIndex, 1);
+    newItems.splice(index, 0, dragged);
+    setItems(newItems);
+    setDragIndex(index);
+  };
+
+  const handleDragEnd = () => setDragIndex(null);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-gray-500 mb-2">Drag items into the correct order:</p>
+      {items.map((item, i) => (
+        <div
+          key={`${questionId}-item-${i}`}
+          draggable={!submitted}
+          onDragStart={() => handleDragStart(i)}
+          onDragOver={(e) => handleDragOver(e, i)}
+          onDragEnd={handleDragEnd}
+          className={`flex items-center gap-3 rounded-lg border p-3 transition
+            ${dragIndex === i ? 'border-blue-400 bg-blue-50 opacity-70' : 'border-gray-200'}
+            ${submitted ? 'cursor-default' : 'cursor-grab hover:bg-gray-50'}`}
+        >
+          <span className="text-xs text-gray-400 w-5 shrink-0">{i + 1}.</span>
+          <span className="text-sm text-gray-700 flex-1">{item}</span>
+          {!submitted && (
+            <div className="flex flex-col gap-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => moveItem(i, i - 1)}
+                disabled={i === 0}
+                className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => moveItem(i, i + 1)}
+                disabled={i === items.length - 1}
+                className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// MATCHING QUESTION - Two-column dropdown matching
+// ============================================================
+
+function MatchingQuestion({
+  questionId,
+  terms,
+  definitions,
+  submitted,
+  result,
+  onAnswer,
+}: {
+  questionId: string;
+  terms: string[];
+  definitions: string[];
+  submitted: boolean;
+  result?: { isCorrect: boolean } | null;
+  onAnswer: (answer: string) => void;
+}) {
+  const [matches, setMatches] = useState<Record<string, string>>({});
+  const shuffledDefs = useMemo(
+    () => [...definitions].sort(() => Math.random() - 0.5),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [definitions.join(',')]
+  );
+
+  const handleMatch = (term: string, definition: string) => {
+    if (submitted) return;
+    const newMatches = { ...matches, [term]: definition };
+    setMatches(newMatches);
+    onAnswer(JSON.stringify(newMatches));
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500">Match each term with its definition:</p>
+      {terms.map((term) => (
+        <div key={`${questionId}-${term}`} className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-800 w-1/3 shrink-0">{term}</span>
+          <select
+            value={matches[term] || ''}
+            onChange={(e) => handleMatch(term, e.target.value)}
+            disabled={submitted}
+            className={`flex-1 border rounded-lg p-2 text-sm transition ${
+              submitted
+                ? result?.isCorrect
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-red-300 bg-red-50'
+                : 'border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
+            }`}
+          >
+            <option value="">Select...</option>
+            {shuffledDefs.map((def) => (
+              <option key={def} value={def}>{def}</option>
+            ))}
+          </select>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1222,6 +1590,172 @@ function ContentBlockRenderer({
           </div>
         </div>
       )}
+
+      {/* ---- New content block types ---- */}
+
+      {block.type === 'table' && (
+        <div className="rounded-lg border border-gray-200 overflow-hidden">
+          {block.metadata?.headers && block.metadata?.rows ? (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {(block.metadata.headers as string[]).map((header, i) => (
+                    <th key={i} className="px-4 py-2.5 text-left font-semibold text-gray-700 border-b border-gray-200">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(block.metadata.rows as string[][]).map((row, ri) => (
+                  <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    {row.map((cell, ci) => (
+                      <td key={ci} className="px-4 py-2 text-gray-700 border-b border-gray-100">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="lesson-prose text-sm p-4">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {block.content}
+              </ReactMarkdown>
+            </div>
+          )}
+        </div>
+      )}
+
+      {block.type === 'list' && (
+        <div className="lesson-prose text-[0.9375rem] text-gray-700 leading-relaxed pl-2">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {block.content}
+          </ReactMarkdown>
+        </div>
+      )}
+
+      {block.type === 'example' && (
+        <div className="rounded-lg border-l-4 border-blue-400 bg-blue-50 p-4">
+          {Boolean(block.metadata?.title) && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-1.5">
+              {String(block.metadata!.title)}
+            </p>
+          )}
+          {!block.metadata?.title && (
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-1.5">
+              Example
+            </p>
+          )}
+          <div className="lesson-prose text-sm text-blue-900">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {block.content}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {block.type === 'analogy' && (
+        <div className="rounded-lg border-l-4 border-teal-400 bg-teal-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 mb-1.5">
+            Think of it this way...
+          </p>
+          <div className="lesson-prose text-sm text-teal-900 italic">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {block.content}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {block.type === 'step_by_step' && (
+        <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 mb-2">
+            Step by Step
+          </p>
+          {block.metadata?.steps ? (
+            <ol className="list-decimal list-inside space-y-1.5 text-sm text-indigo-900">
+              {(block.metadata.steps as string[]).map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          ) : (
+            <div className="lesson-prose text-sm text-indigo-900">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {block.content}
+              </ReactMarkdown>
+            </div>
+          )}
+        </div>
+      )}
+
+      {block.type === 'diagram_description' && (
+        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+            Visual Concept
+          </p>
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
+            {block.content}
+          </pre>
+        </div>
+      )}
+
+      {block.type === 'definition' && (
+        <div className="rounded-lg bg-violet-50 border border-violet-200 p-4">
+          {Boolean(block.metadata?.term) && (
+            <p className="font-bold text-violet-800 mb-1">
+              {String(block.metadata!.term)}
+            </p>
+          )}
+          <div className="lesson-prose text-sm text-violet-900">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {block.content}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {block.type === 'warning' && (
+        <div className="rounded-lg border-l-4 border-red-400 bg-red-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1.5">
+            Common Mistake
+          </p>
+          <div className="lesson-prose text-sm text-red-900">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {block.content}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {block.type === 'tip' && (
+        <div className="rounded-lg border-l-4 border-green-400 bg-green-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-green-700 mb-1.5">
+            Pro Tip
+          </p>
+          <div className="lesson-prose text-sm text-green-900">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {block.content}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
+
+      {block.type === 'quote' && (
+        <blockquote className="border-l-4 border-gray-300 pl-4 py-2 my-2">
+          <div className="lesson-prose text-sm text-gray-700 italic">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {block.content}
+            </ReactMarkdown>
+          </div>
+          {Boolean(block.metadata?.attribution) && (
+            <footer className="text-xs text-gray-500 mt-1">
+              &mdash; {String(block.metadata!.attribution)}
+            </footer>
+          )}
+        </blockquote>
+      )}
     </div>
   );
 }
@@ -1234,10 +1768,12 @@ function ChatPanel({
   lessonId,
   lesson,
   pageNumber,
+  onUnlockCheck,
 }: {
   lessonId: string;
   lesson: Lesson;
   pageNumber?: number;
+  onUnlockCheck?: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -1245,6 +1781,7 @@ function ChatPanel({
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const unlockFiredRef = useRef(false);
 
   // Current page data for page-scoped mode
   const currentPageData =
@@ -1268,22 +1805,32 @@ function ChatPanel({
         if (cancelled) return;
 
         if (data.messages && data.messages.length > 0) {
-          // Has existing history - load it
-          setMessages(
-            data.messages.map(
-              (m: {
-                id: string;
-                role: string;
-                content: string;
-                timestamp: string;
-              }) => ({
-                id: m.id,
-                role: m.role as ChatMessage['role'],
-                content: m.content,
-                timestamp: m.timestamp,
-              })
-            )
+          // Has existing history - load it, stripping unlock markers from display
+          const loadedMessages = data.messages.map(
+            (m: {
+              id: string;
+              role: string;
+              content: string;
+              timestamp: string;
+            }) => ({
+              id: m.id,
+              role: m.role as ChatMessage['role'],
+              content: m.content.replace(QUIZ_UNLOCK_MARKER, '').trim(),
+              timestamp: m.timestamp,
+            })
           );
+          setMessages(loadedMessages);
+
+          // Check if any assistant message in history contained the unlock marker
+          const hadUnlock = data.messages.some(
+            (m: { role: string; content: string }) =>
+              m.role === 'assistant' && m.content.includes(QUIZ_UNLOCK_MARKER)
+          );
+          if (hadUnlock && onUnlockCheck && !unlockFiredRef.current) {
+            unlockFiredRef.current = true;
+            onUnlockCheck();
+          }
+
           setHistoryLoaded(true);
         } else {
           // No history
@@ -1345,9 +1892,16 @@ function ChatPanel({
             if (done) break;
             if (cancelled) break;
             fullText += decoder.decode(value, { stream: true });
+            // Check for unlock marker
+            if (fullText.includes(QUIZ_UNLOCK_MARKER) && onUnlockCheck && !unlockFiredRef.current) {
+              unlockFiredRef.current = true;
+              onUnlockCheck();
+            }
+            // Display text with marker stripped
+            const displayText = fullText.replace(QUIZ_UNLOCK_MARKER, '').trim();
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, content: fullText } : m
+                m.id === assistantId ? { ...m, content: displayText } : m
               )
             );
           }
@@ -1478,9 +2032,17 @@ function ChatPanel({
           const chunk = decoder.decode(value, { stream: true });
           fullText += chunk;
 
+          // Check for unlock marker
+          if (fullText.includes(QUIZ_UNLOCK_MARKER) && onUnlockCheck && !unlockFiredRef.current) {
+            unlockFiredRef.current = true;
+            onUnlockCheck();
+          }
+
+          // Display text with marker stripped
+          const displayText = fullText.replace(QUIZ_UNLOCK_MARKER, '').trim();
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId ? { ...m, content: fullText } : m
+              m.id === assistantId ? { ...m, content: displayText } : m
             )
           );
         }
@@ -1502,7 +2064,7 @@ function ChatPanel({
         inputRef.current?.focus();
       }
     },
-    [messages, isStreaming, lessonId, pageNumber]
+    [messages, isStreaming, lessonId, pageNumber, onUnlockCheck]
   );
 
   if (!historyLoaded) {
@@ -1526,12 +2088,31 @@ function ChatPanel({
         <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
           <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a3.187 3.187 0 01-.758.515m0 0a3.188 3.188 0 01-2.544 0m3.302-.515a3.187 3.187 0 00.758-.515" /></svg>
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-gray-900 text-sm">AI Tutor</h3>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-gray-400 truncate">
             {currentPageData ? `Page ${pageNumber}: ${currentPageData.title}` : 'Ask me anything about this lesson'}
           </p>
         </div>
+        {currentPageData && onUnlockCheck && (
+          <div className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+            unlockFiredRef.current
+              ? 'bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200'
+              : 'bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-200'
+          }`}>
+            {unlockFiredRef.current ? (
+              <>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                Quiz Ready
+              </>
+            ) : (
+              <>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                Teaching...
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Messages */}

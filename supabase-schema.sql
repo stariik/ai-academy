@@ -211,6 +211,27 @@ alter table chat_history add column page_number int;
 alter table chat_history add constraint chat_history_session_lesson_page_key unique(session_id, lesson_id, page_number);
 
 -- ============================================================
+-- Lesson Upgrade: Pedagogical metadata, richer quizzes
+-- ============================================================
+
+-- Lesson-level concept map and learning path
+alter table lessons add column if not exists concept_map jsonb default null;
+alter table lessons add column if not exists learning_path text[] default null;
+
+-- Page-level pedagogical fields
+alter table lesson_pages add column if not exists teaching_flow jsonb default null;
+alter table lesson_pages add column if not exists prerequisites text[] default null;
+alter table lesson_pages add column if not exists concepts_introduced text[] default null;
+alter table lesson_pages add column if not exists difficulty_level text default null;
+alter table lesson_pages add column if not exists bridge_from_previous text default null;
+alter table lesson_pages add column if not exists common_misconceptions text[] default null;
+alter table lesson_pages add column if not exists real_world_applications text[] default null;
+
+-- Quiz question Bloom's taxonomy and metadata
+alter table quiz_questions add column if not exists bloom_level text default null;
+alter table quiz_questions add column if not exists metadata jsonb default null;
+
+-- ============================================================
 -- RLS Policies (commented out for demo - enable with auth)
 -- ============================================================
 -- alter table lessons enable row level security;

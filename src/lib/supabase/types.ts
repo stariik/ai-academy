@@ -19,13 +19,15 @@ export type LessonRow = {
   user_id: string | null;
   created_at: string;
   updated_at: string;
+  concept_map: { concept_id: string; label: string; prerequisite_ids: string[] }[] | null;
+  learning_path: string[] | null;
 };
 
 export type ContentBlockRow = {
   id: string;
   lesson_id: string;
   page_id: string | null;
-  type: 'heading' | 'text' | 'key_concepts' | 'code' | 'callout' | 'summary';
+  type: string;
   content: string;
   metadata: Record<string, unknown> | null;
   order: number;
@@ -35,7 +37,7 @@ export type QuizQuestionRow = {
   id: string;
   lesson_id: string;
   page_id: string | null;
-  type: 'mcq' | 'true_false' | 'short_answer';
+  type: string;
   question: string;
   options: string[] | null;
   correct_answer: string;
@@ -43,6 +45,8 @@ export type QuizQuestionRow = {
   difficulty: 'easy' | 'medium' | 'hard';
   points: number;
   scope: 'check' | 'final';
+  bloom_level: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 export type LessonPageRow = {
@@ -51,6 +55,13 @@ export type LessonPageRow = {
   page_number: number;
   title: string;
   key_concepts: { term: string; definition: string }[];
+  teaching_flow: Record<string, string> | null;
+  prerequisites: string[] | null;
+  concepts_introduced: string[] | null;
+  difficulty_level: string | null;
+  bridge_from_previous: string | null;
+  common_misconceptions: string[] | null;
+  real_world_applications: string[] | null;
   created_at: string;
 };
 

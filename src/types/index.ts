@@ -4,7 +4,23 @@
 
 export type ContentBlock = {
   id: string;
-  type: 'heading' | 'text' | 'key_concepts' | 'code' | 'callout' | 'summary';
+  type:
+    | 'heading'
+    | 'text'
+    | 'key_concepts'
+    | 'code'
+    | 'callout'
+    | 'summary'
+    | 'table'
+    | 'list'
+    | 'example'
+    | 'analogy'
+    | 'step_by_step'
+    | 'diagram_description'
+    | 'definition'
+    | 'warning'
+    | 'tip'
+    | 'quote';
   content: string;
   metadata?: Record<string, unknown>;
   order: number;
@@ -13,7 +29,7 @@ export type ContentBlock = {
 
 export type QuizQuestion = {
   id: string;
-  type: 'mcq' | 'true_false' | 'short_answer';
+  type: 'mcq' | 'true_false' | 'short_answer' | 'ordering' | 'fill_in_blank' | 'matching';
   question: string;
   options?: string[];
   correctAnswer: string;
@@ -22,6 +38,21 @@ export type QuizQuestion = {
   points: number;
   pageId?: string;
   scope?: 'check' | 'final';
+  bloomLevel?: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
+  metadata?: Record<string, unknown>;
+};
+
+export type TeachingFlow = {
+  introduction: string;
+  coreExplanation: string;
+  practiceHint: string;
+  reflectionPrompt: string;
+};
+
+export type ConceptNode = {
+  conceptId: string;
+  label: string;
+  prerequisiteIds: string[];
 };
 
 export type LessonPage = {
@@ -32,6 +63,13 @@ export type LessonPage = {
   keyConcepts: { term: string; definition: string }[];
   contentBlocks: ContentBlock[];
   checkQuestions: QuizQuestion[];
+  teachingFlow?: TeachingFlow;
+  prerequisites?: string[];
+  conceptsIntroduced?: string[];
+  difficultyLevel?: 'foundational' | 'intermediate' | 'advanced' | 'synthesis';
+  bridgeFromPrevious?: string;
+  commonMisconceptions?: string[];
+  realWorldApplications?: string[];
 };
 
 export type Lesson = {
@@ -53,6 +91,8 @@ export type Lesson = {
   positionInCourse?: number;
   pages?: LessonPage[];
   totalPages?: number;
+  conceptMap?: ConceptNode[];
+  learningPath?: string[];
 };
 
 export type ChatMessage = {
@@ -123,26 +163,45 @@ export type GeminiPagedLessonResponse = {
     key_concepts: { term: string; definition: string }[];
     check_questions: {
       question: string;
-      type: 'mcq' | 'true_false';
-      options: string[];
+      type: string;
+      options?: string[];
       correct_answer: string;
       explanation: string;
-      difficulty: 'easy' | 'medium';
+      difficulty: 'easy' | 'medium' | 'hard';
       points: number;
+      bloom_level?: string;
+      metadata?: Record<string, unknown>;
     }[];
+    teaching_flow?: {
+      introduction: string;
+      core_explanation: string;
+      practice_hint: string;
+      reflection_prompt: string;
+    };
+    prerequisites?: string[];
+    concepts_introduced?: string[];
+    difficulty_level?: string;
+    bridge_from_previous?: string;
+    common_misconceptions?: string[];
+    real_world_applications?: string[];
   }[];
   summary: string;
   final_quiz_questions: {
     question: string;
-    type: 'mcq' | 'true_false' | 'short_answer';
+    type: string;
     options?: string[];
     correct_answer: string;
     explanation: string;
     difficulty: 'easy' | 'medium' | 'hard';
     points: number;
+    bloom_level?: string;
+    metadata?: Record<string, unknown>;
+    page_reference?: number;
   }[];
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   estimated_duration_minutes: number;
+  concept_map?: { concept_id: string; label: string; prerequisite_ids: string[] }[];
+  learning_path?: string[];
 };
 
 // ============================================================

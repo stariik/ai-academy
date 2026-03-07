@@ -21,6 +21,7 @@ import {
   buildPageTutorPrompt,
   buildEnhancedPageTutorPrompt,
   streamChat,
+  ThinkingConfig,
 } from '@/lib/ai/claude';
 import { getSessionId } from '@/lib/session';
 import { ChatMessage } from '@/types';
@@ -183,6 +184,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build thinking config from environment variable
+    const thinkingConfig: ThinkingConfig = {
+      enabled: process.env.ENABLE_EXTENDED_THINKING === 'true',
+      budgetTokens: 4096,
+    };
+
     // Create streaming response
     const encoder = new TextEncoder();
     let fullResponse = '';
@@ -190,7 +197,7 @@ export async function POST(request: NextRequest) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of streamChat(claudeMessages, systemPrompt)) {
+          for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig)) {
             fullResponse += chunk;
             controller.enqueue(encoder.encode(chunk));
           }
