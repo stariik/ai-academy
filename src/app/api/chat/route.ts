@@ -31,11 +31,12 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, lessonId, pageNumber, isFirstVisit } = body as {
+    const { messages, lessonId, pageNumber, isFirstVisit, language } = body as {
       messages: ChatMessage[];
       lessonId: string;
       pageNumber?: number;
       isFirstVisit?: boolean;
+      language?: 'en' | 'ka';
     };
 
     if (!messages || !lessonId) {

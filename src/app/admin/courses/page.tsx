@@ -7,11 +7,6 @@ import type { Course } from '@/types';
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [creating, setCreating] = useState(false);
-
   const fetchCourses = async () => {
     setLoading(true);
     try {
@@ -28,29 +23,6 @@ export default function AdminCoursesPage() {
   useEffect(() => {
     fetchCourses();
   }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    setCreating(true);
-    try {
-      const res = await fetch('/api/courses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), description: description.trim() }),
-      });
-      if (res.ok) {
-        setTitle('');
-        setDescription('');
-        setShowCreate(false);
-        fetchCourses();
-      }
-    } catch (err) {
-      console.error('Failed to create course:', err);
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this course? Lessons will be unlinked but not deleted.')) return;
@@ -72,57 +44,13 @@ export default function AdminCoursesPage() {
               Organize lessons into structured courses
             </p>
           </div>
-          <div className="flex gap-2">
-            <Link
-              href="/admin"
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Back to Admin
-            </Link>
-            <button
-              onClick={() => setShowCreate(!showCreate)}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              {showCreate ? 'Cancel' : 'New Course'}
-            </button>
-          </div>
-        </div>
-
-        {/* Create form */}
-        {showCreate && (
-          <form
-            onSubmit={handleCreate}
-            className="bg-white border border-gray-200 rounded-lg p-6 mb-6 space-y-4"
+          <Link
+            href="/admin"
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="e.g., Introduction to Machine Learning"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Brief description of the course..."
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!title.trim() || creating}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              {creating ? 'Creating...' : 'Create Course'}
-            </button>
-          </form>
-        )}
+            Back to Admin
+          </Link>
+        </div>
 
         {/* Course list */}
         {loading ? (
@@ -132,7 +60,7 @@ export default function AdminCoursesPage() {
         ) : courses.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p className="text-lg mb-1">No courses yet</p>
-            <p className="text-sm">Create a course to organize your lessons.</p>
+            <p className="text-sm">Courses are created when you upload a document on the admin page.</p>
           </div>
         ) : (
           <div className="space-y-3">

@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractText } from '@/lib/document-parser';
 import { analyzeDocument } from '@/lib/ai/gemini';
 import { createClient } from '@/lib/supabase/server';
-import { saveLesson, getLesson } from '@/lib/supabase/db';
+import { saveLesson, getLesson, createCourse } from '@/lib/supabase/db';
 import type { Lesson, ContentBlock, QuizQuestion, LessonPage, AnalysisResult } from '@/types';
 
 export const maxDuration = 300; // Allow up to 5 min for large document chunked generation
@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const targetLevel = (formData.get('targetLevel') as string) || 'intermediate';
-    const courseId = formData.get('courseId') as string | null;
+    let courseId = formData.get('courseId') as string | null;
+    const newCourseName = formData.get('newCourseName') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -215,6 +216,18 @@ export async function POST(request: NextRequest) {
 
     // ---- 5. Save lesson to Supabase ----
     const supabase = await createClient();
+
+    // Auto-create course if a new course name was provided
+    if (!courseId && newCourseName?.trim()) {
+      const newCourse = await createCourse(supabase, {
+        title: newCourseName.trim(),
+        description: '',
+        tags: [],
+      });
+      courseId = newCourse.id;
+      lesson.courseId = newCourse.id;
+    }
+
     await saveLesson(supabase, lesson);
 
     // Verify it was saved

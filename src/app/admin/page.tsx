@@ -17,6 +17,8 @@ export default function AdminPage() {
   const [targetLevel, setTargetLevel] = useState<string>('intermediate');
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [newCourseName, setNewCourseName] = useState<string>('');
+  const [courseMode, setCourseMode] = useState<'none' | 'existing' | 'new'>('none');
 
   // Fetch courses for the dropdown
   useEffect(() => {
@@ -37,8 +39,10 @@ export default function AdminPage() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('targetLevel', targetLevel);
-        if (selectedCourseId) {
+        if (courseMode === 'existing' && selectedCourseId) {
           formData.append('courseId', selectedCourseId);
+        } else if (courseMode === 'new' && newCourseName.trim()) {
+          formData.append('newCourseName', newCourseName.trim());
         }
 
         setUploadState('analyzing');
@@ -64,7 +68,7 @@ export default function AdminPage() {
         setUploadState('error');
       }
     },
-    [targetLevel, selectedCourseId]
+    [targetLevel, courseMode, selectedCourseId, newCourseName]
   );
 
   const onDrop = useCallback(
@@ -160,26 +164,57 @@ export default function AdminPage() {
               </select>
             </div>
             <div>
-              <label
-                htmlFor="courseSelect"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Assign to Course (optional)
               </label>
               <select
-                id="courseSelect"
-                value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
+                value={courseMode}
+                onChange={(e) => {
+                  const mode = e.target.value as 'none' | 'existing' | 'new';
+                  setCourseMode(mode);
+                  if (mode !== 'existing') setSelectedCourseId('');
+                  if (mode !== 'new') setNewCourseName('');
+                }}
                 className="border border-gray-300 rounded px-3 py-2 text-sm bg-white min-w-[200px]"
               >
-                <option value="">No course</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
+                <option value="none">No course</option>
+                {courses.length > 0 && <option value="existing">Existing course</option>}
+                <option value="new">Create new course</option>
               </select>
             </div>
+            {courseMode === 'existing' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Select Course
+                </label>
+                <select
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm bg-white min-w-[200px]"
+                >
+                  <option value="">Choose...</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {courseMode === 'new' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Course Name
+                </label>
+                <input
+                  type="text"
+                  value={newCourseName}
+                  onChange={(e) => setNewCourseName(e.target.value)}
+                  placeholder="e.g., Introduction to Machine Learning"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm bg-white min-w-[300px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            )}
           </div>
         )}
 

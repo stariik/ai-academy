@@ -1779,6 +1779,7 @@ function ChatPanel({
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [language, setLanguage] = useState<'en' | 'ka'>('en');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const unlockFiredRef = useRef(false);
@@ -1878,6 +1879,7 @@ function ChatPanel({
           lessonId,
           pageNumber,
           isFirstVisit: true,
+          language,
         }),
       })
         .then(async (res) => {
@@ -2001,6 +2003,7 @@ function ChatPanel({
         const body: Record<string, unknown> = {
           messages: updatedMessages,
           lessonId,
+          language,
         };
         if (pageNumber !== undefined) {
           body.pageNumber = pageNumber;
@@ -2064,7 +2067,7 @@ function ChatPanel({
         inputRef.current?.focus();
       }
     },
-    [messages, isStreaming, lessonId, pageNumber, onUnlockCheck]
+    [messages, isStreaming, lessonId, pageNumber, onUnlockCheck, language]
   );
 
   if (!historyLoaded) {
@@ -2094,6 +2097,17 @@ function ChatPanel({
             {currentPageData ? `Page ${pageNumber}: ${currentPageData.title}` : 'Ask me anything about this lesson'}
           </p>
         </div>
+        <button
+          onClick={() => setLanguage(language === 'en' ? 'ka' : 'en')}
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+            language === 'ka'
+              ? 'bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-300'
+              : 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200 hover:bg-gray-200'
+          }`}
+          title={language === 'ka' ? 'Switch to English' : 'ქართულად'}
+        >
+          {language === 'ka' ? 'ქარ' : 'EN'}
+        </button>
         {currentPageData && onUnlockCheck && (
           <div className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
             unlockFiredRef.current
