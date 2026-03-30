@@ -251,3 +251,36 @@ export type StudentProfile = {
   createdAt: string;
   updatedAt: string;
 };
+
+// ============================================================
+// Course Generation (multi-lesson from single PDF)
+// ============================================================
+
+export type CourseGenerationProgress = {
+  status: 'extracting_outline' | 'generating_lesson' | 'saving' | 'complete' | 'error';
+  totalLessons: number;
+  currentLesson: number;
+  currentLessonTitle: string;
+  courseId?: string;
+  courseName?: string;
+  lessons: { id: string; title: string; pages: number; position: number }[];
+  error?: string;
+};
+
+// ============================================================
+// Leads (onboarding funnel)
+// ============================================================
+
+export type Lead = {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  ageGroup: 'child' | 'adult';
+  topics: string[];
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  utmContent: string | null;
+  utmTerm: string | null;
+  createdAt: string;
+};

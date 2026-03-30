@@ -29,49 +29,28 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0.75rem 1.5rem",
-            borderBottom: "1px solid var(--border)",
-            background: "var(--background)",
-            position: "sticky",
-            top: 0,
-            zIndex: 50,
-          }}
+          className="sticky top-0 z-50 flex items-center justify-between border-b border-[var(--border)] bg-[var(--background)] px-6 py-3"
+          aria-label="Main navigation"
         >
           <Link
             href="/"
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: 700,
-              textDecoration: "none",
-              color: "var(--foreground)",
-            }}
+            className="text-lg font-bold no-underline text-[var(--foreground)]"
+            aria-label="AI Academy home"
           >
             AI Academy
           </Link>
-          <div style={{ display: "flex", gap: "1.5rem" }}>
+          <div className="flex gap-6">
             <Link
               href="/admin"
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                textDecoration: "none",
-                color: "var(--muted-foreground)",
-              }}
+              className="text-sm font-medium no-underline text-[var(--muted-foreground)]"
+              aria-label="Navigate to Admin panel"
             >
               Admin
             </Link>
             <Link
               href="/student"
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                textDecoration: "none",
-                color: "var(--muted-foreground)",
-              }}
+              className="text-sm font-medium no-underline text-[var(--muted-foreground)]"
+              aria-label="Navigate to Student view"
             >
               Student
             </Link>

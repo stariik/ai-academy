@@ -170,21 +170,25 @@ export default function StudentPage() {
         </div>
       )}
 
-      {/* All Lessons */}
+      {/* Standalone Lessons (not in any course) */}
+      {(() => {
+        const standaloneLessons = lessons.filter((l) => !l.courseId);
+        if (standaloneLessons.length === 0 && courses.length > 0) return null;
+        return (
       <div>
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-bold text-gray-900">All Lessons</h2>
-          <span className="text-sm text-gray-500">{lessons.length} available</span>
+          <h2 className="text-lg font-bold text-gray-900">{courses.length > 0 ? 'Other Lessons' : 'All Lessons'}</h2>
+          <span className="text-sm text-gray-500">{standaloneLessons.length} available</span>
         </div>
 
-        {lessons.length === 0 ? (
+        {standaloneLessons.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <p className="text-lg mb-1">No lessons available</p>
             <p className="text-sm">Lessons will appear here once an admin publishes them.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {lessons.map((lesson) => (
+            {standaloneLessons.map((lesson) => (
               <Link
                 key={lesson.id}
                 href={`/student/lesson/${lesson.id}`}
@@ -208,6 +212,8 @@ export default function StudentPage() {
           </div>
         )}
       </div>
+        );
+      })()}
     </div>
   );
 }

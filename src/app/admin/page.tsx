@@ -1,83 +1,249 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { Lesson, AnalysisResult, Course } from '@/types';
+import type { CourseGenerationProgress } from '@/types';
 
-type UploadState = 'idle' | 'uploading' | 'analyzing' | 'success' | 'error';
+type AdminStep = 'choose' | 'prompt-chat' | 'upload' | 'preview-sections' | 'generating' | 'complete';
+
+type DetectedSection = {
+  id: string;
+  title: string;
+  startIndex: number;
+  endIndex: number;
+  wordCount: number;
+  preview: string;
+};
 
 export default function AdminPage() {
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [step, setStep] = useState<AdminStep>('choose');
+  const [courseName, setCourseName] = useState('');
+  const [targetLevel, setTargetLevel] = useState('intermediate');
   const [error, setError] = useState<string | null>(null);
-  const [processingTime, setProcessingTime] = useState<number | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [targetLevel, setTargetLevel] = useState<string>('intermediate');
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [newCourseName, setNewCourseName] = useState<string>('');
-  const [courseMode, setCourseMode] = useState<'none' | 'existing' | 'new'>('none');
+  const [courseGenProgress, setCourseGenProgress] = useState<CourseGenerationProgress | null>(null);
 
-  // Fetch courses for the dropdown
+  // File state (kept between preview and generate steps)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Section preview state
+  const [sections, setSections] = useState<DetectedSection[]>([]);
+  const [detectingOutline, setDetectingOutline] = useState(false);
+  const [totalWords, setTotalWords] = useState(0);
+
+  // Prompt generator chat state
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    fetch('/api/courses')
-      .then((res) => res.json())
-      .then((data) => setCourses(Array.isArray(data) ? data : []))
-      .catch(() => {});
-  }, []);
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
-  const handleAnalyze = useCallback(
-    async (file: File) => {
-      setError(null);
-      setLesson(null);
-      setFileName(file.name);
-      setUploadState('uploading');
+  // ---- Prompt Generator Chat ----
+  const sendChatMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isStreaming) return;
 
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('targetLevel', targetLevel);
-        if (courseMode === 'existing' && selectedCourseId) {
-          formData.append('courseId', selectedCourseId);
-        } else if (courseMode === 'new' && newCourseName.trim()) {
-          formData.append('newCourseName', newCourseName.trim());
-        }
+    const userMsg = { role: 'user' as const, content: text.trim() };
+    const updated = [...chatMessages, userMsg];
+    setChatMessages(updated);
+    setChatInput('');
+    setIsStreaming(true);
+    setChatMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
-        setUploadState('analyzing');
+    try {
+      const res = await fetch('/api/prompt-generator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: updated }),
+      });
 
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          body: formData,
+      if (!res.ok) throw new Error('Failed');
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No body');
+
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+        setChatMessages(prev => {
+          const msgs = [...prev];
+          msgs[msgs.length - 1] = { role: 'assistant', content: fullText };
+          return msgs;
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || `Server error: ${response.status}`);
-        }
-
-        const result = data as AnalysisResult;
-        setLesson(result.lesson);
-        setProcessingTime(result.processingTimeMs);
-        setUploadState('success');
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'An unexpected error occurred';
-        setError(message);
-        setUploadState('error');
       }
-    },
-    [targetLevel, courseMode, selectedCourseId, newCourseName]
-  );
 
+      const promptMatch = fullText.match(/---PROMPT START---([\s\S]*?)---PROMPT END---/);
+      if (promptMatch) {
+        setGeneratedPrompt(promptMatch[1].trim());
+      }
+    } catch {
+      setChatMessages(prev => {
+        const msgs = [...prev];
+        msgs[msgs.length - 1] = { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' };
+        return msgs;
+      });
+    } finally {
+      setIsStreaming(false);
+      chatInputRef.current?.focus();
+    }
+  }, [chatMessages, isStreaming]);
+
+  // ---- Outline Detection ----
+  const detectOutline = useCallback(async (file: File) => {
+    setDetectingOutline(true);
+    setError(null);
+    setSelectedFile(file);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/analyze-outline', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to analyze document');
+
+      setSections(data.sections);
+      setTotalWords(data.totalWords);
+
+      // Auto-fill course name from file if empty
+      if (!courseName.trim()) {
+        setCourseName(file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
+      }
+
+      setStep('preview-sections');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to analyze document');
+    } finally {
+      setDetectingOutline(false);
+    }
+  }, [courseName]);
+
+  // ---- Section Editing ----
+  const mergeSections = (indexA: number, indexB: number) => {
+    setSections(prev => {
+      const next = [...prev];
+      const a = next[indexA];
+      const b = next[indexB];
+      next[indexA] = {
+        ...a,
+        title: `${a.title} & ${b.title}`,
+        endIndex: b.endIndex,
+        wordCount: a.wordCount + b.wordCount,
+        preview: a.preview,
+      };
+      next.splice(indexB, 1);
+      return next;
+    });
+  };
+
+  const deleteSection = (index: number) => {
+    setSections(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const renameSection = (index: number, newTitle: string) => {
+    setSections(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], title: newTitle };
+      return next;
+    });
+  };
+
+  // ---- Course Generation ----
+  const startGeneration = useCallback(async () => {
+    if (!courseName.trim()) {
+      setError('Please enter a course name.');
+      return;
+    }
+    if (sections.length === 0) {
+      setError('No sections to generate.');
+      return;
+    }
+    if (!selectedFile) {
+      setError('No file selected.');
+      return;
+    }
+
+    setError(null);
+    setCourseGenProgress(null);
+    setStep('generating');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('targetLevel', targetLevel);
+      formData.append('newCourseName', courseName.trim());
+      formData.append('sections', JSON.stringify(
+        sections.map(s => ({ title: s.title, startIndex: s.startIndex, endIndex: s.endIndex }))
+      ));
+
+      const response = await fetch('/api/analyze-course', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(errData.error || `Server error: ${response.status}`);
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split('\n\n');
+        buffer = events.pop()!;
+
+        for (const event of events) {
+          const dataLine = event.replace(/^data: /, '');
+          if (dataLine) {
+            try {
+              const progress = JSON.parse(dataLine) as CourseGenerationProgress;
+              setCourseGenProgress(progress);
+              if (progress.status === 'error') {
+                throw new Error(progress.error || 'Course generation failed');
+              }
+            } catch (parseErr) {
+              if (parseErr instanceof Error && parseErr.message.includes('generation failed')) {
+                throw parseErr;
+              }
+            }
+          }
+        }
+      }
+
+      setStep('complete');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setStep('preview-sections');
+    }
+  }, [courseName, targetLevel, sections, selectedFile]);
+
+  // ---- Upload drop handler ----
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
-        handleAnalyze(acceptedFiles[0]);
+        detectOutline(acceptedFiles[0]);
       }
     },
-    [handleAnalyze]
+    [detectOutline]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -87,34 +253,29 @@ export default function AdminPage() {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB
-    disabled: uploadState === 'uploading' || uploadState === 'analyzing',
+    maxSize: 25 * 1024 * 1024,
+    disabled: detectingOutline || step === 'generating',
   });
 
-  const handleRegenerate = () => {
-    setUploadState('idle');
-    setLesson(null);
-    setError(null);
-    setProcessingTime(null);
-    setFileName(null);
+  const copyPrompt = () => {
+    if (generatedPrompt) {
+      navigator.clipboard.writeText(generatedPrompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  const handlePublish = async () => {
-    if (!lesson) return;
-
-    try {
-      const res = await fetch(`/api/lessons/${lesson.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'published' }),
-      });
-
-      if (!res.ok) throw new Error('Failed to publish');
-      const updated = await res.json();
-      setLesson(updated);
-    } catch {
-      alert('Failed to publish lesson. Please try again.');
-    }
+  const resetAll = () => {
+    setStep('choose');
+    setCourseName('');
+    setError(null);
+    setCourseGenProgress(null);
+    setChatMessages([]);
+    setGeneratedPrompt(null);
+    setChatInput('');
+    setSections([]);
+    setSelectedFile(null);
+    setTotalWords(0);
   };
 
   return (
@@ -123,333 +284,408 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">AI Academy - Admin</h1>
-          <p className="text-gray-600 mt-1">
-            Upload a document to generate an AI-powered lesson
-          </p>
+          <p className="text-gray-600 mt-1">Create courses from PDF documents</p>
           <div className="flex gap-4 mt-2">
-            <a
-              href="/admin/lessons"
-              className="text-blue-600 hover:text-blue-800 text-sm"
-            >
-              View all lessons &rarr;
-            </a>
-            <a
-              href="/admin/courses"
-              className="text-blue-600 hover:text-blue-800 text-sm"
-            >
-              Manage courses &rarr;
-            </a>
+            <a href="/admin/lessons" className="text-blue-600 hover:text-blue-800 text-sm">View all lessons &rarr;</a>
+            <a href="/admin/courses" className="text-blue-600 hover:text-blue-800 text-sm">Manage courses &rarr;</a>
           </div>
         </div>
 
-        {/* Target Level + Course Selector */}
-        {(uploadState === 'idle' || uploadState === 'error') && (
-          <div className="mb-4 flex gap-4">
-            <div>
-              <label
-                htmlFor="targetLevel"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Target Level
-              </label>
-              <select
-                id="targetLevel"
-                value={targetLevel}
-                onChange={(e) => setTargetLevel(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2 text-sm bg-white"
-              >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assign to Course (optional)
-              </label>
-              <select
-                value={courseMode}
-                onChange={(e) => {
-                  const mode = e.target.value as 'none' | 'existing' | 'new';
-                  setCourseMode(mode);
-                  if (mode !== 'existing') setSelectedCourseId('');
-                  if (mode !== 'new') setNewCourseName('');
-                }}
-                className="border border-gray-300 rounded px-3 py-2 text-sm bg-white min-w-[200px]"
-              >
-                <option value="none">No course</option>
-                {courses.length > 0 && <option value="existing">Existing course</option>}
-                <option value="new">Create new course</option>
-              </select>
-            </div>
-            {courseMode === 'existing' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Course
-                </label>
-                <select
-                  value={selectedCourseId}
-                  onChange={(e) => setSelectedCourseId(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm bg-white min-w-[200px]"
-                >
-                  <option value="">Choose...</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
+        {/* ============================================================
+            STEP: CHOOSE
+            ============================================================ */}
+        {step === 'choose' && (
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setStep('prompt-chat')}
+              className="bg-white border border-gray-200 rounded-xl p-8 text-left hover:border-blue-300 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4 group-hover:bg-blue-200 transition">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
               </div>
-            )}
-            {courseMode === 'new' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  New Course Name
-                </label>
-                <input
-                  type="text"
-                  value={newCourseName}
-                  onChange={(e) => setNewCourseName(e.target.value)}
-                  placeholder="e.g., Introduction to Machine Learning"
-                  className="border border-gray-300 rounded px-3 py-2 text-sm bg-white min-w-[300px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">I need help creating a PDF</h3>
+              <p className="text-sm text-gray-500">Chat with AI to design your course. It generates a prompt for ChatGPT to create the PDF.</p>
+            </button>
+
+            <button
+              onClick={() => setStep('upload')}
+              className="bg-white border border-gray-200 rounded-xl p-8 text-left hover:border-green-300 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-4 group-hover:bg-green-200 transition">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
               </div>
-            )}
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">I already have a PDF</h3>
+              <p className="text-sm text-gray-500">Upload a course PDF. The system detects chapters and lets you review before generating.</p>
+            </button>
           </div>
         )}
 
-        {/* Upload Area */}
-        {(uploadState === 'idle' || uploadState === 'error') && (
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-              isDragActive
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-gray-400 bg-white'
-            }`}
-          >
-            <input {...getInputProps()} />
-            <div className="text-gray-500">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400 mb-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              {isDragActive ? (
-                <p className="text-blue-600 font-medium">Drop the file here...</p>
-              ) : (
-                <>
-                  <p className="font-medium">Drag & drop a document here, or click to browse</p>
-                  <p className="text-sm mt-1">Supports PDF and DOCX files (max 10MB)</p>
-                </>
+        {/* ============================================================
+            STEP: PROMPT CHAT
+            ============================================================ */}
+        {step === 'prompt-chat' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep('choose')} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+                <h2 className="text-xl font-bold text-gray-900">Course Design Assistant</h2>
+              </div>
+              {generatedPrompt && (
+                <button onClick={() => setStep('upload')} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  Go to Upload &rarr;
+                </button>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Error Message */}
-        {uploadState === 'error' && error && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 text-sm font-medium">Analysis Failed</p>
-            <p className="text-red-600 text-sm mt-1">{error}</p>
-          </div>
-        )}
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="h-[500px] overflow-y-auto p-4 space-y-4">
+                {chatMessages.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082" /></svg>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-1">What course would you like to create?</h3>
+                    <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">Describe your course idea. I&apos;ll ask questions to understand your needs, then generate a ready-to-use prompt.</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {['Prompt Engineering for Adults', 'AI Agents for Beginners', 'Intro to Web Development'].map((s) => (
+                        <button key={s} onClick={() => sendChatMessage(`I want to create a course on: ${s}`)} className="px-3 py-1.5 text-sm border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 hover:border-blue-300 transition">
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-        {/* Processing State */}
-        {(uploadState === 'uploading' || uploadState === 'analyzing') && (
-          <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-            <div className="inline-block h-10 w-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-            <p className="text-gray-900 font-medium text-lg">
-              {uploadState === 'uploading'
-                ? 'Uploading document...'
-                : 'Analyzing with AI...'}
-            </p>
-            <p className="text-gray-500 text-sm mt-2">
-              {fileName && <span>File: {fileName}</span>}
-              {uploadState === 'analyzing' && (
-                <span className="block mt-1">
-                  This may take 15-30 seconds depending on document size
-                </span>
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] rounded-2xl text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white px-4 py-2.5' : 'bg-gray-100 text-gray-800 px-4 py-3'}`}>
+                      {msg.role === 'assistant' ? (
+                        <div className="chat-prose max-w-none text-[0.8125rem]">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content.replace(/---PROMPT START---[\s\S]*?---PROMPT END---/, '[Prompt generated - see below]') || '...'}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="leading-relaxed">{msg.content}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {isStreaming && chatMessages[chatMessages.length - 1]?.content === '' && (
+                  <div className="flex gap-1 px-4 py-2"><span className="typing-dot" /><span className="typing-dot" /><span className="typing-dot" /></div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {generatedPrompt && (
+                <div className="border-t border-gray-200 bg-green-50 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-green-800 text-sm">Your prompt is ready!</h4>
+                    <button onClick={copyPrompt} className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                      {copied ? 'Copied!' : 'Copy Prompt'}
+                    </button>
+                  </div>
+                  <div className="bg-white border border-green-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">{generatedPrompt}</pre>
+                  </div>
+                  <p className="text-xs text-green-700 mt-2">Paste into ChatGPT-4o with Code Interpreter. Download the PDF, then click &quot;Go to Upload&quot;.</p>
+                </div>
               )}
-            </p>
+
+              <div className="border-t border-gray-200 p-3">
+                <form onSubmit={(e) => { e.preventDefault(); sendChatMessage(chatInput); }} className="flex gap-2">
+                  <input ref={chatInputRef} type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Describe your course idea..." disabled={isStreaming} className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 transition" />
+                  <button type="submit" disabled={isStreaming || !chatInput.trim()} className="shrink-0 w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 transition">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9-7-9-7-9 7 9 7z" transform="rotate(-45 12 12)" /></svg>
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Success - Lesson Preview */}
-        {uploadState === 'success' && lesson && (
-          <div className="space-y-6">
-            {/* Processing Info Bar */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
-              <div>
-                <span className="text-green-800 text-sm font-medium">
-                  Lesson generated successfully
-                </span>
-                {processingTime && (
-                  <span className="text-green-600 text-xs ml-2">
-                    ({(processingTime / 1000).toFixed(1)}s)
-                  </span>
+        {/* ============================================================
+            STEP: UPLOAD
+            ============================================================ */}
+        {step === 'upload' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <button onClick={() => setStep('choose')} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+              <h2 className="text-xl font-bold text-gray-900">Upload Course PDF</h2>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="courseName" className="block text-sm font-medium text-gray-700 mb-1">Course Name <span className="text-red-500">*</span></label>
+                  <input id="courseName" type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g., Prompt Engineering for Adults" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label htmlFor="level" className="block text-sm font-medium text-gray-700 mb-1">Target Level</label>
+                  <select id="level" value={targetLevel} onChange={(e) => setTargetLevel(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-3">Upload a PDF with clear chapter headings. The system will detect chapters and show you a preview before generating lessons.</p>
+            </div>
+
+            {detectingOutline ? (
+              <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+                <div className="inline-block h-10 w-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+                <p className="text-gray-900 font-medium">Analyzing document structure...</p>
+                <p className="text-sm text-gray-500 mt-1">Detecting chapters and sections</p>
+              </div>
+            ) : (
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-white'}`}
+              >
+                <input {...getInputProps()} />
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                {isDragActive ? (
+                  <p className="text-blue-600 font-medium">Drop the file here...</p>
+                ) : (
+                  <>
+                    <p className="font-medium text-gray-600">Drag &amp; drop your course PDF, or click to browse</p>
+                    <p className="text-sm text-gray-400 mt-1">PDF or DOCX (max 25MB)</p>
+                  </>
                 )}
               </div>
-              <span
-                className={`text-xs px-2 py-1 rounded font-medium ${
-                  lesson.status === 'published'
-                    ? 'bg-green-200 text-green-800'
-                    : 'bg-yellow-200 text-yellow-800'
-                }`}
-              >
-                {lesson.status}
-              </span>
-            </div>
+            )}
 
-            {/* Title & Description */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900">{lesson.title}</h2>
-              <p className="text-gray-600 mt-2">{lesson.description}</p>
-              <div className="flex gap-4 mt-3 text-sm text-gray-500">
-                <span>Difficulty: {lesson.difficulty}</span>
-                <span>Duration: ~{lesson.estimatedDurationMinutes} min</span>
-                <span>Source: {lesson.sourceDocument}</span>
+            {error && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800 text-sm font-medium">Error</p>
+                <p className="text-red-600 text-sm mt-1">{error}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: PREVIEW SECTIONS - Edit before generating
+            ============================================================ */}
+        {step === 'preview-sections' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <button onClick={() => setStep('upload')} className="text-gray-400 hover:text-gray-600"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Review Detected Sections</h2>
+                <p className="text-sm text-gray-500">{sections.length} sections detected &middot; {totalWords.toLocaleString()} words total</p>
               </div>
             </div>
 
-            {/* Learning Objectives */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Learning Objectives
-              </h3>
-              <ul className="space-y-2">
-                {lesson.learningObjectives.map((obj, i) => (
-                  <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
-                    <span className="text-green-600 mt-0.5 shrink-0">&#10003;</span>
-                    <span>{obj}</span>
-                  </li>
-                ))}
+            {/* Course name (editable here too) */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                  <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Level</label>
+                  <select value={targetLevel} onChange={(e) => setTargetLevel(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section list */}
+            <div className="space-y-2 mb-6">
+              {sections.map((section, i) => (
+                <div key={section.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <span className="shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mt-0.5">
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          value={section.title}
+                          onChange={(e) => renameSection(i, e.target.value)}
+                          className="w-full font-medium text-gray-900 text-sm border-0 border-b border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-0 py-0.5 transition"
+                        />
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-xs text-gray-400">{section.wordCount.toLocaleString()} words</span>
+                          <span className="text-xs text-gray-300">|</span>
+                          <span className="text-xs text-gray-400 truncate">{section.preview}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      {i < sections.length - 1 && (
+                        <button
+                          onClick={() => mergeSections(i, i + 1)}
+                          title="Merge with next section"
+                          className="px-2 py-1 text-xs border border-gray-200 rounded text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition"
+                        >
+                          Merge &darr;
+                        </button>
+                      )}
+                      {sections.length > 1 && (
+                        <button
+                          onClick={() => deleteSection(i)}
+                          title="Remove this section"
+                          className="px-2 py-1 text-xs border border-red-200 rounded text-red-500 hover:bg-red-50 hover:text-red-700 transition"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Info box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                Each section above becomes a <strong>separate lesson</strong> in the course. You can:
+              </p>
+              <ul className="text-sm text-blue-700 mt-1 space-y-0.5 ml-4 list-disc">
+                <li>Click a section title to rename it (this becomes the lesson title)</li>
+                <li>Click &quot;Merge&quot; to combine adjacent sections into one lesson</li>
+                <li>Click &quot;Remove&quot; to skip a section entirely</li>
               </ul>
             </div>
 
-            {/* Content Blocks */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Content</h3>
-              <div className="space-y-4">
-                {lesson.contentBlocks.map((block) => (
-                  <ContentBlockRenderer key={block.id} block={block} />
-                ))}
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-600 text-sm">{error}</p>
               </div>
-            </div>
+            )}
 
-            {/* Key Concepts */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Concepts</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 pr-4 font-medium text-gray-700 w-1/4">
-                        Term
-                      </th>
-                      <th className="text-left py-2 font-medium text-gray-700">
-                        Definition
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lesson.keyConcepts.map((concept, i) => (
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="py-2 pr-4 font-medium text-gray-900">
-                          {concept.term}
-                        </td>
-                        <td className="py-2 text-gray-600">{concept.definition}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Summary</h3>
-              <p className="text-gray-700 text-sm leading-relaxed">{lesson.summary}</p>
-            </div>
-
-            {/* Quiz Questions */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Quiz Questions ({lesson.quizQuestions.length})
-              </h3>
-              <div className="space-y-4">
-                {lesson.quizQuestions.map((q, i) => (
-                  <div key={q.id} className="border border-gray-100 rounded p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-medium text-gray-900">
-                        {i + 1}. {q.question}
-                      </p>
-                      <div className="flex gap-2 shrink-0">
-                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                          {q.type}
-                        </span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
-                          {q.difficulty}
-                        </span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">
-                          {q.points} pts
-                        </span>
-                      </div>
-                    </div>
-                    {q.options && q.options.length > 0 && (
-                      <ul className="mt-2 space-y-1">
-                        {q.options.map((opt, j) => (
-                          <li
-                            key={j}
-                            className={`text-sm pl-4 ${
-                              opt === q.correctAnswer
-                                ? 'text-green-700 font-medium'
-                                : 'text-gray-600'
-                            }`}
-                          >
-                            {String.fromCharCode(65 + j)}. {opt}
-                            {opt === q.correctAnswer && ' (correct)'}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {q.type === 'short_answer' && (
-                      <p className="text-sm text-green-700 mt-2">
-                        <span className="font-medium">Answer:</span> {q.correctAnswer}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-2 italic">{q.explanation}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pb-8">
+            {/* Action buttons */}
+            <div className="flex gap-3">
               <button
-                onClick={handlePublish}
-                disabled={lesson.status === 'published'}
-                className={`px-6 py-2 rounded font-medium text-sm ${
-                  lesson.status === 'published'
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
+                onClick={startGeneration}
+                disabled={sections.length === 0 || !courseName.trim()}
+                className="px-6 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition"
               >
-                {lesson.status === 'published' ? 'Published' : 'Publish'}
+                Generate Course ({sections.length} lessons)
               </button>
               <button
-                onClick={handleRegenerate}
-                className="px-6 py-2 rounded font-medium text-sm border border-gray-300 text-gray-700 hover:bg-gray-50"
+                onClick={() => setStep('upload')}
+                className="px-4 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
               >
-                Regenerate
+                Upload Different File
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: GENERATING
+            ============================================================ */}
+        {step === 'generating' && (
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  Generating: {courseGenProgress?.courseName || courseName}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {!courseGenProgress && 'Starting...'}
+                  {courseGenProgress?.status === 'extracting_outline' && 'Analyzing structure...'}
+                  {courseGenProgress?.status === 'generating_lesson' && `Creating lesson ${courseGenProgress.currentLesson} of ${courseGenProgress.totalLessons}`}
+                  {courseGenProgress?.status === 'saving' && `Saving lesson ${courseGenProgress.currentLesson}...`}
+                </p>
+              </div>
+            </div>
+
+            {courseGenProgress && courseGenProgress.totalLessons > 0 && (
+              <>
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>{courseGenProgress.lessons.length}/{courseGenProgress.totalLessons} lessons</span>
+                    <span>{Math.round((courseGenProgress.lessons.length / courseGenProgress.totalLessons) * 100)}%</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-gray-200 overflow-hidden">
+                    <div className="h-2.5 rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${(courseGenProgress.lessons.length / courseGenProgress.totalLessons) * 100}%` }} />
+                  </div>
+                </div>
+                {courseGenProgress.currentLessonTitle && (
+                  <p className="text-sm text-blue-700 font-medium mb-3">Currently: {courseGenProgress.currentLessonTitle}</p>
+                )}
+                {courseGenProgress.lessons.length > 0 && (
+                  <div className="space-y-1.5">
+                    {courseGenProgress.lessons.map((l, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        {l.id === 'failed' ? <span className="text-red-500">&#10007;</span> : <span className="text-green-500">&#10003;</span>}
+                        <span className="text-gray-700">{l.title}</span>
+                        {l.pages > 0 && <span className="text-gray-400 text-xs">({l.pages} pages)</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: COMPLETE
+            ============================================================ */}
+        {step === 'complete' && courseGenProgress?.status === 'complete' && (
+          <div className="bg-white border border-green-200 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Course Created!</h3>
+                <p className="text-sm text-gray-500">{courseGenProgress.courseName} &middot; {courseGenProgress.lessons.filter(l => l.id !== 'failed').length} lessons</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-6">
+              {courseGenProgress.lessons.map((l, i) => (
+                <div key={i} className="flex items-center justify-between border border-gray-100 rounded-lg p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-400 w-6">{i + 1}.</span>
+                    <span className="text-sm font-medium text-gray-900">{l.title}</span>
+                    {l.pages > 0 && <span className="text-xs text-gray-400">({l.pages} pages)</span>}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${l.id === 'failed' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {l.id === 'failed' ? 'failed' : 'draft'}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              {courseGenProgress.courseId && (
+                <a href={`/admin/courses/${courseGenProgress.courseId}`} className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition">
+                  View &amp; Manage Course
+                </a>
+              )}
+              <button
+                onClick={() => {
+                  const ids = courseGenProgress!.lessons.filter(l => l.id !== 'failed').map(l => l.id);
+                  Promise.all(ids.map(id => fetch(`/api/lessons/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'published' }) }))).then(() => alert('All lessons published!'));
+                }}
+                className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition"
+              >
+                Publish All
+              </button>
+              <button onClick={resetAll} className="px-5 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition">
+                Create Another
               </button>
             </div>
           </div>
@@ -457,66 +693,4 @@ export default function AdminPage() {
       </div>
     </div>
   );
-}
-
-// ---- Content Block Renderer ----
-
-function ContentBlockRenderer({ block }: { block: Lesson['contentBlocks'][0] }) {
-  switch (block.type) {
-    case 'heading':
-      return (
-        <h4 className="text-lg font-semibold text-gray-900 mt-3 mb-1">{block.content}</h4>
-      );
-    case 'text':
-      return (
-        <div className="lesson-prose text-sm text-gray-700 leading-relaxed">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
-        </div>
-      );
-    case 'key_concepts':
-      return (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-purple-600 mb-1">
-            Key Concept
-          </p>
-          <div className="lesson-prose text-sm text-purple-900">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
-          </div>
-        </div>
-      );
-    case 'code':
-      return (
-        <pre className="bg-[#1e1e2e] text-[#cdd6f4] text-sm p-4 rounded-lg overflow-x-auto">
-          <code>{block.content}</code>
-        </pre>
-      );
-    case 'callout':
-      return (
-        <div className="bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">
-            Note
-          </p>
-          <div className="lesson-prose text-sm text-amber-900">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
-          </div>
-        </div>
-      );
-    case 'summary':
-      return (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-            Summary
-          </p>
-          <div className="lesson-prose text-sm text-gray-700">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
-          </div>
-        </div>
-      );
-    default:
-      return (
-        <div className="lesson-prose text-sm text-gray-700">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
-        </div>
-      );
-  }
 }

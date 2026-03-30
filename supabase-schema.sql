@@ -239,3 +239,24 @@ alter table quiz_questions add column if not exists metadata jsonb default null;
 --   on lessons for select using (status = 'published');
 -- create policy "Authenticated users can manage lessons"
 --   on lessons for all using (auth.uid() = user_id);
+
+-- ============================================================
+-- Leads (onboarding funnel from Meta ads)
+-- ============================================================
+create table leads (
+  id uuid primary key default uuid_generate_v4(),
+  email text,
+  phone text,
+  age_group text not null,
+  topics text[] not null default '{}',
+  utm_source text,
+  utm_medium text,
+  utm_campaign text,
+  utm_content text,
+  utm_term text,
+  created_at timestamptz not null default now(),
+  constraint leads_contact_check check (email is not null or phone is not null)
+);
+
+create index idx_leads_created_at on leads(created_at desc);
+create index idx_leads_age_group on leads(age_group);

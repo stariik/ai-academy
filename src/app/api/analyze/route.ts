@@ -9,7 +9,8 @@ import { extractText } from '@/lib/document-parser';
 import { analyzeDocument } from '@/lib/ai/gemini';
 import { createClient } from '@/lib/supabase/server';
 import { saveLesson, getLesson, createCourse } from '@/lib/supabase/db';
-import type { Lesson, ContentBlock, QuizQuestion, LessonPage, AnalysisResult } from '@/types';
+import { buildLessonFromGeminiResponse } from '@/lib/lesson-builder';
+import type { AnalysisResult } from '@/types';
 
 export const maxDuration = 300; // Allow up to 5 min for large document chunked generation
 
@@ -114,105 +115,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ---- 4. Transform paged Gemini response into a Lesson object ----
-    const lessonId = generateId();
-
-    // Build pages with their content blocks and check questions
-    const pages: LessonPage[] = geminiResponse.pages.map((page) => {
-      const pageId = `${lessonId}-page-${page.page_number}`;
-
-      const pageBlocks: ContentBlock[] = page.content_blocks.map((block, idx) => ({
-        id: `${pageId}-cb-${idx}`,
-        type: normalizeBlockType(block.type),
-        content: block.content,
-        metadata: block.metadata,
-        order: idx,
-        pageId,
-      }));
-
-      const checkQuestions: QuizQuestion[] = (page.check_questions || []).map((q, idx) => ({
-        id: `${pageId}-cq-${idx}`,
-        type: q.type as QuizQuestion['type'],
-        question: q.question,
-        options: q.options,
-        correctAnswer: q.correct_answer,
-        explanation: q.explanation,
-        difficulty: q.difficulty,
-        points: q.points || 5,
-        pageId,
-        scope: 'check' as const,
-        bloomLevel: q.bloom_level as QuizQuestion['bloomLevel'],
-        metadata: q.metadata,
-      }));
-
-      return {
-        id: pageId,
-        lessonId,
-        pageNumber: page.page_number,
-        title: page.title,
-        keyConcepts: page.key_concepts || [],
-        contentBlocks: pageBlocks,
-        checkQuestions,
-        teachingFlow: page.teaching_flow ? {
-          introduction: page.teaching_flow.introduction,
-          coreExplanation: page.teaching_flow.core_explanation,
-          practiceHint: page.teaching_flow.practice_hint,
-          reflectionPrompt: page.teaching_flow.reflection_prompt,
-        } : undefined,
-        prerequisites: page.prerequisites,
-        conceptsIntroduced: page.concepts_introduced,
-        difficultyLevel: page.difficulty_level as LessonPage['difficultyLevel'],
-        bridgeFromPrevious: page.bridge_from_previous,
-        commonMisconceptions: page.common_misconceptions,
-        realWorldApplications: page.real_world_applications,
-      };
-    });
-
-    // Build final quiz questions
-    const quizQuestions: QuizQuestion[] = (geminiResponse.final_quiz_questions || []).map(
-      (q, index) => ({
-        id: `${lessonId}-fq-${index}`,
-        type: q.type as QuizQuestion['type'],
-        question: q.question,
-        options: q.options,
-        correctAnswer: q.correct_answer,
-        explanation: q.explanation,
-        difficulty: q.difficulty,
-        points: q.points || 10,
-        scope: 'final' as const,
-        bloomLevel: q.bloom_level as QuizQuestion['bloomLevel'],
-        metadata: q.metadata,
-      })
+    // ---- 4. Transform Gemini response into Lesson + save ----
+    const lesson = buildLessonFromGeminiResponse(
+      geminiResponse,
+      file.name,
+      courseId ?? undefined,
     );
-
-    // Aggregate all key concepts from pages for the lesson level
-    const allKeyConcepts = pages.flatMap((p) => p.keyConcepts);
-
-    const lesson: Lesson = {
-      id: lessonId,
-      title: geminiResponse.title,
-      description: geminiResponse.description,
-      learningObjectives: geminiResponse.learning_objectives,
-      contentBlocks: [],
-      keyConcepts: allKeyConcepts,
-      summary: geminiResponse.summary,
-      quizQuestions,
-      sourceDocument: file.name,
-      difficulty: geminiResponse.difficulty,
-      estimatedDurationMinutes: geminiResponse.estimated_duration_minutes,
-      createdAt: new Date().toISOString(),
-      status: 'draft',
-      tags: [],
-      courseId: courseId ?? undefined,
-      pages,
-      totalPages: pages.length,
-      conceptMap: geminiResponse.concept_map?.map(n => ({
-        conceptId: n.concept_id,
-        label: n.label,
-        prerequisiteIds: n.prerequisite_ids,
-      })),
-      learningPath: geminiResponse.learning_path,
-    };
 
     // ---- 5. Save lesson to Supabase ----
     const supabase = await createClient();
@@ -231,7 +139,7 @@ export async function POST(request: NextRequest) {
     await saveLesson(supabase, lesson);
 
     // Verify it was saved
-    const savedLesson = await getLesson(supabase, lessonId);
+    const savedLesson = await getLesson(supabase, lesson.id);
     if (!savedLesson) {
       console.error('[Analyze] Failed to save lesson to Supabase');
       return NextResponse.json(
@@ -263,63 +171,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// ---- Helper Functions ----
-
-function generateId(): string {
-  return `lesson_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-function normalizeBlockType(type: string): ContentBlock['type'] {
-  const typeMap: Record<string, ContentBlock['type']> = {
-    // Original 6 types (direct match)
-    heading: 'heading',
-    text: 'text',
-    key_concepts: 'key_concepts',
-    code: 'code',
-    callout: 'callout',
-    summary: 'summary',
-
-    // New 10 types (direct match)
-    table: 'table',
-    list: 'list',
-    example: 'example',
-    analogy: 'analogy',
-    step_by_step: 'step_by_step',
-    diagram_description: 'diagram_description',
-    definition: 'definition',
-    warning: 'warning',
-    tip: 'tip',
-    quote: 'quote',
-
-    // Aliases that map to canonical types
-    paragraph: 'text',
-    note: 'callout',
-    important: 'callout',
-    concepts: 'key_concepts',
-    overview: 'summary',
-    numbered_list: 'list',
-    bulleted_list: 'list',
-    ordered_list: 'list',
-    unordered_list: 'list',
-    bullet_list: 'list',
-    worked_example: 'example',
-    comparison: 'analogy',
-    procedure: 'step_by_step',
-    steps: 'step_by_step',
-    visual: 'diagram_description',
-    diagram: 'diagram_description',
-    illustration: 'diagram_description',
-    caution: 'warning',
-    danger: 'warning',
-    best_practice: 'tip',
-    hint: 'tip',
-    advice: 'tip',
-    blockquote: 'quote',
-    citation: 'quote',
-    data_table: 'table',
-    glossary: 'definition',
-    term: 'definition',
-  };
-
-  return typeMap[type.toLowerCase()] || 'text';
-}

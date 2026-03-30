@@ -2,69 +2,25 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div
-      style={{
-        maxWidth: "700px",
-        margin: "0 auto",
-        padding: "3rem 1.5rem",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "2rem",
-          fontWeight: 700,
-          marginBottom: "0.5rem",
-        }}
-      >
+    <div className="mx-auto max-w-[700px] px-6 py-12">
+      <h1 className="mb-2 text-[2rem] font-bold">
         AI Academy Demo
       </h1>
-      <p
-        style={{
-          color: "var(--muted-foreground)",
-          fontSize: "1.05rem",
-          marginBottom: "2rem",
-        }}
-      >
+      <p className="mb-8 text-[1.05rem] text-[var(--muted-foreground)]">
         Test the AI-powered learning platform
       </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1rem",
-          marginBottom: "2.5rem",
-        }}
-      >
+      <div className="mb-10 grid grid-cols-2 gap-4">
         {/* Admin Card */}
         <Link
           href="/admin"
-          style={{
-            display: "block",
-            padding: "1.5rem",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "border-color 0.15s",
-          }}
+          className="block rounded-xl border border-[var(--border)] p-6 no-underline text-inherit transition-[border-color] duration-150"
+          aria-label="Go to Admin Panel - Upload documents, generate lessons with Gemini AI"
         >
-          <div
-            style={{
-              fontSize: "1.5rem",
-              marginBottom: "0.5rem",
-            }}
-          >
+          <div className="mb-2 text-2xl">
             Admin Panel
           </div>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "var(--muted-foreground)",
-              margin: 0,
-              lineHeight: 1.5,
-            }}
-          >
+          <p className="m-0 text-sm leading-normal text-[var(--muted-foreground)]">
             Upload documents, generate lessons with Gemini AI
           </p>
         </Link>
@@ -72,32 +28,13 @@ export default function Home() {
         {/* Student Card */}
         <Link
           href="/student"
-          style={{
-            display: "block",
-            padding: "1.5rem",
-            border: "1px solid var(--border)",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "border-color 0.15s",
-          }}
+          className="block rounded-xl border border-[var(--border)] p-6 no-underline text-inherit transition-[border-color] duration-150"
+          aria-label="Go to Student View - Learn with AI teacher powered by Claude"
         >
-          <div
-            style={{
-              fontSize: "1.5rem",
-              marginBottom: "0.5rem",
-            }}
-          >
+          <div className="mb-2 text-2xl">
             Student View
           </div>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              color: "var(--muted-foreground)",
-              margin: 0,
-              lineHeight: 1.5,
-            }}
-          >
+          <p className="m-0 text-sm leading-normal text-[var(--muted-foreground)]">
             Learn with AI teacher powered by Claude
           </p>
         </Link>
@@ -105,29 +42,14 @@ export default function Home() {
 
       {/* AI Status */}
       <div
-        style={{
-          padding: "1rem 1.25rem",
-          background: "var(--muted)",
-          borderRadius: "8px",
-          fontSize: "0.85rem",
-        }}
+        className="rounded-lg bg-[var(--muted)] px-5 py-4 text-[0.85rem]"
+        role="status"
+        aria-label="AI models currently in use"
       >
-        <div
-          style={{
-            fontWeight: 600,
-            marginBottom: "0.5rem",
-          }}
-        >
+        <div className="mb-2 font-semibold">
           AI Models in Use
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.25rem",
-            color: "var(--muted-foreground)",
-          }}
-        >
+        <div className="flex flex-col gap-1 text-[var(--muted-foreground)]">
           <span>Lesson Generation: Google Gemini 2.0 Flash</span>
           <span>AI Teacher / Chat: Anthropic Claude Sonnet</span>
         </div>

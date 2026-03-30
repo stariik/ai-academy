@@ -139,7 +139,9 @@ interface PageBudget {
 }
 
 function calculateDynamicPageCount(structure: DocumentStructure): PageBudget {
-  let targetPages = structure.estimatedTopicCount;
+  // Base: roughly 1 page per 200 words, capped by topic count
+  const wordBasedPages = Math.ceil(structure.wordCount / 200);
+  let targetPages = Math.min(structure.estimatedTopicCount, wordBasedPages);
 
   if (structure.avgWordsPerSection > 1500) {
     targetPages = Math.ceil(targetPages * 1.3);
@@ -155,10 +157,10 @@ function calculateDynamicPageCount(structure: DocumentStructure): PageBudget {
     targetPages = Math.ceil(targetPages * 0.8);
   }
 
-  targetPages = Math.max(2, targetPages);
+  targetPages = Math.max(2, Math.min(15, targetPages));
 
   const minPages = Math.max(2, Math.floor(targetPages * 0.8));
-  const maxPages = Math.ceil(targetPages * 1.2);
+  const maxPages = Math.min(25, Math.ceil(targetPages * 1.2));
 
   const tokensPerPage = 3000;
   const overheadTokens = 1000;
@@ -186,7 +188,12 @@ function detectSections(text: string): DetectedSection[] {
 
   const headingPatterns = [
     { regex: /^#{1,3}\s+(.+)/, levelFn: (m: RegExpMatchArray) => m[0].indexOf(' ') },
-    { regex: /^(\d+\.)+\s+([A-Z].{3,})/, levelFn: () => 2 },
+    // Multi-level numbered sections only (e.g., "1.1 Introduction", "2.3.1 Details")
+    // Single-level numbers (1., 2., 3.) are almost always list items, not headings
+    {
+      regex: /^(\d+\.){2,}\s+([A-Z].{3,60})$/,
+      levelFn: () => 2,
+    },
     { regex: /^[A-Z][A-Z\s]{5,80}$/, levelFn: () => 1 },
     { regex: /^Chapter\s+\d+/i, levelFn: () => 1 },
     { regex: /^Section\s+\d+/i, levelFn: () => 2 },
@@ -237,7 +244,7 @@ interface DocumentOutline {
   totalSections: number;
 }
 
-async function extractDocumentOutline(text: string): Promise<DocumentOutline> {
+export async function extractDocumentOutline(text: string): Promise<DocumentOutline> {
   // First try: structural detection from text itself
   const sections = detectSections(text);
 
@@ -1283,6 +1290,58 @@ async function analyzeDocumentChunked(
 }
 
 /**
+ * Analyze a single section of a larger document and generate a complete lesson.
+ * Used by the course generation endpoint to create one lesson per section.
+ */
+export async function analyzeSectionAsLesson(
+  sectionText: string,
+  options: {
+    targetLevel: string;
+    sectionTitle: string;
+    sectionIndex: number;
+    totalSections: number;
+    previousSectionContext?: string;
+  }
+): Promise<GeminiPagedLessonResponse> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is not set.');
+  }
+
+  const structure = analyzeDocumentStructure(sectionText);
+  const { targetPages, minPages, maxPages, outputTokens } = calculateDynamicPageCount(structure);
+
+  console.log(`[Gemini-Section-${options.sectionIndex + 1}] "${options.sectionTitle}" - ` +
+    `${structure.wordCount} words, target ${targetPages} pages`);
+
+  // For large sections, use chunked generation
+  if (sectionText.length > CHUNKED_THRESHOLD || targetPages > 12) {
+    return analyzeDocumentChunked(sectionText, { targetLevel: options.targetLevel });
+  }
+
+  // Single-call generation with section context
+  const contextPreamble = options.previousSectionContext
+    ? `\nCONTEXT: This is section ${options.sectionIndex + 1} of ${options.totalSections} in a larger course. ` +
+      `Previous section context (do NOT repeat, build on it):\n${options.previousSectionContext}\n`
+    : '';
+
+  const prompt = ANALYSIS_PROMPT
+    .replace('{targetLevel}', options.targetLevel)
+    .replace('{documentText}', contextPreamble + sectionText)
+    .replace(/\{wordCount\}/g, String(structure.wordCount))
+    .replace(/\{targetPages\}/g, String(targetPages))
+    .replace(/\{minPages\}/g, String(minPages))
+    .replace(/\{maxPages\}/g, String(maxPages));
+
+  const config = getGeminiConfig('content_generation', outputTokens);
+  const responseText = await callGeminiWithRetry(
+    prompt, config, 3, `Gemini-Section-${options.sectionIndex + 1}`
+  );
+  const parsed = parseGeminiResponse(responseText);
+  validateResponse(parsed);
+  return parsed;
+}
+
+/**
  * Analyze a document and generate a multi-page lesson using Gemini AI.
  * Automatically uses chunked generation for large documents.
  */
@@ -1437,7 +1496,13 @@ function parseGeminiResponse(responseText: string): any {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function recoverTruncatedJson(text: string): any | null {
-  // Strategy: remove the last incomplete element, then close all open brackets
+  // Strategy 1: Try recoverLastCompletePage first (most reliable for truncated pages)
+  const pageRecovery = recoverLastCompletePage(text);
+  if (pageRecovery && pageRecovery.pages && pageRecovery.pages.length > 0) {
+    return pageRecovery;
+  }
+
+  // Strategy 2: remove the last incomplete element, then close all open brackets
   let attempt = text;
 
   // Remove trailing incomplete string (unterminated)
@@ -1582,15 +1647,24 @@ function validateResponse(response: GeminiPagedLessonResponse): void {
   if (!Array.isArray(response.pages) || response.pages.length < 2) {
     throw new Error('Must include at least 2 pages');
   }
-  for (const page of response.pages) {
-    if (!page.title) throw new Error(`Page ${page.page_number} missing title`);
-    if (!Array.isArray(page.content_blocks) || page.content_blocks.length < 1) {
-      throw new Error(`Page ${page.page_number} must have at least 1 content block`);
-    }
-    // Check questions are required but we'll be lenient for recovered responses
-    if (!Array.isArray(page.check_questions)) {
-      page.check_questions = [];
-    }
+  // Filter out invalid pages and patch missing fields (common in recovered truncated responses)
+  response.pages = response.pages.filter((page, idx) => {
+    if (!page || typeof page !== 'object') return false;
+    if (!page.title) page.title = `Page ${idx + 1}`;
+    if (!page.page_number) page.page_number = idx + 1;
+    if (!Array.isArray(page.content_blocks) || page.content_blocks.length < 1) return false;
+    if (!Array.isArray(page.check_questions)) page.check_questions = [];
+    if (!Array.isArray(page.key_concepts)) page.key_concepts = [];
+    if (!page.teaching_flow) page.teaching_flow = { introduction: '', core_explanation: '', practice_hint: '', reflection_prompt: '' };
+    if (!page.difficulty_level) page.difficulty_level = 'intermediate';
+    if (!Array.isArray(page.prerequisites)) page.prerequisites = [];
+    if (!Array.isArray(page.concepts_introduced)) page.concepts_introduced = [];
+    if (!Array.isArray(page.common_misconceptions)) page.common_misconceptions = [];
+    if (!Array.isArray(page.real_world_applications)) page.real_world_applications = [];
+    return true;
+  });
+  if (response.pages.length < 1) {
+    throw new Error('No valid pages after filtering');
   }
   if (!response.summary) throw new Error('Missing required field: summary');
   // Final quiz can be empty for chunked responses (generated separately)
