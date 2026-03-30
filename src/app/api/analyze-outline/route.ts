@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       totalWords: extraction.wordCount,
       pageCount: extraction.pageCount,
       sections,
+      extractedText: extraction.text,
     });
   } catch (err) {
     console.error('[AnalyzeOutline] Error:', err);

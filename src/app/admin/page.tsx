@@ -31,6 +31,7 @@ export default function AdminPage() {
   const [sections, setSections] = useState<DetectedSection[]>([]);
   const [detectingOutline, setDetectingOutline] = useState(false);
   const [totalWords, setTotalWords] = useState(0);
+  const [extractedText, setExtractedText] = useState('');
 
   // Prompt generator chat state
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -117,6 +118,7 @@ export default function AdminPage() {
 
       setSections(data.sections);
       setTotalWords(data.totalWords);
+      setExtractedText(data.extractedText || '');
 
       // Auto-fill course name from file if empty
       if (!courseName.trim()) {
@@ -161,7 +163,7 @@ export default function AdminPage() {
     });
   };
 
-  // ---- Course Generation ----
+  // ---- Course Generation (one lesson per request to stay within Vercel 300s limit) ----
   const startGeneration = useCallback(async () => {
     if (!courseName.trim()) {
       setError('Please enter a course name.');
@@ -181,60 +183,117 @@ export default function AdminPage() {
     setStep('generating');
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('targetLevel', targetLevel);
-      formData.append('newCourseName', courseName.trim());
-      formData.append('sections', JSON.stringify(
-        sections.map(s => ({ title: s.title, startIndex: s.startIndex, endIndex: s.endIndex }))
-      ));
-
-      const response = await fetch('/api/analyze-course', {
+      // Step 1: Create the course
+      const createRes = await fetch('/api/analyze-course/create', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseName: courseName.trim(), sections }),
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(errData.error || `Server error: ${response.status}`);
+      if (!createRes.ok) {
+        const errData = await createRes.json().catch(() => ({ error: 'Failed to create course' }));
+        throw new Error(errData.error || 'Failed to create course');
       }
+      const { courseId, courseName: resolvedName } = await createRes.json();
 
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      const totalLessons = sections.length;
+      const completedLessons: CourseGenerationProgress['lessons'] = [];
+      const lessonSummaries: { position: number; title: string; summary: string; keyConcepts: string[] }[] = [];
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+      // Step 2: Generate each lesson one at a time
+      for (let i = 0; i < totalLessons; i++) {
+        const section = sections[i];
+        const sectionText = extractedText.substring(section.startIndex, section.endIndex);
 
-        const events = buffer.split('\n\n');
-        buffer = events.pop()!;
+        // Update progress: generating
+        setCourseGenProgress({
+          status: 'generating_lesson',
+          totalLessons,
+          currentLesson: i + 1,
+          currentLessonTitle: section.title,
+          courseId,
+          courseName: resolvedName,
+          lessons: completedLessons,
+        });
 
-        for (const event of events) {
-          const dataLine = event.replace(/^data: /, '');
-          if (dataLine) {
-            try {
-              const progress = JSON.parse(dataLine) as CourseGenerationProgress;
-              setCourseGenProgress(progress);
-              if (progress.status === 'error') {
-                throw new Error(progress.error || 'Course generation failed');
-              }
-            } catch (parseErr) {
-              if (parseErr instanceof Error && parseErr.message.includes('generation failed')) {
-                throw parseErr;
-              }
-            }
+        // Build context from previous lessons
+        const previousContext = lessonSummaries.length > 0
+          ? `PREVIOUS LESSONS IN THIS COURSE (do NOT repeat their content — build on it, reference their concepts):\n${
+              lessonSummaries.map(s => {
+                const concepts = s.keyConcepts.length > 0 ? ` | Concepts taught: ${s.keyConcepts.join(', ')}` : '';
+                const shortSummary = s.summary.length > 200 ? s.summary.substring(0, 200) + '...' : s.summary;
+                return `Lesson ${s.position + 1} "${s.title}": ${shortSummary}${concepts}`;
+              }).join('\n')
+            }`
+          : '';
+
+        try {
+          const res = await fetch('/api/analyze-course/generate-lesson', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sectionText,
+              sectionTitle: section.title,
+              sectionIndex: i,
+              totalSections: totalLessons,
+              targetLevel,
+              courseId,
+              fileName: selectedFile.name,
+              previousContext,
+            }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({ error: 'Lesson generation failed' }));
+            throw new Error(errData.error || 'Lesson generation failed');
           }
+
+          const result = await res.json();
+          completedLessons.push({
+            id: result.id,
+            title: result.title,
+            pages: result.pages,
+            position: i,
+          });
+
+          lessonSummaries.push({
+            position: i,
+            title: result.title,
+            summary: result.summary || '',
+            keyConcepts: result.keyConcepts || [],
+          });
+        } catch (err) {
+          console.error(`Section ${i + 1} failed:`, err);
+          completedLessons.push({
+            id: 'failed',
+            title: `${section.title} (failed)`,
+            pages: 0,
+            position: i,
+          });
+        }
+
+        // Small delay between lessons
+        if (i < totalLessons - 1) {
+          await new Promise(r => setTimeout(r, 1000));
         }
       }
+
+      // Step 3: Complete
+      setCourseGenProgress({
+        status: 'complete',
+        totalLessons,
+        currentLesson: totalLessons,
+        currentLessonTitle: '',
+        courseId,
+        courseName: resolvedName,
+        lessons: completedLessons,
+      });
 
       setStep('complete');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setStep('preview-sections');
     }
-  }, [courseName, targetLevel, sections, selectedFile]);
+  }, [courseName, targetLevel, sections, selectedFile, extractedText]);
 
   // ---- Upload drop handler ----
   const onDrop = useCallback(

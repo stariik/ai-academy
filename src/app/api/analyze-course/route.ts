@@ -13,7 +13,7 @@ import { saveLesson, createCourse } from '@/lib/supabase/db';
 import { buildLessonFromGeminiResponse } from '@/lib/lesson-builder';
 import type { CourseGenerationProgress, Lesson } from '@/types';
 
-export const maxDuration = 600;
+export const maxDuration = 300;
 
 const MIN_SECTION_WORDS = 200;
 
