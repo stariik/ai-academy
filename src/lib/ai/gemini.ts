@@ -1685,13 +1685,20 @@ function sleep(ms: number): Promise<void> {
 // Generative Lesson Creation — from outline (topic + key points)
 // ============================================================
 
-const GENERATIVE_LESSON_PROMPT = `You are an expert educational content creator and instructional designer. Your task is to CREATE a complete, detailed lesson from scratch based on a topic and key points provided below.
+const GENERATIVE_LESSON_PROMPT = `You are an expert educational content creator and instructional designer. Your task is to CREATE a complete, detailed lesson from scratch based on a topic and detailed key points provided below.
 
 IMPORTANT: You are NOT analyzing an existing document. You are GENERATING original educational content. The lesson should be comprehensive, accurate, well-structured, and engaging for adult learners.
 
 LESSON TOPIC: {lessonTitle}
-KEY POINTS TO COVER:
+
+DETAILED KEY POINTS TO COVER:
 {keyPoints}
+
+IMPORTANT — KEY POINTS CONTAIN CONTEXT: Each key point may include specific details, frameworks, tool names, examples, or angles that MUST be reflected in your lesson content. Do NOT ignore the details after the colon — they tell you exactly what to teach and how to frame it. For example:
+- "Common mistakes: being vague, no context, asking multiple things" means you MUST cover these specific mistakes, not generic ones.
+- "Key tools: ChatGPT, Claude" means you MUST mention and explain these specific tools.
+- If a key point says "RCTF framework" you MUST teach that specific framework.
+Use the details as your content blueprint — expand on them with explanations, examples, and practice exercises.
 
 LANGUAGE: Write the ENTIRE lesson in {language}. All content, questions, explanations, titles — everything must be in {language}.
 
@@ -1707,6 +1714,7 @@ INSTRUCTIONS:
 - Each page covers ONE coherent subtopic derived from the key points.
 - Distribute ALL the key points across exactly 5 pages — combine related points on the same page if needed.
 - Each page should have 200-300 words of teaching material (not more).
+- HONOR THE SPECIFICS in key points — if they mention specific tools, frameworks, numbers, or examples, USE them. Do not substitute with generic alternatives.
 - Use real-world examples, practical scenarios, and concrete explanations.
 - Build knowledge progressively — start with foundations, end with synthesis.
 - Make the content engaging and practical, not dry textbook material.
