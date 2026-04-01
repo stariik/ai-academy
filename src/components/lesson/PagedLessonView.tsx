@@ -21,12 +21,13 @@ export function PagedLessonView({
   lessonId: string;
 }) {
   const pages = lesson.pages!;
-  const totalPages = lesson.totalPages ?? pages.length;
+  const contentPages = pages.length;
+  const hasQuiz = lesson.quizQuestions.filter((q) => q.scope !== 'check').length > 0;
+  const totalPages = contentPages + (hasQuiz ? 1 : 0); // +1 for quiz page
 
   const [currentPage, setCurrentPage] = useState(1);
   const [completedPages, setCompletedPages] = useState<number[]>([]);
   const [showChat, setShowChat] = useState(true);
-  const [showQuiz, setShowQuiz] = useState(false);
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [recommended, setRecommended] = useState<Lesson | null>(null);
   const [language, setLanguage] = useState<'en' | 'ka'>('en');
@@ -148,11 +149,14 @@ export function PagedLessonView({
     loadProgress();
   }, [lessonId]);
 
-  const currentPageData = pages.find((p) => p.pageNumber === currentPage);
-  const allPagesCompleted = pages.every((p) => completedPages.includes(p.pageNumber));
+  const isQuizPage = hasQuiz && currentPage === totalPages;
+  const currentPageData = isQuizPage ? null : pages.find((p) => p.pageNumber === currentPage);
+  const allContentPagesCompleted = pages.every((p) => completedPages.includes(p.pageNumber));
 
   const canAccessPage = (pageNum: number) => {
     if (pageNum === 1) return true;
+    // Quiz page requires all content pages completed
+    if (hasQuiz && pageNum === totalPages) return allContentPagesCompleted;
     if (completedPages.includes(pageNum)) return true;
     return completedPages.includes(pageNum - 1);
   };
@@ -176,9 +180,11 @@ export function PagedLessonView({
     }
     setCompletedPages(updated);
 
-    if (pageNum < totalPages) {
+    // Auto-advance: next content page, or quiz page if last content page
+    const nextPage = pageNum + 1;
+    if (nextPage <= totalPages) {
       setTimeout(() => {
-        setCurrentPage(pageNum + 1);
+        setCurrentPage(nextPage);
         contentRef.current?.scrollTo(0, 0);
       }, 1500);
     }
@@ -257,15 +263,7 @@ export function PagedLessonView({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
               {showChat ? 'Hide Tutor' : 'AI Tutor'}
             </button>
-            {allPagesCompleted && (
-              <button
-                onClick={() => setShowQuiz(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm shadow-emerald-200 hover:bg-emerald-700 transition"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Final Quiz
-              </button>
-            )}
+            {/* Final Quiz button removed — quiz is now a page */}
           </div>
         </div>
         <div className="mt-2.5 h-1 rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow={completedPages.length} aria-valuemin={0} aria-valuemax={totalPages} aria-label="Lesson progress">
@@ -284,14 +282,29 @@ export function PagedLessonView({
             pages={pages}
             currentPage={currentPage}
             completedPages={completedPages}
-            allPagesCompleted={allPagesCompleted}
+            allPagesCompleted={allContentPagesCompleted}
             onPageClick={navigateToPage}
-            onQuizClick={() => setShowQuiz(true)}
+            onQuizClick={() => navigateToPage(totalPages)}
+            quizPageNumber={hasQuiz ? totalPages : undefined}
           />
         </aside>
 
-        {/* Center - Page content */}
-        <main ref={contentRef} className="flex-1 overflow-y-auto p-6 lg:p-8 lesson-scroll bg-gray-50/30" aria-label="Lesson content">
+        {/* Center - AI Chat (main area) */}
+        {showChat && (
+          <aside className="flex-1 border-r bg-white flex flex-col" aria-label="AI Tutor chat">
+            <ChatPanel
+              key={`page-${currentPage}`}
+              lessonId={lessonId}
+              lesson={lesson}
+              pageNumber={currentPage}
+              onUnlockCheck={() => handleCheckUnlocked(currentPage)}
+              language={language}
+            />
+          </aside>
+        )}
+
+        {/* Right panel - Page content */}
+        <main ref={contentRef} className="w-[34rem] shrink-0 overflow-y-auto p-6 lesson-scroll bg-gray-50/30" aria-label="Lesson content">
           {currentPageData ? (
             <div className="mx-auto max-w-3xl animate-fade-in-up" key={currentPage}>
               <div className="content-surface p-8 mb-8">
@@ -400,7 +413,7 @@ export function PagedLessonView({
                 </div>
               )}
 
-              {/* Check Questions */}
+              {/* Check Questions — inline on the page */}
               {currentPageData.checkQuestions.length > 0 && (
                 <div ref={checkQuestionsRef}>
                   <CheckQuestions
@@ -448,18 +461,14 @@ export function PagedLessonView({
                   <button
                     onClick={() => navigateToPage(currentPage + 1)}
                     disabled={!canAccessPage(currentPage + 1)}
-                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-200 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-300 disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+                    className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium shadow-sm transition-all disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed ${
+                      currentPage === contentPages && allContentPagesCompleted
+                        ? 'bg-linear-to-r from-emerald-600 to-blue-600 text-white shadow-emerald-200'
+                        : 'bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700'
+                    }`}
                   >
-                    Next Page
+                    {currentPage === contentPages && allContentPagesCompleted ? 'Take Final Quiz' : 'Next Page'}
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                  </button>
-                ) : allPagesCompleted ? (
-                  <button
-                    onClick={() => setShowQuiz(true)}
-                    className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-emerald-600 to-blue-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-emerald-200 hover:shadow-md hover:shadow-emerald-300 transition-all"
-                  >
-                    Take Final Quiz
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </button>
                 ) : (
                   <button disabled className="inline-flex items-center gap-2 rounded-full bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed">
@@ -467,59 +476,56 @@ export function PagedLessonView({
                   </button>
                 )}
               </div>
-
-              {allPagesCompleted && (
-                <div className="mt-6 bg-linear-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4 text-center">
-                  <p className="font-semibold text-green-800 mb-1">All pages completed!</p>
-                  <p className="text-sm text-green-700 mb-3">
-                    You&apos;ve covered all the material. Ready to test your knowledge?
+            </div>
+          ) : isQuizPage ? (
+            /* ═══ QUIZ PAGE ═══ */
+            <div className="mx-auto max-w-3xl animate-fade-in-up" key="quiz-page">
+              <div className="content-surface p-8 mb-8">
+                <div className="mb-8 pb-6 border-b border-gray-100">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-600">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Final Quiz
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Test Your Knowledge</h2>
+                  <p className="mt-2 text-sm text-gray-500">
+                    {lesson.quizQuestions.filter((q) => q.scope !== 'check').length} questions covering everything you learned in this lesson.
                   </p>
-                  <button
-                    onClick={() => setShowQuiz(true)}
-                    className="rounded-lg bg-green-600 px-6 py-2 text-sm font-medium text-white hover:bg-green-700 transition"
-                  >
-                    Take Final Quiz ({lesson.quizQuestions.length} questions)
-                  </button>
                 </div>
-              )}
 
-              {recommended && recommended.id !== lessonId && (
-                <div className="mt-6 bg-linear-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 text-center">
-                  <p className="text-sm text-gray-600 mb-2">Next recommended lesson:</p>
-                  <Link href={`/student/lesson/${recommended.id}`} className="text-blue-600 font-semibold hover:underline">
-                    {recommended.title} &rarr;
+                <QuizModal
+                  lessonId={lessonId}
+                  questions={lesson.quizQuestions.filter((q) => q.scope !== 'check')}
+                  onClose={() => navigateToPage(contentPages)}
+                  onComplete={fetchRecommendation}
+                  inline
+                />
+              </div>
+
+              {/* Navigation back */}
+              <div className="mt-6 flex items-center justify-between border-t pt-8">
+                <button
+                  onClick={() => navigateToPage(currentPage - 1)}
+                  className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                  Back to lesson
+                </button>
+                {recommended && recommended.id !== lessonId && (
+                  <Link href={`/student/lesson/${recommended.id}`} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition">
+                    Next Lesson
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                   </Link>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
             <div className="text-center text-gray-500 mt-10">Page not found</div>
           )}
         </main>
 
-        {/* Right panel - AI Chat */}
-        {showChat && (
-          <aside className="w-96 shrink-0 border-l bg-white flex flex-col" aria-label="AI Tutor chat">
-            <ChatPanel
-              key={`page-${currentPage}`}
-              lessonId={lessonId}
-              lesson={lesson}
-              pageNumber={currentPage}
-              onUnlockCheck={() => handleCheckUnlocked(currentPage)}
-              language={language}
-            />
-          </aside>
-        )}
       </div>
-
-      {showQuiz && (
-        <QuizModal
-          lessonId={lessonId}
-          questions={lesson.quizQuestions.filter((q) => q.scope !== 'check')}
-          onClose={() => setShowQuiz(false)}
-          onComplete={fetchRecommendation}
-        />
-      )}
     </div>
   );
 }

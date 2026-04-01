@@ -8,11 +8,13 @@ export function QuizModal({
   questions,
   onClose,
   onComplete,
+  inline = false,
 }: {
   lessonId: string;
   questions: QuizQuestion[];
   onClose: () => void;
   onComplete?: () => void;
+  inline?: boolean;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -28,14 +30,15 @@ export function QuizModal({
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
   };
 
-  // Escape key to close + focus trap
+  // Escape key to close (modal mode only)
   useEffect(() => {
+    if (inline) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, inline]);
 
   const handleSubmit = async () => {
     setGrading(true);
@@ -67,8 +70,8 @@ export function QuizModal({
   // Results view
   if (submitted && result) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center quiz-backdrop" role="dialog" aria-modal="true" aria-label="Quiz results">
-        <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in">
+      <div className={inline ? '' : 'fixed inset-0 z-50 flex items-center justify-center quiz-backdrop'} role={inline ? undefined : 'dialog'} aria-modal={inline ? undefined : true} aria-label="Quiz results">
+        <div className={inline ? '' : 'mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in'}>
           <div className="p-6">
             {/* Score header */}
             <div className="text-center mb-6 animate-scale-in">
@@ -183,8 +186,8 @@ export function QuizModal({
 
   // Quiz taking view
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center quiz-backdrop" role="dialog" aria-modal="true" aria-labelledby="quiz-title">
-      <div className="mx-4 w-full max-w-2xl rounded-xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in">
+    <div className={inline ? '' : 'fixed inset-0 z-50 flex items-center justify-center quiz-backdrop'} role={inline ? undefined : 'dialog'} aria-modal={inline ? undefined : true} aria-labelledby="quiz-title">
+      <div className={inline ? '' : 'mx-4 w-full max-w-2xl rounded-xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in'}>
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">

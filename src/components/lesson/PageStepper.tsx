@@ -9,6 +9,7 @@ export function PageStepper({
   allPagesCompleted,
   onPageClick,
   onQuizClick,
+  quizPageNumber,
 }: {
   pages: LessonPage[];
   currentPage: number;
@@ -16,6 +17,7 @@ export function PageStepper({
   allPagesCompleted: boolean;
   onPageClick: (pageNum: number) => void;
   onQuizClick: () => void;
+  quizPageNumber?: number;
 }) {
   const sortedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
 
@@ -77,13 +79,17 @@ export function PageStepper({
       </nav>
 
       {/* Final Quiz entry */}
+      {quizPageNumber && (
       <div className="mt-4 pt-4 border-t">
         <button
-          onClick={onQuizClick}
+          onClick={() => quizPageNumber ? onPageClick(quizPageNumber) : onQuizClick()}
           disabled={!allPagesCompleted}
           aria-label={`Final Quiz${allPagesCompleted ? '' : ' (locked - complete all pages first)'}`}
+          aria-current={currentPage === quizPageNumber ? 'page' : undefined}
           className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left text-sm transition ${
-            allPagesCompleted
+            currentPage === quizPageNumber
+              ? 'bg-emerald-50 font-medium text-emerald-700 page-active-glow'
+              : allPagesCompleted
               ? 'bg-linear-to-r from-emerald-50 to-blue-50 text-emerald-700 font-medium ring-1 ring-inset ring-emerald-200 hover:ring-emerald-300'
               : 'text-gray-400 cursor-not-allowed bg-gray-50/50'
           }`}
@@ -102,6 +108,7 @@ export function PageStepper({
           <span>Final Quiz</span>
         </button>
       </div>
+      )}
 
       {/* Progress */}
       <div className="mt-6 pt-4 border-t">

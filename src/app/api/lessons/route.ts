@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getAllLessons, saveLesson } from '@/lib/supabase/db';
+import { getAllLessons, saveLesson, deleteAllLessons } from '@/lib/supabase/db';
 import { Lesson } from '@/types';
 
 // GET /api/lessons - Return all lessons
@@ -37,4 +37,11 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+}
+
+// DELETE /api/lessons - Delete all lessons
+export async function DELETE() {
+  const supabase = await createClient();
+  const count = await deleteAllLessons(supabase);
+  return NextResponse.json({ success: true, deleted: count });
 }

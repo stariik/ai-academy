@@ -1644,8 +1644,8 @@ function validateResponse(response: GeminiPagedLessonResponse): void {
   if (!Array.isArray(response.learning_objectives) || response.learning_objectives.length === 0) {
     throw new Error('Must include at least one learning objective');
   }
-  if (!Array.isArray(response.pages) || response.pages.length < 2) {
-    throw new Error('Must include at least 2 pages');
+  if (!Array.isArray(response.pages) || response.pages.length < 1) {
+    throw new Error('Must include at least 1 page');
   }
   // Filter out invalid pages and patch missing fields (common in recovered truncated responses)
   response.pages = response.pages.filter((page, idx) => {
@@ -1679,4 +1679,159 @@ function validateResponse(response: GeminiPagedLessonResponse): void {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ============================================================
+// Generative Lesson Creation — from outline (topic + key points)
+// ============================================================
+
+const GENERATIVE_LESSON_PROMPT = `You are an expert educational content creator and instructional designer. Your task is to CREATE a complete, detailed lesson from scratch based on a topic and key points provided below.
+
+IMPORTANT: You are NOT analyzing an existing document. You are GENERATING original educational content. The lesson should be comprehensive, accurate, well-structured, and engaging for adult learners.
+
+LESSON TOPIC: {lessonTitle}
+KEY POINTS TO COVER:
+{keyPoints}
+
+LANGUAGE: Write the ENTIRE lesson in {language}. All content, questions, explanations, titles — everything must be in {language}.
+
+TARGET DURATION: exactly 15 minutes of learning time.
+
+CRITICAL PAGE LIMIT: Generate EXACTLY 5 pages. Not more, not less. Do NOT exceed 5 pages under any circumstances.
+Each page takes ~3 minutes (reading + understanding + answering check questions). 5 pages × 3 min = 15 min.
+
+{previousContext}
+
+INSTRUCTIONS:
+- Create EXACTLY 5 pages. This is a hard limit — never generate more than 5 pages.
+- Each page covers ONE coherent subtopic derived from the key points.
+- Distribute ALL the key points across exactly 5 pages — combine related points on the same page if needed.
+- Each page should have 200-300 words of teaching material (not more).
+- Use real-world examples, practical scenarios, and concrete explanations.
+- Build knowledge progressively — start with foundations, end with synthesis.
+- Make the content engaging and practical, not dry textbook material.
+- Keep content concise and focused — quality over quantity.
+
+CONTENT BLOCK TYPES — Use a VARIETY (at least 3 different types per page):
+- "heading": Page/section title
+- "text": Explanatory paragraphs (use markdown formatting)
+- "definition": Key terms. Set metadata.term
+- "example": Worked examples. Set metadata.title
+- "analogy": Relatable comparisons for abstract concepts
+- "code": Code/commands if relevant
+- "table": Comparisons. Set metadata.headers (string[]) and metadata.rows (string[][])
+- "list": Lists. Set metadata.ordered (boolean)
+- "step_by_step": Procedures. Set metadata.steps (string[])
+- "tip": Best practices
+- "warning": Common mistakes/pitfalls
+- "diagram_description": Visual descriptions
+- "callout": Important notes
+- "summary": Page summaries
+
+PEDAGOGICAL REQUIREMENTS per page:
+- "teaching_flow": {"introduction": "hook + connection to previous", "core_explanation": "main concept label", "practice_hint": "what to try", "reflection_prompt": "metacognitive question"}
+- "difficulty_level": "foundational" | "intermediate" | "advanced" | "synthesis"
+- "prerequisites": concept_ids from previous pages (empty for page 1)
+- "concepts_introduced": new concept_ids taught on this page
+- "bridge_from_previous": transition from prior page (null for page 1)
+- "common_misconceptions": typical misunderstandings
+- "real_world_applications": practical uses
+
+CHECK QUESTIONS (per page):
+- 2 questions per page testing THAT page's content.
+- Types: mcq, true_false, ordering, fill_in_blank, matching
+- Each MUST include "bloom_level": remember | understand | apply | analyze
+- For mcq: exactly 4 plausible options. For true_false: ["True", "False"]. For ordering: 3-6 items, correct_answer comma-separated.
+- For matching: options = terms, metadata.matches = {"term": "definition"}, correct_answer = JSON mapping.
+
+FINAL QUIZ: 5-8 questions covering the whole lesson.
+- Mix of types. Each with bloom_level. Points: 10.
+- Bloom distribution: 15% remember, 25% understand, 25% apply, 20% analyze, 15% evaluate/create.
+
+Respond with this exact JSON structure:
+{
+  "title": "Lesson title in {language}",
+  "description": "2-3 sentence description",
+  "learning_objectives": ["Students will be able to..."],
+  "pages": [
+    {
+      "page_number": 1,
+      "title": "Page title",
+      "content_blocks": [
+        {"type": "heading", "content": "..."},
+        {"type": "text", "content": "..."},
+        {"type": "example", "content": "...", "metadata": {"title": "..."}}
+      ],
+      "key_concepts": [{"term": "...", "definition": "..."}],
+      "teaching_flow": {"introduction": "...", "core_explanation": "...", "practice_hint": "...", "reflection_prompt": "..."},
+      "prerequisites": [],
+      "concepts_introduced": ["concept_id"],
+      "difficulty_level": "foundational",
+      "bridge_from_previous": null,
+      "common_misconceptions": ["..."],
+      "real_world_applications": ["..."],
+      "check_questions": [
+        {"question": "...", "type": "mcq", "options": ["A","B","C","D"], "correct_answer": "A", "explanation": "...", "difficulty": "easy", "points": 5, "bloom_level": "remember"}
+      ]
+    }
+  ],
+  "summary": "3-5 sentence lesson summary",
+  "final_quiz_questions": [
+    {"question": "...", "type": "mcq", "options": ["A","B","C","D"], "correct_answer": "A", "explanation": "...", "difficulty": "medium", "points": 10, "bloom_level": "apply"}
+  ],
+  "concept_map": [{"concept_id": "...", "label": "...", "prerequisite_ids": []}],
+  "learning_path": ["concept_id_1", "concept_id_2"],
+  "difficulty": "beginner",
+  "estimated_duration_minutes": 15
+}
+
+Respond ONLY with the JSON object. No additional text.`;
+
+/**
+ * Generate a lesson from scratch given a topic and key points.
+ * Used for the outline-based course creation flow.
+ */
+export async function generateLessonFromOutline(options: {
+  lessonTitle: string;
+  keyPoints: string[];
+  language: string;
+  lessonIndex: number;
+  totalLessons: number;
+  previousLessonContext?: string;
+}): Promise<GeminiPagedLessonResponse> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY environment variable is not set.');
+  }
+
+  const keyPointsFormatted = options.keyPoints
+    .map((kp, i) => `${i + 1}. ${kp}`)
+    .join('\n');
+
+  const contextBlock = options.previousLessonContext
+    ? `\nCONTEXT: This is lesson ${options.lessonIndex + 1} of ${options.totalLessons} in a course.\n` +
+      `Previous lessons covered (do NOT repeat — build on this knowledge):\n${options.previousLessonContext}\n`
+    : '';
+
+  const prompt = GENERATIVE_LESSON_PROMPT
+    .replace(/\{lessonTitle\}/g, options.lessonTitle)
+    .replace(/\{keyPoints\}/g, keyPointsFormatted)
+    .replace(/\{language\}/g, options.language)
+    .replace(/\{previousContext\}/g, contextBlock);
+
+  // 5 pages with pedagogical fields, check questions, examples, final quiz.
+  // Georgian/non-Latin text uses ~2x more tokens per word.
+  // ~5000 tokens per page + 4000 for quiz/metadata = ~29k. Cap at 32k to prevent over-generation.
+  const outputTokens = 32_768;
+  const config = getGeminiConfig('content_generation', outputTokens);
+
+  console.log(`[Gemini-Generate-${options.lessonIndex + 1}] "${options.lessonTitle}" — ` +
+    `${options.keyPoints.length} key points, language=${options.language}, tokens=${outputTokens}`);
+
+  const responseText = await callGeminiWithRetry(
+    prompt, config, 3, `Gemini-Generate-${options.lessonIndex + 1}`
+  );
+
+  const parsed = parseGeminiResponse(responseText);
+  validateResponse(parsed);
+  return parsed;
 }

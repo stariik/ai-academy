@@ -426,10 +426,24 @@ export async function updateCourse(
 }
 
 export async function deleteCourse(supabase: SupabaseClient, id: string): Promise<boolean> {
-  // Unlink lessons first (set course_id to null)
-  await supabase.from('lessons').update({ course_id: null, position_in_course: null }).eq('course_id', id);
+  // Delete all lessons belonging to this course (cascade deletes their content_blocks, quiz_questions, lesson_pages)
+  const { data: lessons } = await supabase.from('lessons').select('id').eq('course_id', id);
+  if (lessons && lessons.length > 0) {
+    for (const lesson of lessons) {
+      await deleteLesson(supabase, lesson.id);
+    }
+  }
   const { error } = await supabase.from('courses').delete().eq('id', id);
   return !error;
+}
+
+export async function deleteAllLessons(supabase: SupabaseClient): Promise<number> {
+  const { data: lessons } = await supabase.from('lessons').select('id');
+  if (!lessons || lessons.length === 0) return 0;
+  for (const lesson of lessons) {
+    await deleteLesson(supabase, lesson.id);
+  }
+  return lessons.length;
 }
 
 // ============================================================

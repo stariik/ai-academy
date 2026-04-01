@@ -6,7 +6,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { CourseGenerationProgress } from '@/types';
 
-type AdminStep = 'choose' | 'prompt-chat' | 'upload' | 'preview-sections' | 'generating' | 'complete';
+type AdminStep = 'choose' | 'prompt-chat' | 'upload' | 'preview-sections' | 'generating' | 'complete'
+  | 'outline-upload' | 'outline-preview' | 'outline-generating';
 
 type DetectedSection = {
   id: string;
@@ -15,6 +16,12 @@ type DetectedSection = {
   endIndex: number;
   wordCount: number;
   preview: string;
+};
+
+type OutlineLesson = {
+  id: string;
+  title: string;
+  keyPoints: string[];
 };
 
 export default function AdminPage() {
@@ -32,6 +39,11 @@ export default function AdminPage() {
   const [detectingOutline, setDetectingOutline] = useState(false);
   const [totalWords, setTotalWords] = useState(0);
   const [extractedText, setExtractedText] = useState('');
+
+  // Outline-based generation state
+  const [outlineLessons, setOutlineLessons] = useState<OutlineLesson[]>([]);
+  const [outlineLanguage, setOutlineLanguage] = useState('English');
+  const [parsingOutline, setParsingOutline] = useState(false);
 
   // Prompt generator chat state
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -295,6 +307,161 @@ export default function AdminPage() {
     }
   }, [courseName, targetLevel, sections, selectedFile, extractedText]);
 
+  // ---- Outline Upload Handler ----
+  const handleOutlineUpload = useCallback(async (file: File) => {
+    setParsingOutline(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/analyze-course/parse-outline', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to parse outline');
+
+      setOutlineLessons(data.lessons);
+      if (!courseName.trim()) {
+        setCourseName(file.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' '));
+      }
+      setStep('outline-preview');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse outline');
+    } finally {
+      setParsingOutline(false);
+    }
+  }, [courseName]);
+
+  // ---- Split dense lessons into 15-min chunks ----
+  // 3-5 key points → 1 lesson, 6-8 → 2 lessons, 9-12 → 3 lessons, etc.
+  const splitLessonsForGeneration = (lessons: OutlineLesson[]): OutlineLesson[] => {
+    const result: OutlineLesson[] = [];
+    for (const lesson of lessons) {
+      const kpCount = lesson.keyPoints.length;
+      const parts = Math.max(1, Math.ceil(kpCount / 5));
+
+      if (parts === 1) {
+        result.push(lesson);
+      } else {
+        const perPart = Math.ceil(kpCount / parts);
+        for (let p = 0; p < parts; p++) {
+          const partKPs = lesson.keyPoints.slice(p * perPart, (p + 1) * perPart);
+          const suffix = parts === 2
+            ? (p === 0 ? ' — Part 1' : ' — Part 2')
+            : ` — Part ${p + 1}`;
+          result.push({
+            id: `${lesson.id}-part${p + 1}`,
+            title: `${lesson.title}${suffix}`,
+            keyPoints: partKPs,
+          });
+        }
+      }
+    }
+    return result;
+  };
+
+  // ---- Outline Course Generation ----
+  const startOutlineGeneration = useCallback(async () => {
+    if (!courseName.trim()) { setError('Please enter a course name.'); return; }
+    if (outlineLessons.length === 0) { setError('No lessons to generate.'); return; }
+
+    setError(null);
+    setCourseGenProgress(null);
+    setStep('outline-generating');
+
+    try {
+      // Split dense lessons into 15-min parts
+      const expandedLessons = splitLessonsForGeneration(outlineLessons);
+
+      // Step 1: Create the course
+      const createRes = await fetch('/api/analyze-course/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseName: courseName.trim(),
+          sections: expandedLessons.map((l, i) => ({ id: l.id, title: l.title, startIndex: i, endIndex: i, wordCount: l.keyPoints.length * 50 })),
+        }),
+      });
+      if (!createRes.ok) throw new Error('Failed to create course');
+      const { courseId, courseName: resolvedName } = await createRes.json();
+
+      const totalLessons = expandedLessons.length;
+      const completedLessons: CourseGenerationProgress['lessons'] = [];
+      const lessonSummaries: { position: number; title: string; summary: string; keyConcepts: string[] }[] = [];
+
+      // Step 2: Generate each lesson
+      for (let i = 0; i < totalLessons; i++) {
+        const lesson = expandedLessons[i];
+
+        setCourseGenProgress({
+          status: 'generating_lesson',
+          totalLessons,
+          currentLesson: i + 1,
+          currentLessonTitle: lesson.title,
+          courseId,
+          courseName: resolvedName,
+          lessons: completedLessons,
+        });
+
+        const previousContext = lessonSummaries.length > 0
+          ? lessonSummaries.map(s => {
+              const concepts = s.keyConcepts.length > 0 ? ` | Concepts: ${s.keyConcepts.join(', ')}` : '';
+              const short = s.summary.length > 200 ? s.summary.substring(0, 200) + '...' : s.summary;
+              return `Lesson ${s.position + 1} "${s.title}": ${short}${concepts}`;
+            }).join('\n')
+          : '';
+
+        try {
+          const res = await fetch('/api/analyze-course/generate-from-outline', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lessonTitle: lesson.title,
+              keyPoints: lesson.keyPoints,
+              language: outlineLanguage,
+              lessonIndex: i,
+              totalLessons,
+              courseId,
+              previousContext,
+            }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({ error: 'Generation failed' }));
+            throw new Error(errData.error || 'Generation failed');
+          }
+
+          const result = await res.json();
+          completedLessons.push({ id: result.id, title: result.title, pages: result.pages, position: i });
+          lessonSummaries.push({ position: i, title: result.title, summary: result.summary || '', keyConcepts: result.keyConcepts || [] });
+        } catch (err) {
+          console.error(`Lesson ${i + 1} failed:`, err);
+          completedLessons.push({ id: 'failed', title: `${lesson.title} (failed)`, pages: 0, position: i });
+        }
+
+        if (i < totalLessons - 1) await new Promise(r => setTimeout(r, 1500));
+      }
+
+      setCourseGenProgress({
+        status: 'complete',
+        totalLessons,
+        currentLesson: totalLessons,
+        currentLessonTitle: '',
+        courseId,
+        courseName: resolvedName,
+        lessons: completedLessons,
+      });
+      setStep('complete');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setStep('outline-preview');
+    }
+  }, [courseName, outlineLessons, outlineLanguage]);
+
   // ---- Upload drop handler ----
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -335,6 +502,8 @@ export default function AdminPage() {
     setSections([]);
     setSelectedFile(null);
     setTotalWords(0);
+    setOutlineLessons([]);
+    setOutlineLanguage('English');
   };
 
   return (
@@ -354,7 +523,19 @@ export default function AdminPage() {
             STEP: CHOOSE
             ============================================================ */}
         {step === 'choose' && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button
+              onClick={() => setStep('outline-upload')}
+              className="bg-white border-2 border-orange-200 rounded-xl p-8 text-left hover:border-orange-400 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-4 group-hover:bg-orange-200 transition">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Course Outline</h3>
+              <p className="text-sm text-gray-500">Upload a PDF with lesson names &amp; key points. AI generates full lessons from scratch.</p>
+              <span className="inline-block mt-2 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">Recommended</span>
+            </button>
+
             <button
               onClick={() => setStep('prompt-chat')}
               className="bg-white border border-gray-200 rounded-xl p-8 text-left hover:border-blue-300 hover:shadow-md transition-all group"
@@ -373,9 +554,268 @@ export default function AdminPage() {
               <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-4 group-hover:bg-green-200 transition">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">I already have a PDF</h3>
-              <p className="text-sm text-gray-500">Upload a course PDF. The system detects chapters and lets you review before generating.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">I already have a full PDF</h3>
+              <p className="text-sm text-gray-500">Upload a complete course PDF. The system analyzes content and restructures it into lessons.</p>
             </button>
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: OUTLINE UPLOAD
+            ============================================================ */}
+        {step === 'outline-upload' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <button onClick={() => setStep('choose')} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">Upload Course Outline</h2>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-8">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Course Name</label>
+                <input
+                  type="text"
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  placeholder="e.g. Introduction to AI and Vibe Coding"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Language</label>
+                <select
+                  value={outlineLanguage}
+                  onChange={(e) => setOutlineLanguage(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                >
+                  <option value="English">English</option>
+                  <option value="Georgian">Georgian (ქართული)</option>
+                  <option value="Spanish">Spanish</option>
+                  <option value="French">French</option>
+                  <option value="German">German</option>
+                  <option value="Russian">Russian</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Upload Outline (PDF or DOCX)</label>
+                <label className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${parsingOutline ? 'border-orange-300 bg-orange-50' : 'border-gray-300 hover:border-orange-400 hover:bg-orange-50/50'}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    disabled={parsingOutline}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleOutlineUpload(f);
+                    }}
+                  />
+                  {parsingOutline ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-600 rounded-full animate-spin" />
+                      <span className="text-sm text-gray-500">Parsing outline...</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-3">
+                      <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                      <span className="text-sm text-gray-500">Click to upload or drag &amp; drop (PDF or DOCX)</span>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-amber-800 mb-2">Expected PDF format:</p>
+                <pre className="text-xs text-amber-700 whitespace-pre-wrap font-mono">{`Lesson 1: Introduction to AI
+- What is Artificial Intelligence
+- Brief history of AI development
+- Types of AI: narrow vs general
+- AI in everyday life
+
+Lesson 2: Prompt Engineering Basics
+- What is a prompt
+- Structure of effective prompts
+- Common prompting mistakes
+- Practice examples`}</pre>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: OUTLINE PREVIEW
+            ============================================================ */}
+        {step === 'outline-preview' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setStep('outline-upload')} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h2 className="text-xl font-bold text-gray-900">Review Lessons ({outlineLessons.length})</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">Language: <strong>{outlineLanguage}</strong></span>
+                <button
+                  onClick={startOutlineGeneration}
+                  disabled={outlineLessons.length === 0}
+                  className="px-6 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition"
+                >
+                  Generate {outlineLessons.reduce((sum, l) => sum + Math.max(1, Math.ceil(l.keyPoints.length / 5)), 0)} Lessons
+                </button>
+              </div>
+            </div>
+
+            {/* Course name edit */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={courseName}
+                onChange={(e) => setCourseName(e.target.value)}
+                className="text-lg font-semibold text-gray-900 border-b-2 border-transparent focus:border-orange-500 focus:outline-none w-full py-1 bg-transparent"
+                placeholder="Course name..."
+              />
+            </div>
+
+            <div className="space-y-3">
+              {outlineLessons.map((lesson, i) => (
+                <div key={lesson.id} className="bg-white border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 text-orange-700 text-sm font-bold flex items-center justify-center">{i + 1}</span>
+                      <input
+                        type="text"
+                        value={lesson.title}
+                        onChange={(e) => {
+                          setOutlineLessons(prev => {
+                            const next = [...prev];
+                            next[i] = { ...next[i], title: e.target.value };
+                            return next;
+                          });
+                        }}
+                        className="text-base font-semibold text-gray-900 border-b border-transparent focus:border-orange-400 focus:outline-none bg-transparent"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setOutlineLessons(prev => prev.filter((_, idx) => idx !== i))}
+                      className="text-gray-300 hover:text-red-500 transition p-1"
+                      title="Remove lesson"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+
+                  <div className="ml-11 space-y-1">
+                    {lesson.keyPoints.map((kp, j) => (
+                      <div key={j} className="flex items-start gap-2 group">
+                        <span className="text-gray-300 mt-0.5 text-sm">•</span>
+                        <input
+                          type="text"
+                          value={kp}
+                          onChange={(e) => {
+                            setOutlineLessons(prev => {
+                              const next = [...prev];
+                              const kps = [...next[i].keyPoints];
+                              kps[j] = e.target.value;
+                              next[i] = { ...next[i], keyPoints: kps };
+                              return next;
+                            });
+                          }}
+                          className="flex-1 text-sm text-gray-600 border-b border-transparent focus:border-gray-300 focus:outline-none bg-transparent"
+                        />
+                        <button
+                          onClick={() => {
+                            setOutlineLessons(prev => {
+                              const next = [...prev];
+                              next[i] = { ...next[i], keyPoints: next[i].keyPoints.filter((_, idx) => idx !== j) };
+                              return next;
+                            });
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setOutlineLessons(prev => {
+                          const next = [...prev];
+                          next[i] = { ...next[i], keyPoints: [...next[i].keyPoints, ''] };
+                          return next;
+                        });
+                      }}
+                      className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
+                    >
+                      + Add key point
+                    </button>
+                  </div>
+
+                  <div className="ml-11 mt-2 text-xs text-gray-400">
+                    {lesson.keyPoints.length} key points
+                    {lesson.keyPoints.length > 5 ? (
+                      <span className="text-orange-600 font-medium"> &middot; Will split into {Math.ceil(lesson.keyPoints.length / 5)} lessons ({Math.ceil(lesson.keyPoints.length / 5) * 15} min)</span>
+                    ) : (
+                      <> &middot; ~15 min &middot; 5 pages</>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Estimated totals */}
+            {(() => {
+              const expanded = outlineLessons.reduce((sum, l) => sum + Math.max(1, Math.ceil(l.keyPoints.length / 5)), 0);
+              const hasSplits = expanded > outlineLessons.length;
+              return (
+                <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4 text-sm text-orange-800">
+                  <strong>{expanded} lessons</strong>
+                  {hasSplits && <span className="text-gray-500"> (from {outlineLessons.length} topics)</span>}
+                  {' '}&middot; ~{expanded * 15} min total &middot; ~{expanded * 5} pages
+                  {hasSplits && <div className="mt-1 text-xs text-orange-600">Some lessons with 6+ key points will be split into multiple 15-min parts.</div>}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: OUTLINE GENERATING (reuses the same progress UI)
+            ============================================================ */}
+        {step === 'outline-generating' && courseGenProgress && (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Generating Course...</h2>
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">Lesson {courseGenProgress.currentLesson} of {courseGenProgress.totalLessons}</span>
+                  <span className="font-medium text-gray-900">{Math.round((courseGenProgress.currentLesson / courseGenProgress.totalLessons) * 100)}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-3">
+                  <div className="bg-orange-500 h-3 rounded-full transition-all duration-500" style={{ width: `${(courseGenProgress.currentLesson / courseGenProgress.totalLessons) * 100}%` }} />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-sm text-gray-600 mb-4">
+                <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-600 rounded-full animate-spin" />
+                Generating: <strong className="text-gray-900">{courseGenProgress.currentLessonTitle}</strong>
+              </div>
+
+              {courseGenProgress.lessons.length > 0 && (
+                <div className="space-y-2 border-t border-gray-100 pt-4">
+                  {courseGenProgress.lessons.map((l, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      <span className="text-gray-700">{l.title}</span>
+                      <span className="text-gray-400 text-xs">({l.pages} pages)</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

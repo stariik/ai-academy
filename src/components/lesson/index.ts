@@ -5,3 +5,4 @@ export { CheckQuestions } from './CheckQuestions';
 export { PageStepper } from './PageStepper';
 export { PagedLessonView } from './PagedLessonView';
 export { LegacyLessonView } from './LegacyLessonView';
+export { ConversationalLessonView } from './ConversationalLessonView';

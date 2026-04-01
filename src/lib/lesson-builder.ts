@@ -146,7 +146,7 @@ export function buildLessonFromGeminiResponse(
     quizQuestions,
     sourceDocument: sourceFileName,
     difficulty: geminiResponse.difficulty,
-    estimatedDurationMinutes: geminiResponse.estimated_duration_minutes,
+    estimatedDurationMinutes: pages.length * 3, // ~3 min per page (reading + check questions)
     createdAt: new Date().toISOString(),
     status: 'draft',
     tags: [],

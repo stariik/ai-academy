@@ -92,6 +92,40 @@ export default function AdminCourseDetailPage({
     }
   };
 
+  const togglePublish = async (lessonId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
+    try {
+      await fetch(`/api/lessons/${lessonId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      fetchCourse();
+    } catch (err) {
+      console.error('Failed to toggle publish:', err);
+    }
+  };
+
+  const publishAll = async () => {
+    if (!course) return;
+    const drafts = course.lessons.filter(l => l.status !== 'published');
+    if (drafts.length === 0) return;
+    try {
+      await Promise.all(
+        drafts.map(l =>
+          fetch(`/api/lessons/${l.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'published' }),
+          })
+        )
+      );
+      fetchCourse();
+    } catch (err) {
+      console.error('Failed to publish all:', err);
+    }
+  };
+
   const moveLesson = async (lessonId: string, direction: 'up' | 'down') => {
     if (!course) return;
     const lessons = [...course.lessons];
@@ -197,9 +231,19 @@ export default function AdminCourseDetailPage({
 
         {/* Course Lessons */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Lessons ({course.lessons.length})
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Lessons ({course.lessons.length})
+            </h2>
+            {course.lessons.some(l => l.status !== 'published') && (
+              <button
+                onClick={publishAll}
+                className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+              >
+                Publish All
+              </button>
+            )}
+          </div>
           {course.lessons.length === 0 ? (
             <p className="text-sm text-gray-500">No lessons in this course yet. Add lessons below.</p>
           ) : (
@@ -222,6 +266,16 @@ export default function AdminCourseDetailPage({
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    <button
+                      onClick={() => togglePublish(lesson.id, lesson.status)}
+                      className={`px-2 py-1 text-xs rounded ${
+                        lesson.status === 'published'
+                          ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                          : 'bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100'
+                      }`}
+                    >
+                      {lesson.status === 'published' ? 'Published' : 'Publish'}
+                    </button>
                     <button
                       onClick={() => moveLesson(lesson.id, 'up')}
                       disabled={i === 0}

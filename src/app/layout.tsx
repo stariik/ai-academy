@@ -1,6 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +13,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Academy - Demo",
-  description: "AI-powered learning platform demo",
+  title: "AI Academy - Personalized AI Learning for Everyone",
+  description:
+    "Learn AI tools, build AI agents, and create apps with vibe coding. Personalized lessons for every age.",
+  openGraph: {
+    title: "AI Academy - Personalized AI Learning",
+    description:
+      "Learn AI tools, build AI agents, and create apps with vibe coding. Personalized lessons for every age.",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -28,35 +41,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <nav
-          className="sticky top-0 z-50 flex items-center justify-between border-b border-[var(--border)] bg-[var(--background)] px-6 py-3"
-          aria-label="Main navigation"
-        >
-          <Link
-            href="/"
-            className="text-lg font-bold no-underline text-[var(--foreground)]"
-            aria-label="AI Academy home"
-          >
-            AI Academy
-          </Link>
-          <div className="flex gap-6">
-            <Link
-              href="/admin"
-              className="text-sm font-medium no-underline text-[var(--muted-foreground)]"
-              aria-label="Navigate to Admin panel"
-            >
-              Admin
-            </Link>
-            <Link
-              href="/student"
-              className="text-sm font-medium no-underline text-[var(--muted-foreground)]"
-              aria-label="Navigate to Student view"
-            >
-              Student
-            </Link>
-          </div>
-        </nav>
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   );

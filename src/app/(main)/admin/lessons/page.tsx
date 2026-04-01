@@ -53,6 +53,19 @@ export default function AdminLessonsPage() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!confirm(`Delete ALL ${lessons.length} lessons? This cannot be undone.`)) return;
+    if (!confirm('Are you sure? This will permanently delete all lessons and their content.')) return;
+    try {
+      const res = await fetch('/api/lessons', { method: 'DELETE' });
+      if (res.ok) {
+        fetchLessons();
+      }
+    } catch (err) {
+      console.error('Failed to delete all lessons:', err);
+    }
+  };
+
   const btnStyle = (variant: 'default' | 'danger' | 'success' = 'default'): React.CSSProperties => ({
     padding: '0.3rem 0.7rem',
     fontSize: '0.75rem',
@@ -85,20 +98,39 @@ export default function AdminLessonsPage() {
             {lessons.length} lesson{lessons.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Link
-          href="/admin"
-          style={{
-            padding: '0.5rem 1rem',
-            fontSize: '0.85rem',
-            background: 'var(--accent)',
-            color: '#ffffff',
-            borderRadius: '6px',
-            textDecoration: 'none',
-            fontWeight: 500,
-          }}
-        >
-          Generate New Lesson
-        </Link>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {lessons.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.85rem',
+                background: 'var(--danger)',
+                color: '#ffffff',
+                borderRadius: '6px',
+                border: 'none',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Delete All ({lessons.length})
+            </button>
+          )}
+          <Link
+            href="/admin"
+            style={{
+              padding: '0.5rem 1rem',
+              fontSize: '0.85rem',
+              background: 'var(--accent)',
+              color: '#ffffff',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
+          >
+            Generate New Lesson
+          </Link>
+        </div>
       </div>
 
       {loading ? (
