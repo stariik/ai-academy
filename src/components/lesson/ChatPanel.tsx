@@ -12,25 +12,16 @@ export function ChatPanel({
   lesson,
   pageNumber,
   onUnlockCheck,
-  language = 'en',
 }: {
   lessonId: string;
   lesson: Lesson;
   pageNumber?: number;
   onUnlockCheck?: () => void;
-  language?: 'en' | 'ka';
 }) {
-  // Messages always store the ORIGINAL language: user msgs in their typed language, assistant msgs in English
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-
-  // Translation cache: msgId -> translated text
-  // For assistant msgs: English -> Georgian translation
-  // For user msgs typed in Georgian: Georgian -> English translation (used when sending to Claude)
-  const [translations, setTranslations] = useState<Record<string, string>>({});
-  const [isTranslatingChat, setIsTranslatingChat] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,49 +33,9 @@ export function ChatPanel({
       ? lesson.pages?.find((p) => p.pageNumber === pageNumber)
       : null;
 
-  // Translate a completed assistant message (English -> Georgian)
-  const translateAssistantMessage = useCallback(async (messageId: string, englishText: string) => {
-    if (!englishText.trim()) return;
-    setIsTranslatingChat(true);
-    try {
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: englishText, targetLang: 'ka', sourceLang: 'en' }),
-      });
-      const data = await res.json();
-      if (data.translation) {
-        setTranslations((prev) => ({ ...prev, [messageId]: data.translation }));
-      }
-    } catch (err) {
-      console.error('Chat translation error:', err);
-    } finally {
-      setIsTranslatingChat(false);
-    }
-  }, []);
-
-  // Translate user input (Georgian -> English) before sending to Claude
-  const translateUserInput = useCallback(async (text: string): Promise<string> => {
-    try {
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, targetLang: 'en', sourceLang: 'ka' }),
-      });
-      const data = await res.json();
-      return data.translation || text;
-    } catch {
-      return text; // Fallback: send original text
-    }
-  }, []);
-
-  // Get display content for a message based on current language
   const getDisplayContent = useCallback((msg: ChatMessage): string => {
-    if (language === 'ka' && msg.role === 'assistant' && translations[msg.id]) {
-      return translations[msg.id];
-    }
     return msg.content;
-  }, [language, translations]);
+  }, []);
 
   // Load chat history + auto-intro for new pages
   useEffect(() => {
@@ -120,33 +71,6 @@ export function ChatPanel({
           if (hadUnlock && onUnlockCheck && !unlockFiredRef.current) {
             unlockFiredRef.current = true;
             onUnlockCheck();
-          }
-
-          // If Georgian mode, translate all assistant messages from history
-          if (language === 'ka') {
-            const assistantMsgs = loadedMessages.filter(
-              (m: ChatMessage) => m.role === 'assistant' && m.content.trim()
-            );
-            if (assistantMsgs.length > 0) {
-              const textsToTranslate = assistantMsgs.map((m: ChatMessage) => m.content);
-              try {
-                const translateRes = await fetch('/api/translate', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ texts: textsToTranslate, targetLang: 'ka', sourceLang: 'en' }),
-                });
-                const translateData = await translateRes.json();
-                if (translateData.translations) {
-                  const newTranslations: Record<string, string> = {};
-                  assistantMsgs.forEach((m: ChatMessage, i: number) => {
-                    newTranslations[m.id] = translateData.translations[i];
-                  });
-                  if (!cancelled) setTranslations((prev) => ({ ...prev, ...newTranslations }));
-                }
-              } catch {
-                // Translations will stay in English
-              }
-            }
           }
 
           setHistoryLoaded(true);
@@ -218,12 +142,7 @@ export function ChatPanel({
               prev.map((m) => (m.id === assistantId ? { ...m, content: displayText } : m))
             );
           }
-          // Translate the completed response if Georgian mode
-          if (!cancelled && language === 'ka') {
-            const displayText = fullText.replace(QUIZ_UNLOCK_MARKER, '').trim();
-            translateAssistantMessage(assistantId, displayText);
-          }
-        })
+          })
         .catch(() => {
           if (!cancelled) {
             setMessages((prev) =>
@@ -244,34 +163,6 @@ export function ChatPanel({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonId, pageNumber]);
-
-  // When language changes to Georgian, translate any untranslated assistant messages
-  useEffect(() => {
-    if (language !== 'ka' || isStreaming) return;
-
-    const untranslated = messages.filter(
-      (m) => m.role === 'assistant' && m.content.trim() && !translations[m.id]
-    );
-    if (untranslated.length === 0) return;
-
-    const texts = untranslated.map((m) => m.content);
-    fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts, targetLang: 'ka', sourceLang: 'en' }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.translations) {
-          const newTranslations: Record<string, string> = {};
-          untranslated.forEach((m, i) => {
-            newTranslations[m.id] = data.translations[i];
-          });
-          setTranslations((prev) => ({ ...prev, ...newTranslations }));
-        }
-      })
-      .catch(() => {});
-  }, [language, messages, translations, isStreaming]);
 
   // Suggested questions
   const suggestedQuestions =
@@ -307,7 +198,7 @@ export function ChatPanel({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, translations, scrollToBottom]);
+  }, [messages, scrollToBottom]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -325,14 +216,6 @@ export function ChatPanel({
       setInput('');
       setIsStreaming(true);
 
-      // If typing in Georgian, translate to English for Claude
-      let englishUserText = text.trim();
-      if (language === 'ka') {
-        englishUserText = await translateUserInput(text.trim());
-        // Store the English translation so we can send it to Claude
-        setTranslations((prev) => ({ ...prev, [userMessage.id]: englishUserText }));
-      }
-
       const assistantId = `assistant-${Date.now()}`;
       const assistantMessage: ChatMessage = {
         id: assistantId,
@@ -344,17 +227,8 @@ export function ChatPanel({
       setMessages((prev) => [...prev, assistantMessage]);
 
       try {
-        // Build messages for Claude - all content in English
         const claudeMessages = updatedMessages
-          .filter((m) => m.role === 'user' || m.role === 'assistant')
-          .map((m) => {
-            if (m.role === 'user' && language === 'ka') {
-              // Use English translation for user messages sent in Georgian
-              const englishVersion = m.id === userMessage.id ? englishUserText : (translations[m.id] || m.content);
-              return { ...m, content: englishVersion };
-            }
-            return m;
-          });
+          .filter((m) => m.role === 'user' || m.role === 'assistant');
 
         const body: Record<string, unknown> = {
           messages: claudeMessages,
@@ -399,11 +273,6 @@ export function ChatPanel({
           );
         }
 
-        // Translate assistant response if Georgian mode
-        if (language === 'ka') {
-          const displayText = fullText.replace(QUIZ_UNLOCK_MARKER, '').trim();
-          translateAssistantMessage(assistantId, displayText);
-        }
       } catch (err) {
         const errorText = err instanceof Error ? err.message : 'Something went wrong';
         setMessages((prev) =>
@@ -418,7 +287,7 @@ export function ChatPanel({
         inputRef.current?.focus();
       }
     },
-    [messages, isStreaming, lessonId, pageNumber, onUnlockCheck, language, translateAssistantMessage, translateUserInput, translations]
+    [messages, isStreaming, lessonId, pageNumber, onUnlockCheck]
   );
 
   if (!historyLoaded) {
@@ -448,11 +317,6 @@ export function ChatPanel({
             {currentPageData ? `Page ${pageNumber}: ${currentPageData.title}` : 'Ask me anything about this lesson'}
           </p>
         </div>
-        {language === 'ka' && (
-          <span className="shrink-0 rounded-full bg-purple-100 px-2.5 py-1 text-[11px] font-medium text-purple-700 ring-1 ring-inset ring-purple-300">
-            &#x10E5;&#x10D0;&#x10E0;
-          </span>
-        )}
         {currentPageData && onUnlockCheck && (
           <div className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
             unlockFiredRef.current
@@ -543,12 +407,6 @@ export function ChatPanel({
             </div>
           </div>
         ))}
-        {isTranslatingChat && (
-          <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-purple-600" role="status">
-            <div className="w-3 h-3 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" aria-hidden="true" />
-            &#x10D8;&#x10D7;&#x10D0;&#x10E0;&#x10D2;&#x10DB;&#x10DC;&#x10D4;&#x10D1;&#x10D0;...
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -585,9 +443,9 @@ export function ChatPanel({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={language === 'ka' ? 'დასვით შეკითხვა...' : 'Ask a question...'}
+            placeholder="Ask a question..."
             disabled={isStreaming}
-            aria-label={language === 'ka' ? 'შეკითხვის ველი' : 'Chat message input'}
+            aria-label="Chat message input"
             className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 placeholder:text-gray-400 transition"
           />
           <button

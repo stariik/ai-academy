@@ -29,6 +29,12 @@ export function buildTutorSystemPrompt(context: TutorContext): string {
 
   return `You are a tutor at AI Academy. Your ONLY source of knowledge is the lesson material provided below. You teach exclusively from this material — nothing else.
 
+## LANGUAGE RULE
+- ALWAYS respond in the same language the student writes in.
+- If the student writes in Georgian, respond in Georgian. If in English, respond in English. If in Spanish, respond in Spanish. Match their language exactly.
+- The lesson material may be in a different language — translate your teaching into the student's language as you go.
+- Never ask the student to switch languages.
+
 ## ABSOLUTE RULE: Lesson-Only Knowledge
 - You must ONLY use information that appears in the LESSON MATERIAL below.
 - NEVER introduce facts, examples, definitions, or explanations from outside the lesson.
@@ -248,6 +254,11 @@ export function buildPageTutorPrompt(context: PageTutorContext): string {
   let prompt = `You are a tutor at AI Academy teaching the lesson "${context.lessonTitle}". You are currently on **Page ${context.pageNumber} of ${context.totalPages}: "${context.pageTitle}"**.
 
 Your ONLY source of knowledge is the page material provided below. You teach exclusively from this material.
+
+## LANGUAGE RULE
+- ALWAYS respond in the same language the student writes in.
+- If the student writes in Georgian, respond in Georgian. If in English, respond in English. Any language — match it.
+- The lesson material may be in a different language — translate your teaching into the student's language as you go.
 
 ## ABSOLUTE RULE: Page-Only Knowledge
 - You must ONLY use information from the PAGE MATERIAL below.

@@ -30,92 +30,9 @@ export function PagedLessonView({
   const [showChat, setShowChat] = useState(true);
   const [progressLoaded, setProgressLoaded] = useState(false);
   const [recommended, setRecommended] = useState<Lesson | null>(null);
-  const [language, setLanguage] = useState<'en' | 'ka'>('en');
   const [unlockedPages, setUnlockedPages] = useState<Set<number>>(new Set());
   const contentRef = useRef<HTMLDivElement>(null);
   const checkQuestionsRef = useRef<HTMLDivElement>(null);
-
-  // --- Page translation state ---
-  const [translatedPages, setTranslatedPages] = useState<Record<number, Record<string, string>>>({});
-  const [isTranslating, setIsTranslating] = useState(false);
-
-  // Translate page content when language switches to Georgian
-  useEffect(() => {
-    if (language !== 'ka') return;
-    if (translatedPages[currentPage]) return;
-
-    const pageData = pages.find((p) => p.pageNumber === currentPage);
-    if (!pageData) return;
-
-    const textsToTranslate: string[] = [];
-    const keys: string[] = [];
-
-    textsToTranslate.push(pageData.title);
-    keys.push('title');
-
-    if (pageData.bridgeFromPrevious) {
-      textsToTranslate.push(pageData.bridgeFromPrevious);
-      keys.push('bridge');
-    }
-
-    [...pageData.contentBlocks]
-      .sort((a, b) => a.order - b.order)
-      .forEach((block) => {
-        textsToTranslate.push(block.content);
-        keys.push(`block-${block.id}`);
-      });
-
-    pageData.commonMisconceptions?.forEach((m, i) => {
-      textsToTranslate.push(m);
-      keys.push(`misconception-${i}`);
-    });
-
-    pageData.realWorldApplications?.forEach((a, i) => {
-      textsToTranslate.push(a);
-      keys.push(`application-${i}`);
-    });
-
-    if (pageData.teachingFlow?.reflectionPrompt) {
-      textsToTranslate.push(pageData.teachingFlow.reflectionPrompt);
-      keys.push('reflection');
-    }
-
-    pageData.keyConcepts.forEach((c, i) => {
-      textsToTranslate.push(c.term);
-      keys.push(`concept-term-${i}`);
-      textsToTranslate.push(c.definition);
-      keys.push(`concept-def-${i}`);
-    });
-
-    if (textsToTranslate.length === 0) return;
-
-    setIsTranslating(true);
-    fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texts: textsToTranslate, targetLang: 'ka', sourceLang: 'en' }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.translations) {
-          const map: Record<string, string> = {};
-          keys.forEach((key, i) => {
-            map[key] = data.translations[i];
-          });
-          setTranslatedPages((prev) => ({ ...prev, [currentPage]: map }));
-        }
-      })
-      .catch((err) => console.error('Translation error:', err))
-      .finally(() => setIsTranslating(false));
-  }, [language, currentPage, translatedPages, pages]);
-
-  const t = useCallback(
-    (key: string, original: string): string => {
-      if (language !== 'ka') return original;
-      return translatedPages[currentPage]?.[key] ?? original;
-    },
-    [language, currentPage, translatedPages]
-  );
 
   const isCheckUnlocked = completedPages.includes(currentPage) || unlockedPages.has(currentPage);
 
@@ -240,17 +157,6 @@ export function PagedLessonView({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setLanguage(language === 'en' ? 'ka' : 'en')}
-              aria-label={language === 'ka' ? 'Switch to English' : 'Switch to Georgian'}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                language === 'ka'
-                  ? 'bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-300'
-                  : 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200 hover:bg-gray-200'
-              }`}
-            >
-              {language === 'ka' ? '\u{1F1EC}\u{1F1EA} \u10E5\u10D0\u10E0' : '\u{1F1EC}\u{1F1E7} EN'}
-            </button>
-            <button
               onClick={() => setShowChat(!showChat)}
               aria-label={showChat ? 'Hide AI tutor chat' : 'Show AI tutor chat'}
               aria-pressed={showChat}
@@ -298,7 +204,6 @@ export function PagedLessonView({
               lesson={lesson}
               pageNumber={currentPage}
               onUnlockCheck={() => handleCheckUnlocked(currentPage)}
-              language={language}
             />
           </aside>
         )}
@@ -308,16 +213,9 @@ export function PagedLessonView({
           {currentPageData ? (
             <div className="mx-auto max-w-3xl animate-fade-in-up" key={currentPage}>
               <div className="content-surface p-8 mb-8">
-                {isTranslating && language === 'ka' && (
-                  <div className="rounded-lg bg-purple-50 border border-purple-200 p-2 mb-4 flex items-center gap-2 text-sm text-purple-700" role="status">
-                    <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" aria-hidden="true" />
-                    {'\u10D8\u10D7\u10D0\u10E0\u10D2\u10DB\u10DC\u10D4\u10D1\u10D0 \u10E5\u10D0\u10E0\u10D7\u10E3\u10DA\u10D0\u10D3...'}
-                  </div>
-                )}
-
                 {currentPageData.bridgeFromPrevious && currentPage > 1 && (
                   <div className="rounded-lg bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-100 p-3 mb-4 text-sm text-teal-800 italic">
-                    {t('bridge', currentPageData.bridgeFromPrevious)}
+                    {currentPageData.bridgeFromPrevious}
                   </div>
                 )}
 
@@ -326,7 +224,7 @@ export function PagedLessonView({
                   <div className="flex items-center gap-2 mb-3">
                     <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-600">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                      {language === 'ka' ? `\u10D2\u10D5\u10D4\u10E0\u10D3\u10D8 ${currentPage} / ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
+                      {`Page ${currentPage} of ${totalPages}`}
                     </div>
                     {currentPageData.difficultyLevel && (
                       <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -339,7 +237,7 @@ export function PagedLessonView({
                       </span>
                     )}
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{t('title', currentPageData.title)}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{currentPageData.title}</h2>
                 </div>
 
                 {/* Content blocks */}
@@ -350,7 +248,7 @@ export function PagedLessonView({
                       <ContentBlockRenderer
                         key={block.id}
                         block={block}
-                        translatedContent={language === 'ka' ? translatedPages[currentPage]?.[`block-${block.id}`] : undefined}
+                        translatedContent={undefined}
                       />
                     ))}
                 </div>
@@ -360,11 +258,11 @@ export function PagedLessonView({
               {currentPageData.commonMisconceptions && currentPageData.commonMisconceptions.length > 0 && (
                 <div className="rounded-lg border-l-4 border-orange-400 bg-orange-50 p-4 mb-6" role="note">
                   <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 mb-2">
-                    {language === 'ka' ? '\u10D2\u10D0\u10D5\u10E0\u10EA\u10D4\u10DA\u10D4\u10D1\u10E3\u10DA\u10D8 \u10E8\u10D4\u10EA\u10D3\u10DD\u10DB\u10D4\u10D1\u10D8' : 'Common Misconceptions'}
+                    Common Misconceptions
                   </p>
                   <ul className="list-disc list-inside text-sm text-orange-900 space-y-1">
                     {currentPageData.commonMisconceptions.map((m, i) => (
-                      <li key={i}>{t(`misconception-${i}`, m)}</li>
+                      <li key={i}>{m}</li>
                     ))}
                   </ul>
                 </div>
@@ -374,11 +272,11 @@ export function PagedLessonView({
               {currentPageData.realWorldApplications && currentPageData.realWorldApplications.length > 0 && (
                 <div className="rounded-lg bg-green-50 border border-green-200 p-4 mb-6">
                   <p className="text-xs font-semibold uppercase tracking-wide text-green-700 mb-2">
-                    {language === 'ka' ? '\u10E0\u10D4\u10D0\u10DA\u10E3\u10E0\u10D8 \u10D2\u10D0\u10DB\u10DD\u10E7\u10D4\u10DC\u10D4\u10D1\u10D0' : 'Real-World Applications'}
+                    Real-World Applications
                   </p>
                   <ul className="list-disc list-inside text-sm text-green-900 space-y-1">
                     {currentPageData.realWorldApplications.map((app, i) => (
-                      <li key={i}>{t(`application-${i}`, app)}</li>
+                      <li key={i}>{app}</li>
                     ))}
                   </ul>
                 </div>
@@ -388,10 +286,10 @@ export function PagedLessonView({
               {currentPageData.teachingFlow?.reflectionPrompt && (
                 <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 mb-6">
                   <p className="text-xs font-semibold uppercase tracking-wide text-yellow-700 mb-1">
-                    {language === 'ka' ? '\u10D3\u10D0\u10E4\u10D8\u10E5\u10E0\u10D3\u10D8' : 'Reflect'}
+                    Reflect
                   </p>
                   <p className="text-sm text-yellow-900 italic">
-                    {t('reflection', currentPageData.teachingFlow.reflectionPrompt)}
+                    {currentPageData.teachingFlow.reflectionPrompt}
                   </p>
                 </div>
               )}
@@ -400,13 +298,13 @@ export function PagedLessonView({
               {currentPageData.keyConcepts.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    {language === 'ka' ? '\u10EB\u10D8\u10E0\u10D8\u10D7\u10D0\u10D3\u10D8 \u10EA\u10DC\u10D4\u10D1\u10D4\u10D1\u10D8' : 'Key Concepts'}
+                    Key Concepts
                   </h3>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {currentPageData.keyConcepts.map((concept, i) => (
                       <div key={i} className="rounded-xl border border-purple-100 bg-linear-to-br from-purple-50 to-white p-4 transition hover:shadow-md hover:border-purple-200">
-                        <h4 className="font-semibold text-purple-900 text-sm mb-1">{t(`concept-term-${i}`, concept.term)}</h4>
-                        <p className="text-[0.8125rem] text-purple-700 leading-snug">{t(`concept-def-${i}`, concept.definition)}</p>
+                        <h4 className="font-semibold text-purple-900 text-sm mb-1">{concept.term}</h4>
+                        <p className="text-[0.8125rem] text-purple-700 leading-snug">{concept.definition}</p>
                       </div>
                     ))}
                   </div>

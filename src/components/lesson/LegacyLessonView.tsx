@@ -24,7 +24,7 @@ export function LegacyLessonView({
   const [showChat, setShowChat] = useState(true);
   const [showQuiz, setShowQuiz] = useState(false);
   const [recommended, setRecommended] = useState<Lesson | null>(null);
-  const [language, setLanguage] = useState<'en' | 'ka'>('en');
+  // Language toggle removed — tutor auto-detects student's language
 
   const fetchRecommendation = useCallback(async () => {
     try {
@@ -52,17 +52,6 @@ export function LegacyLessonView({
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLanguage(language === 'en' ? 'ka' : 'en')}
-            aria-label={language === 'ka' ? 'Switch to English' : 'Switch to Georgian'}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-              language === 'ka'
-                ? 'bg-purple-100 text-purple-700 ring-1 ring-inset ring-purple-300'
-                : 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200 hover:bg-gray-200'
-            }`}
-          >
-            {language === 'ka' ? '\u{1F1EC}\u{1F1EA} \u10E5\u10D0\u10E0' : '\u{1F1EC}\u{1F1E7} EN'}
-          </button>
           <button
             onClick={() => setShowChat(!showChat)}
             aria-label={showChat ? 'Hide AI tutor chat' : 'Show AI tutor chat'}
@@ -123,7 +112,7 @@ export function LegacyLessonView({
         {/* Right panel - AI Chat */}
         {showChat && (
           <aside className="w-96 shrink-0 border-l bg-white flex flex-col" aria-label="AI Tutor chat">
-            <ChatPanel lessonId={lessonId} lesson={lesson} language={language} />
+            <ChatPanel lessonId={lessonId} lesson={lesson} />
           </aside>
         )}
       </div>
