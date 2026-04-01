@@ -588,7 +588,7 @@ export function ChatPanel({
             placeholder={language === 'ka' ? 'დასვით შეკითხვა...' : 'Ask a question...'}
             disabled={isStreaming}
             aria-label={language === 'ka' ? 'შეკითხვის ველი' : 'Chat message input'}
-            className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 placeholder:text-gray-400 transition"
+            className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 placeholder:text-gray-400 transition"
           />
           <button
             type="submit"
