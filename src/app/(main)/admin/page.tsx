@@ -7,7 +7,8 @@ import remarkGfm from 'remark-gfm';
 import type { CourseGenerationProgress } from '@/types';
 
 type AdminStep = 'choose' | 'prompt-chat' | 'upload' | 'preview-sections' | 'generating' | 'complete'
-  | 'outline-upload' | 'outline-preview' | 'outline-generating';
+  | 'outline-upload' | 'outline-preview' | 'outline-generating'
+  | 'bulk-upload' | 'bulk-processing';
 
 type DetectedSection = {
   id: string;
@@ -44,6 +45,19 @@ export default function AdminPage() {
   const [outlineLessons, setOutlineLessons] = useState<OutlineLesson[]>([]);
   const [outlineLanguage, setOutlineLanguage] = useState('English');
   const [parsingOutline, setParsingOutline] = useState(false);
+
+  // Bulk upload state
+  type BulkCourse = {
+    file: File;
+    name: string;
+    status: 'queued' | 'parsing' | 'generating' | 'complete' | 'failed';
+    lessonsCount?: number;
+    generatedCount?: number;
+    error?: string;
+  };
+  const [bulkCourses, setBulkCourses] = useState<BulkCourse[]>([]);
+  const [bulkLanguage, setBulkLanguage] = useState('English');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Prompt generator chat state
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -307,6 +321,95 @@ export default function AdminPage() {
     }
   }, [courseName, targetLevel, sections, selectedFile, extractedText]);
 
+  // ---- Bulk Processing ----
+  const startBulkProcessing = useCallback(async () => {
+    if (bulkCourses.length === 0) return;
+    setBulkProcessing(true);
+    setStep('bulk-processing');
+
+    for (let ci = 0; ci < bulkCourses.length; ci++) {
+      const course = bulkCourses[ci];
+      if (course.status !== 'queued') continue;
+
+      // 1. Parse outline
+      setBulkCourses(prev => prev.map((c, i) => i === ci ? { ...c, status: 'parsing' } : c));
+
+      try {
+        const formData = new FormData();
+        formData.append('file', course.file);
+        const parseRes = await fetch('/api/analyze-course/parse-outline', { method: 'POST', body: formData });
+        const parseData = await parseRes.json();
+        if (!parseRes.ok) throw new Error(parseData.error || 'Failed to parse');
+
+        const lessons: OutlineLesson[] = parseData.lessons;
+        const expanded = splitLessonsForGeneration(lessons);
+
+        setBulkCourses(prev => prev.map((c, i) => i === ci ? { ...c, status: 'generating', lessonsCount: expanded.length, generatedCount: 0 } : c));
+
+        // 2. Create course
+        const createRes = await fetch('/api/analyze-course/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseName: course.name,
+            sections: expanded.map((l, i) => ({ id: l.id, title: l.title, startIndex: i, endIndex: i, wordCount: l.keyPoints.length * 50 })),
+          }),
+        });
+        if (!createRes.ok) throw new Error('Failed to create course');
+        const { courseId } = await createRes.json();
+
+        // 3. Generate each lesson
+        const summaries: { position: number; title: string; summary: string; keyConcepts: string[] }[] = [];
+
+        for (let li = 0; li < expanded.length; li++) {
+          const lesson = expanded[li];
+          const previousContext = summaries.length > 0
+            ? summaries.map(s => {
+                const concepts = s.keyConcepts.length > 0 ? ` | Concepts: ${s.keyConcepts.join(', ')}` : '';
+                const short = s.summary.length > 200 ? s.summary.substring(0, 200) + '...' : s.summary;
+                return `Lesson ${s.position + 1} "${s.title}": ${short}${concepts}`;
+              }).join('\n')
+            : '';
+
+          try {
+            const res = await fetch('/api/analyze-course/generate-from-outline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                lessonTitle: lesson.title,
+                keyPoints: lesson.keyPoints,
+                language: bulkLanguage,
+                lessonIndex: li,
+                totalLessons: expanded.length,
+                courseId,
+                previousContext,
+              }),
+            });
+            if (!res.ok) throw new Error('Lesson generation failed');
+            const result = await res.json();
+            summaries.push({ position: li, title: result.title, summary: result.summary || '', keyConcepts: result.keyConcepts || [] });
+          } catch (err) {
+            console.error(`Bulk: Course "${course.name}" lesson ${li + 1} failed:`, err);
+          }
+
+          setBulkCourses(prev => prev.map((c, i) => i === ci ? { ...c, generatedCount: li + 1 } : c));
+
+          if (li < expanded.length - 1) await new Promise(r => setTimeout(r, 1500));
+        }
+
+        setBulkCourses(prev => prev.map((c, i) => i === ci ? { ...c, status: 'complete' } : c));
+      } catch (err) {
+        console.error(`Bulk: Course "${course.name}" failed:`, err);
+        setBulkCourses(prev => prev.map((c, i) => i === ci ? { ...c, status: 'failed', error: err instanceof Error ? err.message : 'Failed' } : c));
+      }
+
+      // Delay between courses
+      if (ci < bulkCourses.length - 1) await new Promise(r => setTimeout(r, 2000));
+    }
+
+    setBulkProcessing(false);
+  }, [bulkCourses, bulkLanguage]);
+
   // ---- Outline Upload Handler ----
   const handleOutlineUpload = useCallback(async (file: File) => {
     setParsingOutline(true);
@@ -504,6 +607,9 @@ export default function AdminPage() {
     setTotalWords(0);
     setOutlineLessons([]);
     setOutlineLanguage('English');
+    setBulkCourses([]);
+    setBulkLanguage('English');
+    setBulkProcessing(false);
   };
 
   return (
@@ -523,7 +629,7 @@ export default function AdminPage() {
             STEP: CHOOSE
             ============================================================ */}
         {step === 'choose' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setStep('outline-upload')}
               className="bg-white border-2 border-orange-200 rounded-xl p-8 text-left hover:border-orange-400 hover:shadow-md transition-all group"
@@ -532,8 +638,19 @@ export default function AdminPage() {
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">Upload Course Outline</h3>
-              <p className="text-sm text-gray-500">Upload a PDF with lesson names &amp; key points. AI generates full lessons from scratch.</p>
-              <span className="inline-block mt-2 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded">Recommended</span>
+              <p className="text-sm text-gray-500">Upload a single PDF with lesson names &amp; key points.</p>
+            </button>
+
+            <button
+              onClick={() => setStep('bulk-upload')}
+              className="bg-white border-2 border-purple-200 rounded-xl p-8 text-left hover:border-purple-400 hover:shadow-md transition-all group"
+            >
+              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4 group-hover:bg-purple-200 transition">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Bulk Upload Courses</h3>
+              <p className="text-sm text-gray-500">Upload multiple course outlines at once. Processes them one by one automatically.</p>
+              <span className="inline-block mt-2 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">Multiple files</span>
             </button>
 
             <button
@@ -557,6 +674,179 @@ export default function AdminPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-1">I already have a full PDF</h3>
               <p className="text-sm text-gray-500">Upload a complete course PDF. The system analyzes content and restructures it into lessons.</p>
             </button>
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: BULK UPLOAD
+            ============================================================ */}
+        {step === 'bulk-upload' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <button onClick={() => { setBulkCourses([]); setStep('choose'); }} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">Bulk Upload Courses</h2>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-8">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Language</label>
+                <select
+                  value={bulkLanguage}
+                  onChange={(e) => setBulkLanguage(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                >
+                  <option value="English">English</option>
+                  <option value="Georgian">Georgian (ქართული)</option>
+                  <option value="Spanish">Spanish</option>
+                  <option value="French">French</option>
+                  <option value="German">German</option>
+                  <option value="Russian">Russian</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Course Outline Files</label>
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (files.length > 0) {
+                        setBulkCourses(files.map(f => ({
+                          file: f,
+                          name: f.name.replace(/\.[^.]+$/, '').replace(/[_-]/g, ' ').replace(/^\d+\s*/, ''),
+                          status: 'queued' as const,
+                        })));
+                      }
+                    }}
+                  />
+                  <svg className="w-10 h-10 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                  <span className="text-sm text-gray-500">Click to select multiple PDF/DOCX files</span>
+                </label>
+              </div>
+
+              {bulkCourses.length > 0 && (
+                <>
+                  <div className="mb-4">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">{bulkCourses.length} courses ready</h3>
+                    <div className="space-y-2">
+                      {bulkCourses.map((course, i) => (
+                        <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+                          <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                          <input
+                            type="text"
+                            value={course.name}
+                            onChange={(e) => {
+                              setBulkCourses(prev => prev.map((c, idx) => idx === i ? { ...c, name: e.target.value } : c));
+                            }}
+                            className="flex-1 bg-transparent border-b border-transparent focus:border-purple-400 focus:outline-none text-sm font-medium text-gray-900"
+                          />
+                          <span className="text-xs text-gray-400 shrink-0">{(course.file.size / 1024).toFixed(0)} KB</span>
+                          <button
+                            onClick={() => setBulkCourses(prev => prev.filter((_, idx) => idx !== i))}
+                            className="text-gray-300 hover:text-red-500 transition"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={startBulkProcessing}
+                    className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition"
+                  >
+                    Start Processing {bulkCourses.length} Courses
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: BULK PROCESSING
+            ============================================================ */}
+        {step === 'bulk-processing' && (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              Processing Courses... {bulkCourses.filter(c => c.status === 'complete').length}/{bulkCourses.length}
+            </h2>
+
+            <div className="space-y-3">
+              {bulkCourses.map((course, i) => (
+                <div key={i} className={`bg-white border rounded-xl p-5 transition-all ${
+                  course.status === 'generating' ? 'border-purple-300 ring-1 ring-purple-100' :
+                  course.status === 'complete' ? 'border-green-200' :
+                  course.status === 'failed' ? 'border-red-200' :
+                  'border-gray-200'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className="shrink-0">
+                      {course.status === 'queued' && (
+                        <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                      )}
+                      {course.status === 'parsing' && (
+                        <span className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                        </span>
+                      )}
+                      {course.status === 'generating' && (
+                        <span className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                        </span>
+                      )}
+                      {course.status === 'complete' && (
+                        <span className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                        </span>
+                      )}
+                      {course.status === 'failed' && (
+                        <span className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 text-sm truncate">{course.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {course.status === 'queued' && 'Waiting...'}
+                        {course.status === 'parsing' && 'Parsing outline...'}
+                        {course.status === 'generating' && `Generating lesson ${course.generatedCount || 0}/${course.lessonsCount || '?'}...`}
+                        {course.status === 'complete' && `Done — ${course.lessonsCount} lessons generated`}
+                        {course.status === 'failed' && (course.error || 'Failed')}
+                      </div>
+                    </div>
+
+                    {course.status === 'generating' && course.lessonsCount && (
+                      <div className="shrink-0 w-24">
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${((course.generatedCount || 0) / course.lessonsCount) * 100}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {!bulkProcessing && (
+              <div className="mt-6 flex gap-3">
+                <button onClick={resetAll} className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm transition">
+                  Back to Admin
+                </button>
+                <a href="/admin/courses" className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition">
+                  View All Courses &rarr;
+                </a>
+              </div>
+            )}
           </div>
         )}
 
