@@ -157,7 +157,7 @@ export default function AdminCourseDetailPage({
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="h-8 w-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <div className="h-8 w-8 border-4 border-navy-100 border-t-navy rounded-full animate-spin" />
       </div>
     );
   }
@@ -166,7 +166,7 @@ export default function AdminCourseDetailPage({
     return (
       <div className="text-center py-20">
         <h2 className="text-xl font-bold text-gray-900">Course not found</h2>
-        <Link href="/admin/courses" className="text-blue-600 mt-2 inline-block">
+        <Link href="/admin/courses" className="text-teal mt-2 inline-block">
           Back to courses
         </Link>
       </div>
@@ -203,7 +203,7 @@ export default function AdminCourseDetailPage({
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
               <div className="flex gap-2">
-                <button onClick={handleSave} className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                <button onClick={handleSave} className="px-4 py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light">
                   Save
                 </button>
                 <button onClick={() => setEditing(false)} className="px-4 py-1.5 text-sm border rounded-lg text-gray-600">
@@ -323,7 +323,7 @@ export default function AdminCourseDetailPage({
                   </div>
                   <button
                     onClick={() => addLesson(lesson.id)}
-                    className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="px-3 py-1.5 text-xs bg-navy text-white rounded hover:bg-navy-light"
                   >
                     Add to Course
                   </button>

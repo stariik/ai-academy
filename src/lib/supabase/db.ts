@@ -912,6 +912,15 @@ export async function getOrCreateProfile(
     .select()
     .single();
 
+  if (error?.code === '23505') {
+    // Race condition: another request already created the profile — just fetch it
+    const { data: existing } = await supabase
+      .from('student_profiles')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+    if (existing) return mapProfileRow(existing as StudentProfileRow);
+  }
   if (error || !newProfile) throw new Error(`Failed to create profile: ${error?.message}`);
   return mapProfileRow(newProfile as StudentProfileRow);
 }
@@ -993,7 +1002,7 @@ export async function getRecommendedLessons(
       // Weak topic overlap
       const weakTopicNames = profile.weakTopics.map((t) => t.topic.toLowerCase());
       const lessonTopics = [
-        ...lesson.keyConcepts.map((c) => c.term.toLowerCase()),
+        ...lesson.keyConcepts.filter((c) => c.term).map((c) => c.term.toLowerCase()),
         ...(lesson.tags ?? []).map((t) => t.toLowerCase()),
       ];
       const overlap = lessonTopics.filter((t) =>

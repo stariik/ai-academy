@@ -66,14 +66,14 @@ export default function StudentPage() {
     if (p.status === 'completed')
       return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Completed</span>;
     if (p.status === 'in_progress')
-      return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">In Progress</span>;
+      return <span className="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal font-medium">In Progress</span>;
     return null;
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="h-8 w-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <div className="h-8 w-8 border-4 border-teal-100 border-t-teal rounded-full animate-spin" />
       </div>
     );
   }
@@ -84,7 +84,7 @@ export default function StudentPage() {
       {profile && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">{completedCount}</p>
+            <p className="text-2xl font-bold text-navy">{completedCount}</p>
             <p className="text-xs text-gray-500 mt-1">Completed</p>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
@@ -96,7 +96,7 @@ export default function StudentPage() {
             <p className="text-xs text-gray-500 mt-1">Quizzes Taken</p>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
-            <p className="text-2xl font-bold text-purple-600">
+            <p className="text-2xl font-bold text-navy">
               {profile.averageScore > 0 ? `${Math.round(profile.averageScore)}%` : '--'}
             </p>
             <p className="text-xs text-gray-500 mt-1">Avg Score</p>
@@ -113,7 +113,7 @@ export default function StudentPage() {
               <Link
                 key={lesson.id}
                 href={`/student/lesson/${lesson.id}`}
-                className="block bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition"
+                className="block bg-gradient-to-br from-teal-50 to-cream-50 border border-teal-100 rounded-lg p-4 hover:shadow-md transition"
               >
                 <h3 className="text-sm font-semibold text-gray-900 mb-1">{lesson.title}</h3>
                 <p className="text-xs text-gray-500 line-clamp-2 mb-2">{lesson.description}</p>
@@ -154,7 +154,7 @@ export default function StudentPage() {
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-2 rounded-full bg-gray-200">
                       <div
-                        className="h-2 rounded-full bg-blue-500 transition-all"
+                        className="h-2 rounded-full bg-teal transition-all"
                         style={{ width: `${pct}%` }}
                       />
                     </div>

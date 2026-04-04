@@ -50,7 +50,7 @@ export function CheckQuestions({
   if (locked) {
     return (
       <div className="content-surface p-0 overflow-hidden relative" aria-label="Check questions - locked">
-        <div className="bg-linear-to-r from-gray-500 to-gray-600 px-6 py-4">
+        <div className="bg-linear-to-r from-gray-500 to-gray-600 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center" aria-hidden="true">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -147,19 +147,19 @@ export function CheckQuestions({
 
   return (
     <div className="content-surface p-0 overflow-hidden" role="region" aria-label="Check your understanding">
-      <div className="bg-linear-to-r from-blue-600 to-blue-700 px-6 py-4">
+      <div className="bg-linear-to-r from-navy to-navy-light px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center" aria-hidden="true">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0" aria-hidden="true">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <div>
-            <h3 className="text-white font-semibold">Check Your Understanding</h3>
-            <p className="text-blue-100 text-sm">Answer correctly to unlock the next page</p>
+            <h3 className="text-white font-semibold text-sm sm:text-base">Check Your Understanding</h3>
+            <p className="text-navy-100 text-xs sm:text-sm">Answer correctly to unlock the next page</p>
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {questions.map((q, i) => {
           const result = results?.find((r) => r.questionId === q.id);
           return (
@@ -186,7 +186,7 @@ export function CheckQuestions({
                         answers[q.id] === option
                           ? submitted
                             ? result?.isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
-                            : 'border-blue-500 bg-blue-50'
+                            : 'border-teal bg-teal-50'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -197,7 +197,7 @@ export function CheckQuestions({
                         checked={answers[q.id] === option}
                         onChange={() => !submitted && setAnswers((prev) => ({ ...prev, [q.id]: option }))}
                         disabled={submitted}
-                        className="h-4 w-4 text-blue-600"
+                        className="h-4 w-4 text-teal"
                       />
                       <span className="text-sm text-gray-700">{option}</span>
                     </label>
@@ -217,7 +217,7 @@ export function CheckQuestions({
                         answers[q.id] === val
                           ? submitted
                             ? result?.isCorrect ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700'
-                            : 'border-blue-500 bg-blue-50 text-blue-700'
+                            : 'border-teal bg-teal-50 text-teal'
                           : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -254,7 +254,7 @@ export function CheckQuestions({
                             className={`inline-block w-32 border-b-2 mx-1 px-1 py-0.5 text-center ${
                               submitted
                                 ? result?.isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'
-                                : 'border-blue-300 focus:border-blue-500'
+                                : 'border-teal-100 focus:border-teal'
                             } outline-none text-sm`}
                             placeholder="..."
                           />
@@ -282,7 +282,7 @@ export function CheckQuestions({
                   placeholder="Type your answer..."
                   aria-label={`Answer for question ${i + 1}`}
                   rows={2}
-                  className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
                 />
               )}
 
@@ -311,7 +311,7 @@ export function CheckQuestions({
             <button
               onClick={handleSubmit}
               disabled={!allAnswered || checking}
-              className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-200 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-300 disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed transition-all"
+              className="inline-flex items-center gap-2 rounded-full bg-navy px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-navy-100 hover:bg-navy-light hover:shadow-md hover:shadow-navy-100 disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed transition-all"
             >
               {checking ? (
                 <>
@@ -330,7 +330,7 @@ export function CheckQuestions({
           ) : !allCorrect ? (
             <button
               onClick={handleRetry}
-              className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-200 hover:bg-blue-700 hover:shadow-md hover:shadow-blue-300 transition-all"
+              className="inline-flex items-center gap-2 rounded-full bg-navy px-6 py-2.5 text-sm font-medium text-white shadow-sm shadow-navy-100 hover:bg-navy-light hover:shadow-md hover:shadow-navy-100 transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
               Try Again
@@ -412,7 +412,7 @@ function OrderingQuestion({
           role="option"
           aria-selected={dragIndex === i}
           className={`flex items-center gap-3 rounded-lg border p-3 transition
-            ${dragIndex === i ? 'border-blue-400 bg-blue-50 opacity-70' : 'border-gray-200'}
+            ${dragIndex === i ? 'border-teal bg-teal-50 opacity-70' : 'border-gray-200'}
             ${submitted ? 'cursor-default' : 'cursor-grab hover:bg-gray-50'}`}
         >
           <span className="text-xs text-gray-400 w-5 shrink-0">{i + 1}.</span>
@@ -492,7 +492,7 @@ function MatchingQuestion({
             className={`flex-1 border rounded-lg p-2 text-sm transition ${
               submitted
                 ? result?.isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
-                : 'border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100'
+                : 'border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal-100'
             }`}
           >
             <option value="">Select...</option>

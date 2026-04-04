@@ -31,9 +31,9 @@ function Stepper({ current }: { current: number }) {
               <div
                 className="relative flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-all duration-500"
                 style={{
-                  background: done || active ? "linear-gradient(135deg, #2563eb, #7c3aed)" : "#e2e8f0",
+                  background: done || active ? "linear-gradient(135deg, #0992C2, #0AC4E0)" : "#e2e8f0",
                   color: done || active ? "#fff" : "#94a3b8",
-                  boxShadow: active ? "0 0 0 4px rgba(37,99,235,0.13)" : "none",
+                  boxShadow: active ? "0 0 0 4px rgba(9,146,194,0.13)" : "none",
                 }}
               >
                 {done ? (
@@ -41,15 +41,15 @@ function Stepper({ current }: { current: number }) {
                 ) : (
                   i + 1
                 )}
-                {active && <span className="absolute inset-0 animate-ping rounded-full bg-blue-500/20" style={{ animationDuration: "2s" }} />}
+                {active && <span className="absolute inset-0 animate-ping rounded-full bg-teal/20" style={{ animationDuration: "2s" }} />}
               </div>
-              <span className="absolute top-8 whitespace-nowrap text-[10px] font-medium" style={{ color: done || active ? "#2563eb" : "#94a3b8" }}>
+              <span className="absolute top-8 whitespace-nowrap text-[10px] font-medium" style={{ color: done || active ? "#0992C2" : "#94a3b8" }}>
                 {label}
               </span>
             </div>
             {!last && (
               <div className="relative mx-1 h-[3px] flex-1 overflow-hidden rounded-full bg-slate-200">
-                <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700" style={{ width: done ? "100%" : "0%", background: "linear-gradient(90deg, #2563eb, #7c3aed)" }} />
+                <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700" style={{ width: done ? "100%" : "0%", background: "linear-gradient(90deg, #0992C2, #0AC4E0)" }} />
               </div>
             )}
           </div>
@@ -145,17 +145,17 @@ function QuestionsContent() {
                     minHeight: 140,
                     background: sel ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.7)",
                     backdropFilter: "blur(16px)",
-                    border: sel ? "2px solid #2563eb" : "1px solid rgba(226,232,240,0.8)",
-                    boxShadow: sel ? "0 8px 28px rgba(37,99,235,0.15)" : "0 2px 12px rgba(0,0,0,0.04)",
+                    border: sel ? "2px solid #0992C2" : "1px solid rgba(226,232,240,0.8)",
+                    boxShadow: sel ? "0 8px 28px rgba(9,146,194,0.15)" : "0 2px 12px rgba(0,0,0,0.04)",
                     transform: sel ? "translateY(-2px)" : "none",
                   }}
                 >
                   {/* Check */}
-                  <div className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full transition-all" style={{ background: sel ? "linear-gradient(135deg,#2563eb,#7c3aed)" : "#e2e8f0", opacity: sel ? 1 : 0.4, transform: sel ? "scale(1)" : "scale(0.7)" }}>
+                  <div className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full transition-all" style={{ background: sel ? "linear-gradient(135deg,#0992C2,#0AC4E0)" : "#e2e8f0", opacity: sel ? 1 : 0.4, transform: sel ? "scale(1)" : "scale(0.7)" }}>
                     <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </div>
                   {/* Icon */}
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl transition-colors" style={{ background: sel ? "#dbeafe" : "#f1f5f9", color: sel ? "#2563eb" : "#94a3b8" }}>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl transition-colors" style={{ background: sel ? "#e6f5fa" : "#f1f5f9", color: sel ? "#0992C2" : "#94a3b8" }}>
                     {group === "child" ? (
                       <svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="9" r="5" stroke="currentColor" strokeWidth="2" /><path d="M6 26c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="currentColor" strokeWidth="2" /><path d="M12 20l1.5 3 2.5-4 2.5 4 1.5-3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     ) : (
@@ -200,15 +200,15 @@ function QuestionsContent() {
                     style={{
                       background: sel ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.65)",
                       backdropFilter: "blur(12px)",
-                      border: sel ? "2px solid #2563eb" : "1px solid rgba(226,232,240,0.7)",
-                      boxShadow: sel ? "0 4px 20px rgba(37,99,235,0.12)" : "0 1px 6px rgba(0,0,0,0.03)",
+                      border: sel ? "2px solid #0992C2" : "1px solid rgba(226,232,240,0.7)",
+                      boxShadow: sel ? "0 4px 20px rgba(9,146,194,0.12)" : "0 1px 6px rgba(0,0,0,0.03)",
                       transform: sel ? "translateY(-1px)" : "none",
                     }}
                   >
-                    <div className="absolute top-2 right-2 flex h-[18px] w-[18px] items-center justify-center rounded-full transition-all" style={{ background: sel ? "linear-gradient(135deg,#2563eb,#7c3aed)" : "transparent", border: sel ? "none" : "1.5px solid #cbd5e1", opacity: sel ? 1 : 0.5 }}>
+                    <div className="absolute top-2 right-2 flex h-[18px] w-[18px] items-center justify-center rounded-full transition-all" style={{ background: sel ? "linear-gradient(135deg,#0992C2,#0AC4E0)" : "transparent", border: sel ? "none" : "1.5px solid #cbd5e1", opacity: sel ? 1 : 0.5 }}>
                       {sel && <svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     </div>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sel ? "#2563eb" : "#94a3b8"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={sel ? "#0992C2" : "#94a3b8"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
                     <span className="text-center text-xs font-semibold leading-tight" style={{ color: sel ? "#0f172a" : "#64748b" }}>
                       {course.title}
                     </span>
@@ -218,7 +218,7 @@ function QuestionsContent() {
             </div>
           )}
 
-          <p className="mt-3 text-center text-xs font-medium transition-all" style={{ color: selectedCourses.length > 0 ? "#2563eb" : "transparent" }}>
+          <p className="mt-3 text-center text-xs font-medium transition-all" style={{ color: selectedCourses.length > 0 ? "#0992C2" : "transparent" }}>
             {selectedCourses.length} course{selectedCourses.length !== 1 ? "s" : ""} selected
           </p>
         </section>
@@ -261,7 +261,7 @@ export default function QuestionsPage() {
   return (
     <Suspense fallback={
       <div className="ob-page-bg flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-teal" />
       </div>
     }>
       <QuestionsContent />

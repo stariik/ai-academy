@@ -293,7 +293,7 @@ export function ChatPanel({
   if (!historyLoaded) {
     return (
       <div className="flex items-center justify-center flex-1" role="status" aria-label="Loading chat">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-br from-blue-500 to-purple-600 shadow-sm">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-br from-teal to-cyan shadow-sm">
           <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         </div>
       </div>
@@ -307,31 +307,32 @@ export function ChatPanel({
   return (
     <>
       {/* Chat header */}
-      <div className="border-b px-4 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0" aria-hidden="true">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a3.187 3.187 0 01-.758.515m0 0a3.188 3.188 0 01-2.544 0m3.302-.515a3.187 3.187 0 00.758-.515" /></svg>
+      <div className="border-b px-2.5 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-linear-to-br from-teal to-cyan flex items-center justify-center shrink-0" aria-hidden="true">
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a3.187 3.187 0 01-.758.515m0 0a3.188 3.188 0 01-2.544 0m3.302-.515a3.187 3.187 0 00.758-.515" /></svg>
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 text-sm">AI Tutor</h3>
-          <p className="text-xs text-gray-400 truncate">
-            {currentPageData ? `Page ${pageNumber}: ${currentPageData.title}` : 'Ask me anything about this lesson'}
+          <h3 className="font-semibold text-gray-900 text-xs sm:text-sm">AI Tutor</h3>
+          <p className="text-[10px] sm:text-xs text-gray-400 truncate">
+            {currentPageData ? `P${pageNumber}: ${currentPageData.title}` : 'Ask me anything'}
           </p>
         </div>
         {currentPageData && onUnlockCheck && (
-          <div className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+          <div className={`shrink-0 inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-medium ${
             unlockFiredRef.current
               ? 'bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200'
               : 'bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-200'
           }`}>
             {unlockFiredRef.current ? (
               <>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                Quiz Ready
+                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                <span className="hidden xs:inline">Quiz </span>Ready
               </>
             ) : (
               <>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                Teaching...
+                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                <span className="hidden xs:inline">Teaching</span>
+                <span className="xs:hidden">...</span>
               </>
             )}
           </div>
@@ -339,28 +340,26 @@ export function ChatPanel({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3" role="log" aria-label="Chat messages" aria-live="polite">
+      <div className="flex-1 overflow-y-auto px-2 sm:px-3 py-2 sm:py-3 space-y-2 sm:space-y-3" role="log" aria-label="Chat messages" aria-live="polite">
         {messages.length === 0 && (
-          <div className="space-y-3">
-            <div className="rounded-lg bg-blue-50 p-3">
-              <p className="text-sm text-blue-800 font-medium mb-1">
+          <div className="space-y-2 sm:space-y-3">
+            <div className="rounded-lg bg-teal-50 p-2 sm:p-3">
+              <p className="text-[11px] sm:text-sm text-navy font-medium mb-0.5 sm:mb-1">
                 Welcome! I&apos;m your AI tutor.
               </p>
-              <p className="text-xs text-blue-600">
-                I&apos;m here to help you understand{' '}
-                {currentPageData ? `"${currentPageData.title}"` : `"${lesson.title}"`}
-                . Ask me anything, or try one of the suggestions below!
+              <p className="text-[10px] sm:text-xs text-teal leading-snug">
+                Ask me anything about this lesson, or try a suggestion below!
               </p>
             </div>
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-gray-400 uppercase">
-                Suggested questions
+            <div className="space-y-1 sm:space-y-1.5">
+              <p className="text-[10px] sm:text-xs font-medium text-gray-400 uppercase">
+                Suggested
               </p>
               {suggestedQuestions.map((q, i) => (
                 <button
                   key={i}
                   onClick={() => sendMessage(q)}
-                  className="block w-full rounded-lg border border-gray-200 p-2 text-left text-xs text-gray-600 hover:bg-gray-50 hover:border-blue-300 transition"
+                  className="block w-full rounded-lg border border-gray-200 p-1.5 sm:p-2 text-left text-[10px] sm:text-xs text-gray-600 hover:bg-gray-50 hover:border-teal-100 transition leading-snug"
                 >
                   {q}
                 </button>
@@ -372,22 +371,22 @@ export function ChatPanel({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-1.5 sm:gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.role === 'assistant' && (
-              <div className="w-6 h-6 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">
-                <div className="w-2 h-2 rounded-full bg-white" />
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-linear-to-br from-teal to-cyan flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white" />
               </div>
             )}
             <div
-              className={`max-w-[85%] rounded-2xl text-sm ${
+              className={`max-w-[88%] sm:max-w-[85%] rounded-2xl text-xs sm:text-sm ${
                 msg.role === 'user'
-                  ? 'bg-blue-600 text-white px-4 py-2.5 msg-tail-right'
-                  : 'bg-gray-100 text-gray-800 px-4 py-3 msg-tail-left'
+                  ? 'bg-teal text-white px-2.5 sm:px-4 py-1.5 sm:py-2.5 msg-tail-right'
+                  : 'bg-gray-100 text-gray-800 px-2.5 sm:px-4 py-2 sm:py-3 msg-tail-left'
               }`}
             >
               {msg.role === 'assistant' ? (
-                <div className="chat-prose max-w-none text-[0.8125rem]">
+                <div className="chat-prose max-w-none text-[0.6875rem] sm:text-[0.8125rem] leading-relaxed">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {getDisplayContent(msg) || '...'}
                   </ReactMarkdown>
@@ -412,15 +411,14 @@ export function ChatPanel({
 
       {/* Quick concept buttons */}
       {messages.length > 0 && conceptButtons.length > 0 && (
-        <div className="border-t px-3 py-2">
-          <p className="text-xs text-gray-400 mb-1">Ask about a concept:</p>
+        <div className="border-t px-2 sm:px-3 py-1.5 sm:py-2">
           <div className="flex flex-wrap gap-1">
             {conceptButtons.map((c, i) => (
               <button
                 key={i}
                 onClick={() => sendMessage(`Can you explain "${c.term}" in more detail?`)}
                 disabled={isStreaming}
-                className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 hover:bg-blue-100 hover:text-blue-700 transition disabled:opacity-50"
+                className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] sm:text-xs text-gray-600 hover:bg-teal-50 hover:text-teal transition disabled:opacity-50"
               >
                 {c.term}
               </button>
@@ -430,13 +428,13 @@ export function ChatPanel({
       )}
 
       {/* Input */}
-      <div className="border-t p-3 bg-gray-50/50">
+      <div className="border-t p-2 sm:p-3 bg-gray-50/50">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             sendMessage(input);
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-1.5 sm:gap-2"
         >
           <input
             ref={inputRef}
@@ -446,15 +444,15 @@ export function ChatPanel({
             placeholder="Ask a question..."
             disabled={isStreaming}
             aria-label="Chat message input"
-            className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 placeholder:text-gray-400 transition"
+            className="flex-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-900 focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal-100 disabled:bg-gray-50 placeholder:text-gray-400 transition"
           />
           <button
             type="submit"
             disabled={isStreaming || !input.trim()}
             aria-label="Send message"
-            className="shrink-0 w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 transition shadow-sm"
+            className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-navy flex items-center justify-center text-white hover:bg-navy-light disabled:bg-gray-200 disabled:text-gray-400 transition shadow-sm"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9-7-9-7-9 7 9 7z" transform="rotate(-45 12 12)" /></svg>
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9-7-9-7-9 7 9 7z" transform="rotate(-45 12 12)" /></svg>
           </button>
         </form>
       </div>

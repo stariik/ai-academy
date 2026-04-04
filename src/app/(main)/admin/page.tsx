@@ -620,8 +620,8 @@ export default function AdminPage() {
           <h1 className="text-3xl font-bold text-gray-900">AI Academy - Admin</h1>
           <p className="text-gray-600 mt-1">Create courses from PDF documents</p>
           <div className="flex gap-4 mt-2">
-            <a href="/admin/lessons" className="text-blue-600 hover:text-blue-800 text-sm">View all lessons &rarr;</a>
-            <a href="/admin/courses" className="text-blue-600 hover:text-blue-800 text-sm">Manage courses &rarr;</a>
+            <a href="/admin/lessons" className="text-teal hover:text-navy text-sm">View all lessons &rarr;</a>
+            <a href="/admin/courses" className="text-teal hover:text-navy text-sm">Manage courses &rarr;</a>
           </div>
         </div>
 
@@ -643,22 +643,22 @@ export default function AdminPage() {
 
             <button
               onClick={() => setStep('bulk-upload')}
-              className="bg-white border-2 border-purple-200 rounded-xl p-8 text-left hover:border-purple-400 hover:shadow-md transition-all group"
+              className="bg-white border-2 border-navy-100 rounded-xl p-8 text-left hover:border-navy hover:shadow-md transition-all group"
             >
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4 group-hover:bg-purple-200 transition">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              <div className="w-12 h-12 rounded-xl bg-navy-50 flex items-center justify-center mb-4 group-hover:bg-navy-100 transition">
+                <svg className="w-6 h-6 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">Bulk Upload Courses</h3>
               <p className="text-sm text-gray-500">Upload multiple course outlines at once. Processes them one by one automatically.</p>
-              <span className="inline-block mt-2 text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">Multiple files</span>
+              <span className="inline-block mt-2 text-xs font-semibold text-navy bg-navy-50 px-2 py-1 rounded">Multiple files</span>
             </button>
 
             <button
               onClick={() => setStep('prompt-chat')}
-              className="bg-white border border-gray-200 rounded-xl p-8 text-left hover:border-blue-300 hover:shadow-md transition-all group"
+              className="bg-white border border-gray-200 rounded-xl p-8 text-left hover:border-teal-100 hover:shadow-md transition-all group"
             >
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4 group-hover:bg-blue-200 transition">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+              <div className="w-12 h-12 rounded-xl bg-teal-50 flex items-center justify-center mb-4 group-hover:bg-teal-100 transition">
+                <svg className="w-6 h-6 text-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">I need help creating a PDF</h3>
               <p className="text-sm text-gray-500">Chat with AI to design your course. It generates a prompt for ChatGPT to create the PDF.</p>
@@ -695,7 +695,7 @@ export default function AdminPage() {
                 <select
                   value={bulkLanguage}
                   onChange={(e) => setBulkLanguage(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-navy-100 focus:border-transparent bg-white"
                 >
                   <option value="English">English</option>
                   <option value="Georgian">Georgian (ქართული)</option>
@@ -708,7 +708,7 @@ export default function AdminPage() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Course Outline Files</label>
-                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition">
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-navy hover:bg-navy-50/50 transition">
                   <input
                     type="file"
                     accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -737,14 +737,14 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       {bulkCourses.map((course, i) => (
                         <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
-                          <span className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                          <span className="w-7 h-7 rounded-full bg-navy-50 text-navy text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                           <input
                             type="text"
                             value={course.name}
                             onChange={(e) => {
                               setBulkCourses(prev => prev.map((c, idx) => idx === i ? { ...c, name: e.target.value } : c));
                             }}
-                            className="flex-1 bg-transparent border-b border-transparent focus:border-purple-400 focus:outline-none text-sm font-medium text-gray-900"
+                            className="flex-1 bg-transparent border-b border-transparent focus:border-navy focus:outline-none text-sm font-medium text-gray-900"
                           />
                           <span className="text-xs text-gray-400 shrink-0">{(course.file.size / 1024).toFixed(0)} KB</span>
                           <button
@@ -760,7 +760,7 @@ export default function AdminPage() {
 
                   <button
                     onClick={startBulkProcessing}
-                    className="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition"
+                    className="w-full px-6 py-3 bg-navy text-white rounded-lg hover:bg-navy-light font-medium text-sm transition"
                   >
                     Start Processing {bulkCourses.length} Courses
                   </button>
@@ -782,7 +782,7 @@ export default function AdminPage() {
             <div className="space-y-3">
               {bulkCourses.map((course, i) => (
                 <div key={i} className={`bg-white border rounded-xl p-5 transition-all ${
-                  course.status === 'generating' ? 'border-purple-300 ring-1 ring-purple-100' :
+                  course.status === 'generating' ? 'border-navy-100 ring-1 ring-navy-50' :
                   course.status === 'complete' ? 'border-green-200' :
                   course.status === 'failed' ? 'border-red-200' :
                   'border-gray-200'
@@ -793,13 +793,13 @@ export default function AdminPage() {
                         <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-bold">{i + 1}</span>
                       )}
                       {course.status === 'parsing' && (
-                        <span className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                        <span className="w-8 h-8 rounded-full bg-navy-50 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-navy-100 border-t-navy rounded-full animate-spin" />
                         </span>
                       )}
                       {course.status === 'generating' && (
-                        <span className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                        <span className="w-8 h-8 rounded-full bg-navy-50 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-navy-100 border-t-navy rounded-full animate-spin" />
                         </span>
                       )}
                       {course.status === 'complete' && (
@@ -828,7 +828,7 @@ export default function AdminPage() {
                     {course.status === 'generating' && course.lessonsCount && (
                       <div className="shrink-0 w-24">
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-1.5 bg-purple-500 rounded-full transition-all duration-500" style={{ width: `${((course.generatedCount || 0) / course.lessonsCount) * 100}%` }} />
+                          <div className="h-1.5 bg-navy rounded-full transition-all duration-500" style={{ width: `${((course.generatedCount || 0) / course.lessonsCount) * 100}%` }} />
                         </div>
                       </div>
                     )}
@@ -842,7 +842,7 @@ export default function AdminPage() {
                 <button onClick={resetAll} className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm transition">
                   Back to Admin
                 </button>
-                <a href="/admin/courses" className="px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm transition">
+                <a href="/admin/courses" className="px-6 py-2.5 bg-navy text-white rounded-lg hover:bg-navy-light font-medium text-sm transition">
                   View All Courses &rarr;
                 </a>
               </div>
@@ -1130,14 +1130,14 @@ Lesson 2: Prompt Engineering Basics
               <div className="h-[500px] overflow-y-auto p-4 space-y-4">
                 {chatMessages.length === 0 && (
                   <div className="text-center py-12">
-                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082" /></svg>
+                    <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-7 h-7 text-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082" /></svg>
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-1">What course would you like to create?</h3>
                     <p className="text-sm text-gray-500 max-w-md mx-auto mb-4">Describe your course idea. I&apos;ll ask questions to understand your needs, then generate a ready-to-use prompt.</p>
                     <div className="flex flex-wrap justify-center gap-2">
                       {['Prompt Engineering for Adults', 'AI Agents for Beginners', 'Intro to Web Development'].map((s) => (
-                        <button key={s} onClick={() => sendChatMessage(`I want to create a course on: ${s}`)} className="px-3 py-1.5 text-sm border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 hover:border-blue-300 transition">
+                        <button key={s} onClick={() => sendChatMessage(`I want to create a course on: ${s}`)} className="px-3 py-1.5 text-sm border border-gray-200 rounded-full text-gray-600 hover:bg-gray-50 hover:border-teal-100 transition">
                           {s}
                         </button>
                       ))}
@@ -1148,11 +1148,11 @@ Lesson 2: Prompt Engineering Basics
                 {chatMessages.map((msg, i) => (
                   <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'assistant' && (
-                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                        <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <div className="w-7 h-7 rounded-full bg-teal-50 flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-3 h-3 rounded-full bg-teal" />
                       </div>
                     )}
-                    <div className={`max-w-[80%] rounded-2xl text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white px-4 py-2.5' : 'bg-gray-100 text-gray-800 px-4 py-3'}`}>
+                    <div className={`max-w-[80%] rounded-2xl text-sm ${msg.role === 'user' ? 'bg-navy text-white px-4 py-2.5' : 'bg-gray-100 text-gray-800 px-4 py-3'}`}>
                       {msg.role === 'assistant' ? (
                         <div className="chat-prose max-w-none text-[0.8125rem]">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -1189,8 +1189,8 @@ Lesson 2: Prompt Engineering Basics
 
               <div className="border-t border-gray-200 p-3">
                 <form onSubmit={(e) => { e.preventDefault(); sendChatMessage(chatInput); }} className="flex gap-2">
-                  <input ref={chatInputRef} type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Describe your course idea..." disabled={isStreaming} className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 transition" />
-                  <button type="submit" disabled={isStreaming || !chatInput.trim()} className="shrink-0 w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 transition">
+                  <input ref={chatInputRef} type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Describe your course idea..." disabled={isStreaming} className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal-100 disabled:bg-gray-50 transition" />
+                  <button type="submit" disabled={isStreaming || !chatInput.trim()} className="shrink-0 w-9 h-9 rounded-full bg-navy flex items-center justify-center text-white hover:bg-navy-light disabled:bg-gray-200 disabled:text-gray-400 transition">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9-7-9-7-9 7 9 7z" transform="rotate(-45 12 12)" /></svg>
                   </button>
                 </form>
@@ -1213,7 +1213,7 @@ Lesson 2: Prompt Engineering Basics
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="courseName" className="block text-sm font-medium text-gray-700 mb-1">Course Name <span className="text-red-500">*</span></label>
-                  <input id="courseName" type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g., Prompt Engineering for Adults" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input id="courseName" type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="e.g., Prompt Engineering for Adults" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100" />
                 </div>
                 <div>
                   <label htmlFor="level" className="block text-sm font-medium text-gray-700 mb-1">Target Level</label>
@@ -1229,19 +1229,19 @@ Lesson 2: Prompt Engineering Basics
 
             {detectingOutline ? (
               <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-                <div className="inline-block h-10 w-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+                <div className="inline-block h-10 w-10 border-4 border-navy-100 border-t-navy rounded-full animate-spin mb-4" />
                 <p className="text-gray-900 font-medium">Analyzing document structure...</p>
                 <p className="text-sm text-gray-500 mt-1">Detecting chapters and sections</p>
               </div>
             ) : (
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 bg-white'}`}
+                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${isDragActive ? 'border-teal bg-teal-50' : 'border-gray-300 hover:border-gray-400 bg-white'}`}
               >
                 <input {...getInputProps()} />
                 <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                 {isDragActive ? (
-                  <p className="text-blue-600 font-medium">Drop the file here...</p>
+                  <p className="text-teal font-medium">Drop the file here...</p>
                 ) : (
                   <>
                     <p className="font-medium text-gray-600">Drag &amp; drop your course PDF, or click to browse</p>
@@ -1278,7 +1278,7 @@ Lesson 2: Prompt Engineering Basics
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
-                  <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Target Level</label>
@@ -1297,7 +1297,7 @@ Lesson 2: Prompt Engineering Basics
                 <div key={section.id} className="bg-white border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <span className="shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold mt-0.5">
+                      <span className="shrink-0 w-8 h-8 rounded-full bg-teal-50 text-teal flex items-center justify-center text-sm font-semibold mt-0.5">
                         {i + 1}
                       </span>
                       <div className="flex-1 min-w-0">
@@ -1305,7 +1305,7 @@ Lesson 2: Prompt Engineering Basics
                           type="text"
                           value={section.title}
                           onChange={(e) => renameSection(i, e.target.value)}
-                          className="w-full font-medium text-gray-900 text-sm border-0 border-b border-transparent hover:border-gray-200 focus:border-blue-400 focus:outline-none px-0 py-0.5 transition"
+                          className="w-full font-medium text-gray-900 text-sm border-0 border-b border-transparent hover:border-gray-200 focus:border-teal focus:outline-none px-0 py-0.5 transition"
                         />
                         <div className="flex items-center gap-3 mt-1">
                           <span className="text-xs text-gray-400">{section.wordCount.toLocaleString()} words</span>
@@ -1340,11 +1340,11 @@ Lesson 2: Prompt Engineering Basics
             </div>
 
             {/* Info box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
+            <div className="bg-teal-50 border border-teal-100 rounded-lg p-4 mb-6">
+              <p className="text-sm text-navy">
                 Each section above becomes a <strong>separate lesson</strong> in the course. You can:
               </p>
-              <ul className="text-sm text-blue-700 mt-1 space-y-0.5 ml-4 list-disc">
+              <ul className="text-sm text-navy mt-1 space-y-0.5 ml-4 list-disc">
                 <li>Click a section title to rename it (this becomes the lesson title)</li>
                 <li>Click &quot;Merge&quot; to combine adjacent sections into one lesson</li>
                 <li>Click &quot;Remove&quot; to skip a section entirely</li>
@@ -1362,7 +1362,7 @@ Lesson 2: Prompt Engineering Basics
               <button
                 onClick={startGeneration}
                 disabled={sections.length === 0 || !courseName.trim()}
-                className="px-6 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                className="px-6 py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition"
               >
                 Generate Course ({sections.length} lessons)
               </button>
@@ -1382,8 +1382,8 @@ Lesson 2: Prompt Engineering Basics
         {step === 'generating' && (
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+              <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-navy-100 border-t-navy rounded-full animate-spin" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">
@@ -1406,11 +1406,11 @@ Lesson 2: Prompt Engineering Basics
                     <span>{Math.round((courseGenProgress.lessons.length / courseGenProgress.totalLessons) * 100)}%</span>
                   </div>
                   <div className="h-2.5 rounded-full bg-gray-200 overflow-hidden">
-                    <div className="h-2.5 rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${(courseGenProgress.lessons.length / courseGenProgress.totalLessons) * 100}%` }} />
+                    <div className="h-2.5 rounded-full bg-teal transition-all duration-500" style={{ width: `${(courseGenProgress.lessons.length / courseGenProgress.totalLessons) * 100}%` }} />
                   </div>
                 </div>
                 {courseGenProgress.currentLessonTitle && (
-                  <p className="text-sm text-blue-700 font-medium mb-3">Currently: {courseGenProgress.currentLessonTitle}</p>
+                  <p className="text-sm text-navy font-medium mb-3">Currently: {courseGenProgress.currentLessonTitle}</p>
                 )}
                 {courseGenProgress.lessons.length > 0 && (
                   <div className="space-y-1.5">
@@ -1460,7 +1460,7 @@ Lesson 2: Prompt Engineering Basics
 
             <div className="flex gap-3">
               {courseGenProgress.courseId && (
-                <a href={`/admin/courses/${courseGenProgress.courseId}`} className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition">
+                <a href={`/admin/courses/${courseGenProgress.courseId}`} className="px-5 py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium transition">
                   View &amp; Manage Course
                 </a>
               )}

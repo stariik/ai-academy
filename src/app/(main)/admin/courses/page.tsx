@@ -55,7 +55,7 @@ export default function AdminCoursesPage() {
         {/* Course list */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            <div className="h-8 w-8 border-4 border-navy-100 border-t-navy rounded-full animate-spin" />
           </div>
         ) : courses.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
@@ -72,7 +72,7 @@ export default function AdminCoursesPage() {
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/admin/courses/${course.id}`}
-                    className="text-lg font-semibold text-gray-900 hover:text-blue-600"
+                    className="text-lg font-semibold text-gray-900 hover:text-teal"
                   >
                     {course.title}
                   </Link>

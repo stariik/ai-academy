@@ -37,7 +37,7 @@ export default async function LandingPage({ searchParams }: PageProps) {
       {/* ═══ HERO ═══ */}
       <section className="relative z-[1] flex min-h-[100svh] flex-col items-center justify-center px-6 pt-20 pb-12 text-center">
         {/* Trust badge */}
-        <div className="fade-up fade-up-d1 mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-[13px] font-semibold shadow-sm backdrop-blur-sm" style={{ border: "1px solid rgba(37,99,235,0.12)" }}>
+        <div className="fade-up fade-up-d1 mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-[13px] font-semibold shadow-sm backdrop-blur-sm" style={{ border: "1px solid rgba(11,45,114,0.12)" }}>
           <span className="flex gap-0.5 text-amber-400">
             {[...Array(5)].map((_, i) => (
               <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
@@ -130,15 +130,15 @@ export default async function LandingPage({ searchParams }: PageProps) {
       {/* ═══ VALUE PROPS ═══ */}
       <section className="relative z-[1] px-6 pb-14">
         <div className="mx-auto max-w-[520px]">
-          <p className="mb-2 text-center text-xs font-bold uppercase tracking-[0.12em]" style={{ color: "#2563eb" }}>What You&apos;ll Learn</p>
+          <p className="mb-2 text-center text-xs font-bold uppercase tracking-[0.12em]" style={{ color: "#0B2D72" }}>What You&apos;ll Learn</p>
           <h2 className="mb-8 text-center text-[clamp(24px,7vw,34px)] font-extrabold leading-tight tracking-tight">
             The skills that <span className="ob-gradient-text">matter most</span>
           </h2>
 
           <div className="flex flex-col gap-3">
             {[
-              { icon: "M12 5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 11h18v10H3z", label: "AI Tools & Agents", desc: "Master ChatGPT, Claude & build AI agents that automate real tasks.", color: "#2563eb", bg: "#dbeafe" },
-              { icon: "M16 18l6-6-6-6M8 6l-6 6 6 6M14 4l-4 16", label: "Vibe Coding", desc: "Build full apps by describing what you want. Zero coding experience needed.", color: "#7c3aed", bg: "#ede9fe" },
+              { icon: "M12 5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 11h18v10H3z", label: "AI Tools & Agents", desc: "Master ChatGPT, Claude & build AI agents that automate real tasks.", color: "#0992C2", bg: "#e6f5fa" },
+              { icon: "M16 18l6-6-6-6M8 6l-6 6 6 6M14 4l-4 16", label: "Vibe Coding", desc: "Build full apps by describing what you want. Zero coding experience needed.", color: "#0B2D72", bg: "#fdf8ec" },
               { icon: "M13 2L3 14h9l-1 8 10-12h-9l1-8z", label: "Prompt Engineering", desc: "Talk to AI like a pro. Get 10x better results from any AI tool, instantly.", color: "#0891b2", bg: "#cffafe" },
             ].map(({ label, desc, color, bg }, i) => (
               <div key={label} className={`ob-glass-card flex items-start gap-4 rounded-2xl p-5 slide-right slide-right-d${i + 1}`}>

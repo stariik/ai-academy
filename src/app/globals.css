@@ -15,6 +15,16 @@
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.85);
   --glass-shadow: 0 4px 24px rgba(37, 99, 235, 0.07), 0 1px 4px rgba(0,0,0,0.05);
+
+  /* Brand palette */
+  --brand-navy: #0B2D72;
+  --brand-teal: #0992C2;
+  --brand-cyan: #0AC4E0;
+  --brand-cream: #F6E7BC;
+  --brand-navy-light: #1a3f8a;
+  --brand-teal-light: #0ba8dc;
+  --brand-cyan-light: #3dd4ea;
+  --brand-cream-light: #faf1d8;
 }
 
 @theme inline {
@@ -22,6 +32,26 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Brand colors */
+  --color-navy: #0B2D72;
+  --color-navy-light: #1a3f8a;
+  --color-navy-50: #e8edf5;
+  --color-navy-100: #c5d0e6;
+  --color-teal: #0992C2;
+  --color-teal-light: #0ba8dc;
+  --color-teal-50: #e6f5fa;
+  --color-teal-100: #b3e2f1;
+  --color-cyan: #0AC4E0;
+  --color-cyan-light: #3dd4ea;
+  --color-cyan-50: #e6f9fc;
+  --color-cream: #F6E7BC;
+  --color-cream-light: #faf1d8;
+  --color-cream-50: #fdf8ec;
+
+  /* Custom breakpoints */
+  --breakpoint-widemd: 1080px;
+  --breakpoint-widecontent: 1200px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -402,6 +432,15 @@ body {
   animation: scaleIn 0.25s ease-out both;
 }
 
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out both;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 /* Stagger children animations */
 .stagger-children > * {
   animation: fadeInUp 0.4s ease-out both;
@@ -462,6 +501,56 @@ body {
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* ============================================================
+   Content Panel — compact text at 1080–1200px viewport width
+   At this range the 3-column layout is tight, so we scale down
+   headings and body to reclaim space without sacrificing legibility.
+   ============================================================ */
+
+@media (min-width: 1080px) and (max-width: 1199px) {
+  .lesson-content-panel h2.content-heading {
+    font-size: 1.25rem; /* down from text-xl/text-2xl (1.5rem) */
+    line-height: 1.35;
+  }
+
+  .lesson-content-panel .content-surface {
+    padding: 1.25rem;  /* tighter padding */
+  }
+
+  .lesson-content-panel .lesson-prose h1 {
+    font-size: 1.375rem;
+  }
+
+  .lesson-content-panel .lesson-prose h2 {
+    font-size: 1.125rem;
+  }
+
+  .lesson-content-panel .lesson-prose h3 {
+    font-size: 1rem;
+  }
+
+  .lesson-content-panel .lesson-prose p,
+  .lesson-content-panel .lesson-prose li {
+    font-size: 0.875rem;
+    line-height: 1.65;
+  }
+
+  /* Page title heading (text-xl sm:text-2xl in JSX) */
+  .lesson-content-panel .page-title {
+    font-size: 1.25rem;
+  }
+
+  /* Concept cards, misconceptions, applications — tighten text */
+  .lesson-content-panel .card-body-text {
+    font-size: 0.8125rem;
+  }
+
+  /* Key concepts grid: single column saves horizontal space */
+  .lesson-content-panel .concepts-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Chat message tails */

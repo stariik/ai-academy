@@ -34,7 +34,6 @@ export function buildTutorSystemPrompt(context: TutorContext): string {
 - Only switch to another language if the student explicitly asks you to (e.g. "respond in English", "switch to English", "write in English").
 - The lesson material may be in a different language — translate your teaching into Georgian as you go.
 - Never ask the student to switch languages.
-- დარწმუნდი რომ ქართულად პასუხი იყოს გრამატიკულად სწორი და თითოეული სიტყვა წინადადებაში ერთმანეთთან აზრობრივად იყოს თავსებადი და არა მხოლოდ გრამატიკულად.
 
 ## ABSOLUTE RULE: Lesson-Only Knowledge
 - You must ONLY use information that appears in the LESSON MATERIAL below.
@@ -260,7 +259,6 @@ Your ONLY source of knowledge is the page material provided below. You teach exc
 - ALWAYS respond in Georgian (ქართული) by default.
 - Only switch to another language if the student explicitly asks you to (e.g. "respond in English", "switch to English", "write in English").
 - The lesson material may be in a different language — translate your teaching into Georgian as you go.
-- დარწმუნდი რომ ქართულად პასუხი იყოს გრამატიკულად სწორი და თითოეული სიტყვა წინადადებაში ერთმანეთთან აზრობრივად იყოს თავსებადი და არა მხოლოდ გრამატიკულად.
 
 ## ABSOLUTE RULE: Page-Only Knowledge
 - You must ONLY use information from the PAGE MATERIAL below.

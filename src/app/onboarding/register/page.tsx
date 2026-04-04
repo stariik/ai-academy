@@ -16,12 +16,12 @@ function Stepper() {
         const last = i === 2;
         return (
           <div key={step} className="flex items-center" style={{ flex: last ? "0 0 auto" : 1 }}>
-            <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold" style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)", color: "#fff", boxShadow: step === 3 ? "0 0 0 4px rgba(37,99,235,0.13)" : "none" }}>
+            <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold" style={{ background: "linear-gradient(135deg, #0992C2, #0AC4E0)", color: "#fff", boxShadow: step === 3 ? "0 0 0 4px rgba(9,146,194,0.13)" : "none" }}>
               {step < 3 ? (
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6L5 8.5L9.5 3.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
               ) : step}
             </div>
-            {!last && <div className="mx-1 h-[2px] flex-1 rounded-full" style={{ background: "linear-gradient(90deg, #2563eb, #7c3aed)" }} />}
+            {!last && <div className="mx-1 h-[2px] flex-1 rounded-full" style={{ background: "linear-gradient(90deg, #0992C2, #0AC4E0)" }} />}
           </div>
         );
       })}
@@ -40,7 +40,7 @@ function SuccessView() {
 
       <div className="relative z-[1] flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
         {/* Animated check */}
-        <div className="fade-up fade-up-d1 mb-6 flex h-20 w-20 items-center justify-center rounded-full" style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)", boxShadow: "0 8px 32px rgba(37,99,235,0.25)" }}>
+        <div className="fade-up fade-up-d1 mb-6 flex h-20 w-20 items-center justify-center rounded-full" style={{ background: "linear-gradient(135deg, #0992C2, #0AC4E0)", boxShadow: "0 8px 32px rgba(9,146,194,0.25)" }}>
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
         </div>
 
@@ -65,11 +65,11 @@ function SuccessView() {
             { text: "Personalized curriculum built for you", icon: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z" },
             { text: "Your information is always private", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
           ].map(({ text, icon }) => (
-            <div key={text} className="flex items-center gap-3 rounded-xl bg-blue-50 px-4 py-3" style={{ border: "1px solid rgba(37,99,235,0.1)" }}>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100/80">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
+            <div key={text} className="flex items-center gap-3 rounded-xl bg-teal-50 px-4 py-3" style={{ border: "1px solid rgba(9,146,194,0.1)" }}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-100/80">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0992C2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={icon} /></svg>
               </div>
-              <span className="text-[13px] font-medium leading-snug" style={{ color: "#1e40af" }}>{text}</span>
+              <span className="text-[13px] font-medium leading-snug" style={{ color: "#0B2D72" }}>{text}</span>
             </div>
           ))}
         </div>
@@ -186,9 +186,9 @@ function RegisterForm() {
                   onClick={() => { setMethod(m); setValue(""); setError(null); }}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-semibold transition-all duration-200"
                   style={{
-                    background: active ? "linear-gradient(135deg, #2563eb, #7c3aed)" : "transparent",
+                    background: active ? "linear-gradient(135deg, #0992C2, #0AC4E0)" : "transparent",
                     color: active ? "#fff" : "#64748b",
-                    boxShadow: active ? "0 2px 12px rgba(37,99,235,0.25)" : "none",
+                    boxShadow: active ? "0 2px 12px rgba(9,146,194,0.25)" : "none",
                     minHeight: 44,
                   }}
                 >
@@ -208,9 +208,9 @@ function RegisterForm() {
             <label htmlFor="contact" className="mb-1.5 block text-[13px] font-semibold">
               {method === "email" ? "Email address" : "Phone number"}
             </label>
-            <div className="rounded-2xl p-[2px] transition-all" style={{ background: focused ? "linear-gradient(135deg, #2563eb, #7c3aed)" : error ? "#ef4444" : "#e2e8f0", boxShadow: focused ? "0 0 0 4px rgba(37,99,235,0.1)" : error ? "0 0 0 4px rgba(239,68,68,0.08)" : "none" }}>
+            <div className="rounded-2xl p-[2px] transition-all" style={{ background: focused ? "linear-gradient(135deg, #0992C2, #0AC4E0)" : error ? "#ef4444" : "#e2e8f0", boxShadow: focused ? "0 0 0 4px rgba(9,146,194,0.1)" : error ? "0 0 0 4px rgba(239,68,68,0.08)" : "none" }}>
               <div className="flex items-center rounded-xl bg-white/90 px-4">
-                <div className="mr-2.5 shrink-0" style={{ color: focused ? "#2563eb" : error ? "#ef4444" : "#94a3b8" }}>
+                <div className="mr-2.5 shrink-0" style={{ color: focused ? "#0992C2" : error ? "#ef4444" : "#94a3b8" }}>
                   {method === "email" ? (
                     <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.4" /><path d="M2 6.5L9 10.5L16 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
                   ) : (
@@ -230,7 +230,7 @@ function RegisterForm() {
                   onBlur={() => setFocused(false)}
                   aria-invalid={!!error}
                   className="h-[54px] flex-1 border-none bg-transparent text-base outline-none"
-                  style={{ caretColor: "#2563eb" }}
+                  style={{ caretColor: "#0992C2" }}
                 />
               </div>
             </div>
@@ -281,7 +281,7 @@ export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="ob-page-bg flex min-h-[100dvh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-teal" />
       </div>
     }>
       <RegisterForm />

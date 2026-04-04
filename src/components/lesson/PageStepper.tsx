@@ -45,7 +45,7 @@ export function PageStepper({
               aria-label={`Page ${page.pageNumber}: ${page.title}${isCompleted ? ' (completed)' : isLocked ? ' (locked)' : ''}`}
               className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left text-sm transition relative z-10 ${
                 isCurrent
-                  ? 'bg-blue-50 font-medium text-blue-700 page-active-glow'
+                  ? 'bg-navy-50 font-medium text-navy page-active-glow'
                   : isCompleted
                   ? 'text-green-700 hover:bg-green-50/50'
                   : isLocked
@@ -59,7 +59,7 @@ export function PageStepper({
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
                   </span>
                 ) : isCurrent ? (
-                  <span className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold shadow-sm ring-2 ring-blue-200">
+                  <span className="w-10 h-10 rounded-full bg-navy text-white flex items-center justify-center font-semibold shadow-sm ring-2 ring-navy-100">
                     {page.pageNumber}
                   </span>
                 ) : isLocked ? (
@@ -90,13 +90,13 @@ export function PageStepper({
             currentPage === quizPageNumber
               ? 'bg-emerald-50 font-medium text-emerald-700 page-active-glow'
               : allPagesCompleted
-              ? 'bg-linear-to-r from-emerald-50 to-blue-50 text-emerald-700 font-medium ring-1 ring-inset ring-emerald-200 hover:ring-emerald-300'
+              ? 'bg-linear-to-r from-emerald-50 to-navy-50 text-emerald-700 font-medium ring-1 ring-inset ring-emerald-200 hover:ring-emerald-300'
               : 'text-gray-400 cursor-not-allowed bg-gray-50/50'
           }`}
         >
           <span className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-xs" aria-hidden="true">
             {allPagesCompleted ? (
-              <span className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-blue-500 text-white flex items-center justify-center shadow-sm">
+              <span className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-navy text-white flex items-center justify-center shadow-sm">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </span>
             ) : (
@@ -122,7 +122,7 @@ export function PageStepper({
         </div>
         <div className="h-2 rounded-full bg-gray-200 overflow-hidden" role="progressbar" aria-valuenow={completedPages.length} aria-valuemin={0} aria-valuemax={pages.length}>
           <div
-            className="h-2 rounded-full bg-linear-to-r from-blue-500 to-emerald-500 transition-all duration-500"
+            className="h-2 rounded-full bg-linear-to-r from-navy to-cyan transition-all duration-500"
             style={{ width: `${(completedPages.length / pages.length) * 100}%` }}
           />
         </div>

@@ -69,7 +69,7 @@ export default function StudentLessonPage({
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50" role="status" aria-label="Loading lesson">
         <div className="text-center animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-linear-to-br from-blue-500 to-purple-600 mb-4 shadow-lg shadow-blue-200">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-linear-to-br from-teal to-cyan mb-4 shadow-lg shadow-navy-100">
             <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
           </div>
           <p className="text-gray-600 font-medium">Loading lesson...</p>
@@ -86,7 +86,7 @@ export default function StudentLessonPage({
           <p className="text-gray-600 mb-4">{error || 'Lesson not found'}</p>
           <a
             href="/"
-            className="inline-block rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            className="inline-block rounded bg-navy px-4 py-2 text-white hover:bg-navy-light"
           >
             Back to Home
           </a>

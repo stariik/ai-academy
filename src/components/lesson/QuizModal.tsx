@@ -72,7 +72,7 @@ export function QuizModal({
     return (
       <div className={inline ? '' : 'fixed inset-0 z-50 flex items-center justify-center quiz-backdrop'} role={inline ? undefined : 'dialog'} aria-modal={inline ? undefined : true} aria-label="Quiz results">
         <div className={inline ? '' : 'mx-4 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in'}>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Score header */}
             <div className="text-center mb-6 animate-scale-in">
               <div className="relative inline-flex items-center justify-center mb-4" role="img" aria-label={`Score: ${result.percentage}%`}>
@@ -173,7 +173,7 @@ export function QuizModal({
               </button>
               <button
                 onClick={onClose}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light"
               >
                 Back to Lesson
               </button>
@@ -188,12 +188,12 @@ export function QuizModal({
   return (
     <div className={inline ? '' : 'fixed inset-0 z-50 flex items-center justify-center quiz-backdrop'} role={inline ? undefined : 'dialog'} aria-modal={inline ? undefined : true} aria-labelledby="quiz-title">
       <div className={inline ? '' : 'mx-4 w-full max-w-2xl rounded-xl bg-white shadow-2xl ring-1 ring-black/5 animate-scale-in'}>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 id="quiz-title" className="text-xl font-bold text-gray-900">Quiz</h2>
-              <p className="text-sm text-gray-500">
+              <h2 id="quiz-title" className="text-lg sm:text-xl font-bold text-gray-900">Quiz</h2>
+              <p className="text-xs sm:text-sm text-gray-500">
                 Question {currentIndex + 1} of {totalQuestions} &middot; 70% needed to pass
               </p>
             </div>
@@ -214,7 +214,7 @@ export function QuizModal({
             </div>
             <div className="h-2 rounded-full bg-gray-200" role="progressbar" aria-valuenow={currentIndex + 1} aria-valuemin={1} aria-valuemax={totalQuestions}>
               <div
-                className="h-2 rounded-full bg-blue-500 transition-all"
+                className="h-2 rounded-full bg-teal transition-all"
                 style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
               />
             </div>
@@ -254,7 +254,7 @@ export function QuizModal({
                     key={i}
                     className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
                       answers[currentQuestion.id] === option
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-teal bg-teal-50'
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                   >
@@ -264,7 +264,7 @@ export function QuizModal({
                       value={option}
                       checked={answers[currentQuestion.id] === option}
                       onChange={() => setAnswer(currentQuestion.id, option)}
-                      className="h-4 w-4 text-blue-600"
+                      className="h-4 w-4 text-teal"
                     />
                     <span className="text-sm text-gray-700">{option}</span>
                   </label>
@@ -281,7 +281,7 @@ export function QuizModal({
                     aria-pressed={answers[currentQuestion.id] === val}
                     className={`flex-1 rounded-lg border p-4 text-center text-sm font-medium transition ${
                       answers[currentQuestion.id] === val
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        ? 'border-teal bg-teal-50 text-teal'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
@@ -298,7 +298,7 @@ export function QuizModal({
                 placeholder="Type your answer here..."
                 aria-label="Your answer"
                 rows={3}
-                className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal"
               />
             )}
           </fieldset>
@@ -314,7 +314,7 @@ export function QuizModal({
             </button>
 
             {/* Question dots */}
-            <div className="flex gap-1.5" role="tablist" aria-label="Question navigation">
+            <div className="flex gap-1 sm:gap-1.5" role="tablist" aria-label="Question navigation">
               {questions.map((q, i) => (
                 <button
                   key={q.id}
@@ -322,21 +322,23 @@ export function QuizModal({
                   role="tab"
                   aria-selected={i === currentIndex}
                   aria-label={`Question ${i + 1}${answers[q.id] ? ' (answered)' : ''}`}
-                  className={`h-3 w-3 rounded-full transition hover:scale-125 ${
+                  className={`h-6 w-6 sm:h-3 sm:w-3 rounded-full transition hover:scale-110 flex items-center justify-center text-[10px] font-medium sm:text-[0px] ${
                     i === currentIndex
-                      ? 'bg-blue-600 ring-2 ring-blue-200'
+                      ? 'bg-navy text-white sm:text-[0px] ring-2 ring-navy-100'
                       : answers[q.id]
-                      ? 'bg-blue-300'
-                      : 'bg-gray-300'
+                      ? 'bg-teal-100 text-white sm:text-[0px]'
+                      : 'bg-gray-300 text-gray-600 sm:text-[0px]'
                   }`}
-                />
+                >
+                  <span className="sm:hidden">{i + 1}</span>
+                </button>
               ))}
             </div>
 
             {currentIndex < totalQuestions - 1 ? (
               <button
                 onClick={() => setCurrentIndex((i) => Math.min(totalQuestions - 1, i + 1))}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light"
               >
                 Next
               </button>

@@ -43,7 +43,7 @@ export default function StudentCoursePage({
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="h-8 w-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <div className="h-8 w-8 border-4 border-teal-100 border-t-teal rounded-full animate-spin" />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export default function StudentCoursePage({
     return (
       <div className="text-center py-20">
         <h2 className="text-xl font-bold text-gray-900">Course not found</h2>
-        <Link href="/student" className="text-blue-600 mt-2 inline-block">
+        <Link href="/student" className="text-teal mt-2 inline-block">
           Back to dashboard
         </Link>
       </div>
@@ -82,7 +82,7 @@ export default function StudentCoursePage({
         <div className="mt-4 flex items-center gap-4">
           <div className="flex-1 h-3 rounded-full bg-gray-200">
             <div
-              className="h-3 rounded-full bg-blue-500 transition-all"
+              className="h-3 rounded-full bg-teal transition-all"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -108,7 +108,7 @@ export default function StudentCoursePage({
                 isCompleted
                   ? 'bg-green-50 border-green-200'
                   : isInProgress
-                  ? 'bg-blue-50 border-blue-200'
+                  ? 'bg-teal-50 border-teal-100'
                   : 'bg-white border-gray-200'
               }`}
             >
@@ -118,7 +118,7 @@ export default function StudentCoursePage({
                   isCompleted
                     ? 'bg-green-500 text-white'
                     : isInProgress
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-teal text-white'
                     : 'bg-gray-200 text-gray-500'
                 }`}
               >
@@ -139,7 +139,7 @@ export default function StudentCoursePage({
                 </span>
               )}
               {isInProgress && (
-                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                <span className="text-xs px-2 py-1 rounded-full bg-teal-50 text-teal font-medium">
                   Continue
                 </span>
               )}
