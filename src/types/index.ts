@@ -43,10 +43,11 @@ export type QuizQuestion = {
 };
 
 export type TeachingFlow = {
-  introduction: string;
-  coreExplanation: string;
-  practiceHint: string;
   reflectionPrompt: string;
+  // Legacy fields from earlier generations — present in older DB rows, never generated for new lessons.
+  introduction?: string;
+  coreExplanation?: string;
+  practiceHint?: string;
 };
 
 export type ConceptNode = {
@@ -169,19 +170,11 @@ export type GeminiPagedLessonResponse = {
       explanation: string;
       difficulty: 'easy' | 'medium' | 'hard';
       points: number;
-      bloom_level?: string;
       metadata?: Record<string, unknown>;
     }[];
-    teaching_flow?: {
-      introduction: string;
-      core_explanation: string;
-      practice_hint: string;
-      reflection_prompt: string;
-    };
-    prerequisites?: string[];
-    concepts_introduced?: string[];
+    teaching_flow?: { reflection_prompt: string };
     difficulty_level?: string;
-    bridge_from_previous?: string;
+    bridge_from_previous?: string | null;
     common_misconceptions?: string[];
     real_world_applications?: string[];
   }[];
@@ -194,14 +187,10 @@ export type GeminiPagedLessonResponse = {
     explanation: string;
     difficulty: 'easy' | 'medium' | 'hard';
     points: number;
-    bloom_level?: string;
     metadata?: Record<string, unknown>;
-    page_reference?: number;
   }[];
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   estimated_duration_minutes: number;
-  concept_map?: { concept_id: string; label: string; prerequisite_ids: string[] }[];
-  learning_path?: string[];
 };
 
 // ============================================================
@@ -257,13 +246,22 @@ export type StudentProfile = {
 // ============================================================
 
 export type CourseGenerationProgress = {
-  status: 'extracting_outline' | 'generating_lesson' | 'saving' | 'complete' | 'error';
+  status:
+    | 'parsing_syllabus'
+    | 'extracting_outline'
+    | 'expanding_lessons'
+    | 'generating_lesson'
+    | 'saving'
+    | 'complete'
+    | 'error';
   totalLessons: number;
   currentLesson: number;
   currentLessonTitle: string;
   courseId?: string;
   courseName?: string;
   lessons: { id: string; title: string; pages: number; position: number }[];
+  // Only set during 'expanding_lessons' — how many syllabus lessons have been expanded so far
+  expansionProgress?: { current: number; total: number };
   error?: string;
 };
 

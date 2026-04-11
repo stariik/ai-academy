@@ -219,12 +219,25 @@ export default function AdminCourseDetailPage({
                   <p className="text-gray-500 mt-1">{course.description}</p>
                 )}
               </div>
-              <button
-                onClick={() => setEditing(true)}
-                className="px-3 py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-50"
-              >
-                Edit
-              </button>
+              <div className="flex gap-2">
+                <Link
+                  href={`/admin/courses/${courseId}/preview`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded hover:bg-violet-100 hover:border-violet-300 transition"
+                  title="Read the full course content end-to-end"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Read full course
+                </Link>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="px-3 py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
+              </div>
             </div>
           )}
         </div>

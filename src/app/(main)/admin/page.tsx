@@ -8,7 +8,8 @@ import type { CourseGenerationProgress } from '@/types';
 
 type AdminStep = 'choose' | 'prompt-chat' | 'upload' | 'preview-sections' | 'generating' | 'complete'
   | 'outline-upload' | 'outline-preview' | 'outline-generating'
-  | 'bulk-upload' | 'bulk-processing';
+  | 'bulk-upload' | 'bulk-processing'
+  | 'syllabus-upload';
 
 type DetectedSection = {
   id: string;
@@ -67,6 +68,14 @@ export default function AdminPage() {
   const [copied, setCopied] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+
+  // Abort controller for in-flight syllabus generation — lets the user
+  // click Stop to cancel and wipe any partial course created so far.
+  // `syllabusRunning` is the reactive flag used by the JSX; the ref holds
+  // the actual controller instance.
+  const syllabusAbortRef = useRef<AbortController | null>(null);
+  const [syllabusRunning, setSyllabusRunning] = useState(false);
+  const [syllabusProvider, setSyllabusProvider] = useState<'gemini' | 'claude'>('gemini');
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -188,6 +197,107 @@ export default function AdminPage() {
       return next;
     });
   };
+
+  // ---- Syllabus → Full Course (3-stage Gemini pipeline, SSE streamed) ----
+  const startSyllabusGeneration = useCallback(async () => {
+    if (!selectedFile) {
+      setError('Please upload a syllabus PDF.');
+      return;
+    }
+
+    setError(null);
+    setCourseGenProgress(null);
+    setStep('generating');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('provider', syllabusProvider);
+    if (courseName.trim()) {
+      formData.append('courseName', courseName.trim());
+    }
+
+    const controller = new AbortController();
+    syllabusAbortRef.current = controller;
+    setSyllabusRunning(true);
+
+    try {
+      const res = await fetch('/api/analyze-course/from-syllabus', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Request failed: ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE events are separated by \n\n; keep any trailing partial event in buffer
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+
+        for (const raw of events) {
+          const line = raw.trim();
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (!payload) continue;
+
+          try {
+            const progress: CourseGenerationProgress = JSON.parse(payload);
+            setCourseGenProgress(progress);
+
+            if (progress.status === 'complete') {
+              setStep('complete');
+            } else if (progress.status === 'error') {
+              setError(progress.error || 'Course generation failed.');
+              setStep('syllabus-upload');
+            }
+          } catch (err) {
+            console.warn('[SyllabusSSE] Failed to parse event:', payload, err);
+          }
+        }
+      }
+    } catch (err) {
+      // User clicked Stop → fetch was aborted. stopSyllabusGeneration already
+      // reset UI state; don't treat as error and don't overwrite it.
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return;
+      }
+      const message = err instanceof Error ? err.message : 'Failed to generate course.';
+      setError(message);
+      setStep('syllabus-upload');
+    } finally {
+      if (syllabusAbortRef.current === controller) {
+        syllabusAbortRef.current = null;
+      }
+      setSyllabusRunning(false);
+    }
+  }, [selectedFile, courseName, syllabusProvider]);
+
+  // ---- Stop an in-flight syllabus generation ----
+  // Aborts the fetch (server catches PipelineAbortError and deleteCourse's
+  // any partial data). Returns user to the upload step with clean state.
+  const stopSyllabusGeneration = useCallback(() => {
+    const controller = syllabusAbortRef.current;
+    if (!controller) return;
+    console.log('[Admin] Stop clicked — aborting syllabus generation');
+    controller.abort();
+    syllabusAbortRef.current = null;
+    setSyllabusRunning(false);
+    setCourseGenProgress(null);
+    setError(null);
+    setStep('syllabus-upload');
+  }, []);
 
   // ---- Course Generation (one lesson per request to stay within Vercel 300s limit) ----
   const startGeneration = useCallback(async () => {
@@ -674,6 +784,195 @@ export default function AdminPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-1">I already have a full PDF</h3>
               <p className="text-sm text-gray-500">Upload a complete course PDF. The system analyzes content and restructures it into lessons.</p>
             </button>
+
+            <button
+              onClick={() => setStep('syllabus-upload')}
+              className="bg-white border-2 border-violet-200 rounded-xl p-8 text-left hover:border-violet-400 hover:shadow-md transition-all group sm:col-span-2"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition">
+                  <svg className="w-6 h-6 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14-7H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zM9 15h6" /></svg>
+                </div>
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 bg-violet-50 border border-violet-200 px-2 py-1 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                  NEW · AI-powered
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Generate Full Course from Syllabus</h3>
+              <p className="text-sm text-gray-500">
+                Upload just a syllabus (table of contents with lesson titles). Gemini parses it, expands each lesson
+                into detailed key points, then generates full 10-15 minute lessons in the source language —
+                all with automatic quality review.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-xs text-violet-700 bg-violet-50 px-2 py-0.5 rounded">3-stage pipeline</span>
+                <span className="text-xs text-violet-700 bg-violet-50 px-2 py-0.5 rounded">Smart splitting</span>
+                <span className="text-xs text-violet-700 bg-violet-50 px-2 py-0.5 rounded">Quality review ≥9/10</span>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* ============================================================
+            STEP: SYLLABUS UPLOAD
+            ============================================================ */}
+        {step === 'syllabus-upload' && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <button
+                onClick={() => { setSelectedFile(null); setError(null); setStep('choose'); }}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Back"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <h2 className="text-xl font-bold text-gray-900">Generate Course from Syllabus</h2>
+            </div>
+
+            <div className="bg-violet-50 border border-violet-200 rounded-xl p-5 mb-6">
+              <div className="flex gap-3">
+                <svg className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div className="text-sm text-violet-900 space-y-1">
+                  <p className="font-semibold">How this is different from &ldquo;I already have a full PDF&rdquo;</p>
+                  <p>
+                    This flow is for <strong>syllabus-only documents</strong> — PDFs that contain a table of contents
+                    with module and lesson titles, but no teaching material yet. Gemini will generate the full lesson
+                    content from scratch for each title in the syllabus, grounded in the module outcomes and course goals.
+                  </p>
+                  <p className="text-xs text-violet-700 mt-2">
+                    Output language is auto-detected from the PDF. Georgian syllabi get native Georgian content via
+                    a dedicated few-shot example.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-8">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  AI Provider <span className="text-gray-400 font-normal">(generates the full course content)</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSyllabusProvider('gemini')}
+                    className={`text-left p-4 rounded-lg border-2 transition ${
+                      syllabusProvider === 'gemini'
+                        ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200'
+                        : 'border-gray-200 hover:border-violet-300 hover:bg-violet-50/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-gray-900">Google Gemini</span>
+                      {syllabusProvider === 'gemini' && (
+                        <span className="text-[10px] font-semibold text-violet-700 bg-violet-100 px-2 py-0.5 rounded">SELECTED</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">gemini-2.5-flash · 65K output · fast & cheap</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSyllabusProvider('claude')}
+                    className={`text-left p-4 rounded-lg border-2 transition ${
+                      syllabusProvider === 'claude'
+                        ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-200'
+                        : 'border-gray-200 hover:border-violet-300 hover:bg-violet-50/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-gray-900">Anthropic Claude</span>
+                      {syllabusProvider === 'claude' && (
+                        <span className="text-[10px] font-semibold text-violet-700 bg-violet-100 px-2 py-0.5 rounded">SELECTED</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">claude-sonnet-4-5 · 64K output · higher quality</p>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Generate the same syllabus with each provider and compare the output in the preview page to pick a winner.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Course Name <span className="text-gray-400 font-normal">(optional — auto-extracted from PDF if empty)</span>
+                </label>
+                <input
+                  type="text"
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  placeholder="e.g. AI მარკეტინგი"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-transparent"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Syllabus PDF</label>
+                <label
+                  className={`flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-xl cursor-pointer transition ${
+                    selectedFile
+                      ? 'border-violet-400 bg-violet-50/60'
+                      : 'border-gray-300 hover:border-violet-400 hover:bg-violet-50/30'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setError(null);
+                      }
+                    }}
+                  />
+                  {selectedFile ? (
+                    <div className="text-center">
+                      <svg className="w-10 h-10 text-violet-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {(selectedFile.size / 1024).toFixed(1)} KB · click to replace
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <svg className="w-10 h-10 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                      <p className="text-sm font-medium text-gray-700">Click to upload syllabus PDF</p>
+                      <p className="text-xs text-gray-500 mt-1">PDF or DOCX · max 25MB</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={startSyllabusGeneration}
+                  disabled={!selectedFile}
+                  className="px-5 py-2.5 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Generate Full Course
+                </button>
+                <button
+                  onClick={() => { setSelectedFile(null); setError(null); setStep('choose'); }}
+                  className="px-5 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">
+                Expected time: 3-10 minutes depending on lesson count. Each lesson is generated with a quality-review pass
+                and one regeneration if the score is below 9/10. The course is saved incrementally — if a later lesson fails,
+                earlier ones are preserved.
+              </p>
+            </div>
           </div>
         )}
 
@@ -1381,24 +1680,70 @@ Lesson 2: Prompt Engineering Basics
             ============================================================ */}
         {step === 'generating' && (
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-navy-100 border-t-navy rounded-full animate-spin" />
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-navy-100 border-t-navy rounded-full animate-spin" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">
+                    Generating: {courseGenProgress?.courseName || courseName}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {!courseGenProgress && 'Starting...'}
+                    {courseGenProgress?.status === 'parsing_syllabus' && 'Stage 0 — Parsing syllabus structure...'}
+                    {courseGenProgress?.status === 'extracting_outline' && 'Analyzing structure...'}
+                    {courseGenProgress?.status === 'expanding_lessons' && courseGenProgress.expansionProgress &&
+                      `Stage 1 — Expanding lessons into key points: ${courseGenProgress.expansionProgress.current}/${courseGenProgress.expansionProgress.total}`}
+                    {courseGenProgress?.status === 'generating_lesson' && `Stage 2 — Creating lesson ${courseGenProgress.currentLesson} of ${courseGenProgress.totalLessons}`}
+                    {courseGenProgress?.status === 'saving' && `Saving lesson ${courseGenProgress.currentLesson}...`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">
-                  Generating: {courseGenProgress?.courseName || courseName}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {!courseGenProgress && 'Starting...'}
-                  {courseGenProgress?.status === 'extracting_outline' && 'Analyzing structure...'}
-                  {courseGenProgress?.status === 'generating_lesson' && `Creating lesson ${courseGenProgress.currentLesson} of ${courseGenProgress.totalLessons}`}
-                  {courseGenProgress?.status === 'saving' && `Saving lesson ${courseGenProgress.currentLesson}...`}
-                </p>
-              </div>
+
+              {/* Stop button — only for the syllabus pipeline flow (tracks running state) */}
+              {syllabusRunning && (
+                <button
+                  onClick={stopSyllabusGeneration}
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition"
+                  title="Cancel generation and delete any partial course"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <rect x="9" y="9" width="6" height="6" rx="0.5" fill="currentColor" stroke="none" />
+                  </svg>
+                  Stop & Discard
+                </button>
+              )}
             </div>
 
-            {courseGenProgress && courseGenProgress.totalLessons > 0 && (
+            {/* Stage 1 — expansion progress bar */}
+            {courseGenProgress?.status === 'expanding_lessons' && courseGenProgress.expansionProgress && (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>
+                    {courseGenProgress.expansionProgress.current}/{courseGenProgress.expansionProgress.total} syllabus lessons expanded
+                  </span>
+                  <span>
+                    {Math.round((courseGenProgress.expansionProgress.current / Math.max(1, courseGenProgress.expansionProgress.total)) * 100)}%
+                  </span>
+                </div>
+                <div className="h-2.5 rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className="h-2.5 rounded-full bg-violet-500 transition-all duration-500"
+                    style={{
+                      width: `${(courseGenProgress.expansionProgress.current / Math.max(1, courseGenProgress.expansionProgress.total)) * 100}%`,
+                    }}
+                  />
+                </div>
+                {courseGenProgress.currentLessonTitle && (
+                  <p className="text-sm text-violet-700 font-medium mt-2">Currently: {courseGenProgress.currentLessonTitle}</p>
+                )}
+              </div>
+            )}
+
+            {/* Stage 2 — lesson generation progress bar */}
+            {courseGenProgress && courseGenProgress.totalLessons > 0 && courseGenProgress.status !== 'expanding_lessons' && (
               <>
                 <div className="mb-4">
                   <div className="flex justify-between text-xs text-gray-500 mb-1">

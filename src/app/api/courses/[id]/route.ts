@@ -4,11 +4,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getCourse, updateCourse, deleteCourse, getAllLessons } from '@/lib/supabase/db';
+import { getCourse, getLesson, updateCourse, deleteCourse, getAllLessons } from '@/lib/supabase/db';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
   const supabase = await createClient();
 
@@ -17,13 +17,29 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Course not found' }, { status: 404 });
   }
 
-  // Include ordered lessons
-  const lessons = await getAllLessons(supabase, { courseId: id });
-  const orderedLessons = lessons.sort(
+  // `?include=pages` returns lessons with full pages / content blocks / questions
+  // expanded — used by the admin preview page to render the whole course as
+  // one scrollable document. Default behavior (no query) omits pages to stay fast.
+  const includePages = request.nextUrl.searchParams.get('include') === 'pages';
+
+  const lessonSummaries = await getAllLessons(supabase, { courseId: id });
+  const ordered = lessonSummaries.sort(
     (a, b) => (a.positionInCourse ?? 999) - (b.positionInCourse ?? 999)
   );
 
-  return NextResponse.json({ ...course, lessons: orderedLessons });
+  if (!includePages) {
+    return NextResponse.json({ ...course, lessons: ordered });
+  }
+
+  // Expand every lesson into its full tree (pages + content_blocks + quiz_questions)
+  const fullLessons = await Promise.all(
+    ordered.map((l) => getLesson(supabase, l.id))
+  );
+
+  return NextResponse.json({
+    ...course,
+    lessons: fullLessons.filter((l): l is NonNullable<typeof l> => l !== null),
+  });
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {

@@ -90,7 +90,6 @@ export function buildLessonFromGeminiResponse(
       points: q.points || 5,
       pageId,
       scope: 'check' as const,
-      bloomLevel: q.bloom_level as QuizQuestion['bloomLevel'],
       metadata: q.metadata,
     }));
 
@@ -102,16 +101,11 @@ export function buildLessonFromGeminiResponse(
       keyConcepts: page.key_concepts || [],
       contentBlocks: pageBlocks,
       checkQuestions,
-      teachingFlow: page.teaching_flow ? {
-        introduction: page.teaching_flow.introduction,
-        coreExplanation: page.teaching_flow.core_explanation,
-        practiceHint: page.teaching_flow.practice_hint,
-        reflectionPrompt: page.teaching_flow.reflection_prompt,
-      } : undefined,
-      prerequisites: page.prerequisites,
-      conceptsIntroduced: page.concepts_introduced,
+      teachingFlow: page.teaching_flow
+        ? { reflectionPrompt: page.teaching_flow.reflection_prompt }
+        : undefined,
       difficultyLevel: page.difficulty_level as LessonPage['difficultyLevel'],
-      bridgeFromPrevious: page.bridge_from_previous,
+      bridgeFromPrevious: page.bridge_from_previous ?? undefined,
       commonMisconceptions: page.common_misconceptions,
       realWorldApplications: page.real_world_applications,
     };
@@ -128,7 +122,6 @@ export function buildLessonFromGeminiResponse(
       difficulty: q.difficulty,
       points: q.points || 10,
       scope: 'final' as const,
-      bloomLevel: q.bloom_level as QuizQuestion['bloomLevel'],
       metadata: q.metadata,
     })
   );
@@ -154,11 +147,5 @@ export function buildLessonFromGeminiResponse(
     positionInCourse,
     pages,
     totalPages: pages.length,
-    conceptMap: geminiResponse.concept_map?.map(n => ({
-      conceptId: n.concept_id,
-      label: n.label,
-      prerequisiteIds: n.prerequisite_ids,
-    })),
-    learningPath: geminiResponse.learning_path,
   };
 }
