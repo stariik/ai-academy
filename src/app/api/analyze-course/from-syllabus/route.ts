@@ -29,7 +29,7 @@ import { saveLesson, createCourse, deleteCourse } from '@/lib/supabase/db';
 import { buildLessonFromGeminiResponse } from '@/lib/lesson-builder';
 import type { CourseGenerationProgress, Lesson } from '@/types';
 
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = [
