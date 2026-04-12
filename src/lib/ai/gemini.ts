@@ -49,8 +49,8 @@ const anthropic = new Anthropic();
 export type LLMProvider = 'gemini' | 'claude';
 const DEFAULT_PROVIDER: LLMProvider = 'gemini';
 
-const CLAUDE_CONTENT_MODEL = process.env.CLAUDE_CONTENT_MODEL ?? 'claude-sonnet-4-5-20250929';
-const CLAUDE_FAST_MODEL = process.env.CLAUDE_FAST_MODEL ?? 'claude-sonnet-4-5-20250929';
+const CLAUDE_CONTENT_MODEL = process.env.CLAUDE_CONTENT_MODEL ?? 'claude-sonnet-4-6';
+const CLAUDE_FAST_MODEL = process.env.CLAUDE_FAST_MODEL ?? 'claude-sonnet-4-6';
 
 const CHUNKED_THRESHOLD = 60_000;
 const MAX_CHUNK_SIZE = 60_000;

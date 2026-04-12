@@ -885,7 +885,7 @@ export default function AdminPage() {
                         <span className="text-[10px] font-semibold text-violet-700 bg-violet-100 px-2 py-0.5 rounded">SELECTED</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500">claude-sonnet-4-5 · 64K output · higher quality</p>
+                    <p className="text-xs text-gray-500">claude-sonnet-4-6 · 64K output · higher quality</p>
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
