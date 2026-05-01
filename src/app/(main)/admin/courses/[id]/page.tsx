@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useCallback, useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import type { Course, Lesson } from '@/types';
+import { CATEGORIES } from '@/lib/constants/categories';
 
 type CourseWithLessons = Course & { lessons: Lesson[] };
 
@@ -18,8 +19,9 @@ export default function AdminCourseDetailPage({
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
 
-  const fetchCourse = async () => {
+  const fetchCourse = useCallback(async () => {
     try {
       const res = await fetch(`/api/courses/${courseId}`);
       if (!res.ok) throw new Error('Not found');
@@ -27,12 +29,13 @@ export default function AdminCourseDetailPage({
       setCourse(data);
       setTitle(data.title);
       setDescription(data.description);
+      setTags(Array.isArray(data.tags) ? data.tags : []);
     } catch {
       setCourse(null);
     }
-  };
+  }, [courseId]);
 
-  const fetchAllLessons = async () => {
+  const fetchAllLessons = useCallback(async () => {
     try {
       const res = await fetch('/api/lessons');
       const data = await res.json();
@@ -40,20 +43,20 @@ export default function AdminCourseDetailPage({
     } catch {
       setAllLessons([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     Promise.all([fetchCourse(), fetchAllLessons()]).finally(() =>
       setLoading(false)
     );
-  }, [courseId]);
+  }, [courseId, fetchCourse, fetchAllLessons]);
 
   const handleSave = async () => {
     try {
       const res = await fetch(`/api/courses/${courseId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, tags }),
       });
       if (res.ok) {
         setEditing(false);
@@ -202,6 +205,7 @@ export default function AdminCourseDetailPage({
                 rows={2}
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
+              <CategoryPicker selected={tags} onChange={setTags} />
               <div className="flex gap-2">
                 <button onClick={handleSave} className="px-4 py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light">
                   Save
@@ -218,6 +222,7 @@ export default function AdminCourseDetailPage({
                 {course.description && (
                   <p className="text-gray-500 mt-1">{course.description}</p>
                 )}
+                <CategoryBadges tags={course.tags} />
               </div>
               <div className="flex gap-2">
                 <Link
@@ -346,6 +351,85 @@ export default function AdminCourseDetailPage({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CategoryPicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const toggle = (category: string) => {
+    onChange(
+      selected.includes(category)
+        ? selected.filter((tag) => tag !== category)
+        : [...selected, category]
+    );
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-sm font-medium text-gray-700">Categories</label>
+        {selected.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="text-xs font-medium text-gray-400 hover:text-red-500"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {CATEGORIES.map((category) => {
+          const checked = selected.includes(category);
+          return (
+            <label
+              key={category}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer transition ${
+                checked
+                  ? 'border-teal bg-teal-50 text-navy'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-teal/50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(category)}
+                className="h-4 w-4 rounded border-gray-300 text-teal focus:ring-teal"
+              />
+              <span className="font-medium">{category}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CategoryBadges({ tags }: { tags: string[] }) {
+  if (!tags?.length) {
+    return (
+      <div className="mt-3 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-100">
+        Uncategorized
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal border border-teal/20"
+        >
+          {tag}
+        </span>
+      ))}
     </div>
   );
 }

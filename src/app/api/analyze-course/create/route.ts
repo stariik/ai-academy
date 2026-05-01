@@ -12,7 +12,7 @@ import { createCourse } from '@/lib/supabase/db';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { courseName, sections } = body;
+    const { courseName, sections, tags } = body;
 
     if (!courseName?.trim()) {
       return NextResponse.json({ error: 'Course name is required' }, { status: 400 });
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const course = await createCourse(supabase, {
       title: courseName.trim(),
       description: '',
-      tags: [],
+      tags: Array.isArray(tags) ? tags : [],
     });
 
     return NextResponse.json({

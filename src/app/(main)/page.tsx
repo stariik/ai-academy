@@ -1,17 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Lesson, Course, LessonProgress, StudentProfile } from '@/types';
+import { Lesson, Course, LessonProgress } from '@/types';
 import { useSession } from '@/hooks/useSession';
+import { CATEGORIES } from '@/lib/constants/categories';
 
 export default function Home() {
   const { sessionId } = useSession();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [progress, setProgress] = useState<LessonProgress[]>([]);
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [recommendations, setRecommendations] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
 
@@ -19,25 +18,19 @@ export default function Home() {
     async function fetchAll() {
       setLoading(true);
       try {
-        const [lessonsRes, coursesRes, progressRes, profileRes, recsRes] = await Promise.all([
+        const [lessonsRes, coursesRes, progressRes] = await Promise.all([
           fetch('/api/lessons?status=published'),
           fetch('/api/courses'),
           fetch('/api/progress'),
-          fetch('/api/profile'),
-          fetch('/api/recommendations'),
         ]);
-        const [lessonsData, coursesData, progressData, profileData, recsData] = await Promise.all([
+        const [lessonsData, coursesData, progressData] = await Promise.all([
           lessonsRes.json(),
           coursesRes.json(),
           progressRes.json(),
-          profileRes.json(),
-          recsRes.json(),
         ]);
         setLessons(Array.isArray(lessonsData) ? lessonsData : []);
         setCourses(Array.isArray(coursesData) ? coursesData : []);
         setProgress(Array.isArray(progressData) ? progressData : []);
-        setProfile(profileData?.id ? profileData : null);
-        setRecommendations(Array.isArray(recsData) ? recsData : []);
       } catch (err) {
         console.error('Failed to fetch data:', err);
       } finally {
@@ -57,37 +50,33 @@ export default function Home() {
     () =>
       lessons
         .filter((l) => progressById.get(l.id)?.status === 'in_progress')
-        .slice(0, 6),
+        .slice(0, 8),
     [lessons, progressById]
   );
 
-  const completedCount = progress.filter((p) => p.status === 'completed').length;
-  const inProgressCount = progress.filter((p) => p.status === 'in_progress').length;
-
-  const categories = useMemo(() => {
-    const counts = new Map<string, number>();
-    courses.forEach((c) => (c.tags || []).forEach((t) => counts.set(t, (counts.get(t) || 0) + 1)));
-    lessons.forEach((l) => (l.tags || []).forEach((t) => counts.set(t, (counts.get(t) || 0) + 1)));
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([name, count]) => ({ name, count }));
-  }, [courses, lessons]);
-
-  const popularCourses = courses.slice(0, 8);
-
-  const filteredLessons = useMemo(() => {
-    if (!query.trim()) return [];
+  const filteredCourses = useMemo(() => {
+    if (!query.trim()) return courses;
     const q = query.toLowerCase();
-    return lessons
-      .filter(
-        (l) =>
-          l.title.toLowerCase().includes(q) ||
-          l.description?.toLowerCase().includes(q) ||
-          l.tags?.some((t) => t.toLowerCase().includes(q))
-      )
-      .slice(0, 8);
-  }, [query, lessons]);
+    return courses.filter(
+      (c) =>
+        c.title.toLowerCase().includes(q) ||
+        c.description?.toLowerCase().includes(q) ||
+        c.tags?.some((t) => t.toLowerCase().includes(q))
+    );
+  }, [query, courses]);
+
+  const categoryRails = useMemo(() => {
+    const categoryNames = new Set<string>();
+    CATEGORIES.forEach((category) => categoryNames.add(category));
+    courses.forEach((course) => getCourseCategories(course).forEach((category) => categoryNames.add(category)));
+
+    return Array.from(categoryNames)
+      .map((category) => ({
+        category,
+        courses: courses.filter((course) => getCourseCategories(course).includes(category)),
+      }))
+      .filter((rail) => rail.courses.length > 0);
+  }, [courses]);
 
   const courseProgress = (courseId: string) => {
     const courseLessons = lessons.filter((l) => l.courseId === courseId);
@@ -115,7 +104,6 @@ export default function Home() {
     <div className="bg-cream-50 min-h-screen">
       {/* HERO */}
       <section className="relative overflow-hidden bg-navy text-white">
-        {/* Decorative gradient blobs */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -123,7 +111,6 @@ export default function Home() {
               'radial-gradient(circle at 15% 20%, rgba(10,196,224,0.35) 0, transparent 45%), radial-gradient(circle at 85% 70%, rgba(9,146,194,0.35) 0, transparent 45%), radial-gradient(circle at 50% 100%, rgba(246,231,188,0.15) 0, transparent 50%)',
           }}
         />
-        {/* Grid overlay */}
         <div
           className="absolute inset-0 opacity-[0.07] pointer-events-none"
           style={{
@@ -139,74 +126,36 @@ export default function Home() {
               AI Academy
             </p>
           </div>
-          <h1 className="text-4xl sm:text-6xl font-black leading-[1.05] mb-4 max-w-3xl">
-            Learn without <span className="text-cream">limits.</span>
+          <h1 className="text-4xl sm:text-6xl font-black leading-[1.1] mb-4 max-w-3xl">
+            ისწავლე <span className="text-cream">უსაზღვროდ.</span>
           </h1>
           <p className="text-base sm:text-xl text-white/75 max-w-2xl mb-8 leading-relaxed">
-            Personalized, AI-powered lessons that adapt to the way you learn. Pick up where you left off or explore something new.
+            პერსონალიზებული, AI-ზე დაფუძნებული კურსები, რომლებიც შენს სწავლის სტილს ერგება.
           </p>
 
-          {/* Search */}
+          {/* Live search */}
           <div className="relative max-w-2xl">
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for anything…"
+              placeholder="მოძებნე კურსი…"
               className="w-full rounded-full bg-white text-navy placeholder:text-navy-100 pl-12 pr-4 py-3 sm:py-4 text-sm sm:text-base shadow-2xl shadow-black/30 focus:outline-none focus:ring-4 focus:ring-cyan/50"
-              aria-label="Search lessons"
+              aria-label="კურსის ძებნა"
             />
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
-
-            {query && (
-              <div className="absolute z-20 mt-2 left-0 right-0 bg-white text-navy rounded-2xl shadow-2xl border border-cyan-50 overflow-hidden">
-                {filteredLessons.length === 0 ? (
-                  <div className="p-4 text-sm text-navy-100">No lessons match “{query}”.</div>
-                ) : (
-                  filteredLessons.map((l) => (
-                    <Link
-                      key={l.id}
-                      href={`/student/lesson/${l.id}`}
-                      className="flex items-start gap-3 p-3 hover:bg-cyan-50 border-b border-cyan-50 last:border-0 no-underline"
-                    >
-                      <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-cyan to-teal text-white flex items-center justify-center flex-shrink-0 font-bold">
-                        {l.title.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold truncate text-navy">{l.title}</p>
-                        <p className="text-xs text-navy-100 line-clamp-1">{l.description}</p>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            )}
           </div>
-
-          {/* Stat strip */}
-          {profile && (
-            <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl">
-              <StatPill label="Completed" value={completedCount.toString()} accent="text-cream" />
-              <StatPill label="In Progress" value={inProgressCount.toString()} accent="text-cyan" />
-              <StatPill label="Quizzes" value={profile.totalQuizzes.toString()} accent="text-cyan-light" />
-              <StatPill
-                label="Avg Score"
-                value={profile.averageScore > 0 ? `${Math.round(profile.averageScore)}%` : '—'}
-                accent="text-cream"
-              />
-            </div>
-          )}
         </div>
       </section>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
-        {/* CONTINUE LEARNING */}
-        {inProgressLessons.length > 0 && (
+        {/* CONTINUE LEARNING — hidden while searching */}
+        {!query.trim() && inProgressLessons.length > 0 && (
           <Section
-            title="Continue learning"
-            subtitle="Pick up right where you left off"
+            title="განაგრძე სწავლა"
+            subtitle="დაბრუნდი იქ, სადაც გაჩერდი"
           >
             <HScroll>
               {inProgressLessons.map((l) => (
@@ -222,7 +171,7 @@ export default function Home() {
                       {l.title.charAt(0)}
                     </div>
                     <span className="absolute top-2 right-2 text-[10px] bg-cream text-navy px-2 py-0.5 rounded-full font-bold uppercase tracking-wide shadow-md">
-                      In progress
+                      მიმდინარე
                     </span>
                   </div>
                   <div className="p-4">
@@ -237,7 +186,7 @@ export default function Home() {
                       />
                     </div>
                     <p className="text-[11px] text-teal mt-1.5 font-bold">
-                      {lessonProgressPct(l.id)}% complete
+                      {lessonProgressPct(l.id)}% დასრულებული
                     </p>
                   </div>
                 </Link>
@@ -246,151 +195,56 @@ export default function Home() {
           </Section>
         )}
 
-        {/* RECOMMENDED */}
-        {recommendations.length > 0 && (
-          <Section
-            title="Recommended for you"
-            subtitle="Based on what you've been learning"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recommendations.slice(0, 6).map((l) => (
-                <Link
-                  key={l.id}
-                  href={`/student/lesson/${l.id}`}
-                  className="group bg-white rounded-2xl border border-cyan-50 hover:shadow-xl hover:shadow-navy/10 hover:border-cyan hover:-translate-y-1 transition-all p-5"
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-navy to-teal flex items-center justify-center text-cream font-black text-lg flex-shrink-0 shadow-md">
-                      {l.title.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm text-navy line-clamp-2 group-hover:text-teal">
-                        {l.title}
-                      </h3>
-                      <p className="text-[11px] text-teal mt-0.5 capitalize font-semibold">{l.difficulty}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-navy-100 line-clamp-2 mb-3">{l.description}</p>
-                  <div className="flex items-center justify-between text-[11px] pt-3 border-t border-cyan-50">
-                    <span className="text-navy-100 font-medium">{l.estimatedDurationMinutes} min</span>
-                    <span className="text-teal font-bold group-hover:translate-x-1 transition">
-                      Start →
-                    </span>
-                  </div>
-                </Link>
+        {/* COURSES */}
+        <Section
+          title={query.trim() ? 'ძებნის შედეგი' : 'კურსები'}
+          subtitle={query.trim() ? `ნაპოვნია ${filteredCourses.length} კურსი` : 'აირჩიე კურსი და დაიწყე სწავლა'}
+          action={
+            !query.trim() && courses.length > 8 ? (
+              <Link href="/courses" className="text-sm font-bold text-teal hover:text-navy transition">
+                ყველა კურსი →
+              </Link>
+            ) : null
+          }
+        >
+          {filteredCourses.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-cyan-50">
+              <p className="text-base font-bold text-navy mb-1">
+                {query.trim() ? 'კურსი ვერ მოიძებნა' : 'კურსები ჯერ არ არის'}
+              </p>
+              <p className="text-sm text-navy-100">
+                {query.trim() ? 'სცადე სხვა საძიებო სიტყვა.' : 'კურსები მალე გამოჩნდება.'}
+              </p>
+            </div>
+          ) : !query.trim() && categoryRails.length > 0 ? (
+            <div className="space-y-8">
+              {categoryRails.map((rail) => (
+                <CategoryCourseRail
+                  key={rail.category}
+                  title={rail.category}
+                  courses={rail.courses}
+                  courseProgress={courseProgress}
+                />
               ))}
             </div>
-          </Section>
-        )}
-
-        {/* CATEGORIES */}
-        {categories.length > 0 && (
-          <Section
-            title="Browse by category"
-            subtitle="Find topics that interest you"
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {categories.map((c, i) => (
-                <div
-                  key={c.name}
-                  className="bg-white rounded-2xl border border-cyan-50 hover:border-cyan hover:shadow-lg hover:shadow-navy/10 hover:-translate-y-1 transition-all p-4 cursor-pointer group"
-                >
-                  <div className={`h-11 w-11 rounded-xl mb-3 flex items-center justify-center text-cream font-black shadow-md group-hover:scale-110 transition ${categoryColor(i)}`}>
-                    {c.name.charAt(0).toUpperCase()}
-                  </div>
-                  <p className="font-bold text-sm text-navy capitalize line-clamp-1">{c.name}</p>
-                  <p className="text-xs text-teal mt-0.5 font-semibold">{c.count} {c.count === 1 ? 'item' : 'items'}</p>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* POPULAR COURSES */}
-        {popularCourses.length > 0 && (
-          <Section
-            title="Popular courses"
-            subtitle="Top picks from AI Academy"
-            action={<Link href="/student" className="text-sm font-bold text-teal hover:text-navy transition">See all →</Link>}
-          >
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {popularCourses.map((c, i) => {
+              {filteredCourses.map((c, i) => {
                 const { pct, done, total } = courseProgress(c.id);
                 return (
-                  <Link
+                  <CourseCard
                     key={c.id}
-                    href={`/student/course/${c.id}`}
-                    className="group bg-white rounded-2xl border border-cyan-50 hover:shadow-2xl hover:shadow-navy/15 hover:-translate-y-1 hover:border-cyan transition-all overflow-hidden flex flex-col"
-                  >
-                    <div className={`h-32 relative ${courseCover(i)}`}>
-                      <div className="absolute inset-0 opacity-20"
-                        style={{ backgroundImage: 'radial-gradient(circle at 70% 30%, #F6E7BC 0, transparent 60%)' }} />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-cream text-5xl font-black drop-shadow-lg">
-                          {c.title.charAt(0)}
-                        </span>
-                      </div>
-                      {pct > 0 && (
-                        <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/25">
-                          <div className="h-full bg-cream" style={{ width: `${pct}%` }} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-bold text-sm text-navy line-clamp-2 group-hover:text-teal">
-                        {c.title}
-                      </h3>
-                      {c.description && (
-                        <p className="text-xs text-navy-100 line-clamp-2 mt-1">{c.description}</p>
-                      )}
-                      <div className="mt-auto pt-3 flex items-center justify-between text-[11px]">
-                        <span className="text-navy-100 font-medium">{total} lessons</span>
-                        {pct > 0 ? (
-                          <span className="font-bold text-teal">{done}/{total} done</span>
-                        ) : (
-                          <span className="font-bold bg-cream text-navy px-2 py-0.5 rounded-full">NEW</span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
+                    course={c}
+                    coverIndex={i}
+                    pct={pct}
+                    done={done}
+                    total={total}
+                  />
                 );
               })}
             </div>
-          </Section>
-        )}
-
-        {/* EMPTY STATE */}
-        {courses.length === 0 && lessons.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-2xl border border-cyan-50">
-            <p className="text-xl font-bold text-navy mb-2">No lessons yet</p>
-            <p className="text-sm text-navy-100">Content will appear here once it&apos;s published.</p>
-          </div>
-        )}
-
-        {/* CTA STRIP */}
-        <section className="relative rounded-3xl bg-navy p-8 sm:p-12 text-white text-center shadow-2xl shadow-navy/30 overflow-hidden">
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle at 10% 20%, rgba(10,196,224,0.35) 0, transparent 45%), radial-gradient(circle at 90% 80%, rgba(246,231,188,0.20) 0, transparent 45%)',
-            }}
-          />
-          <div className="relative">
-            <h2 className="text-2xl sm:text-4xl font-black mb-2">
-              Ready to <span className="text-cyan">level up</span>?
-            </h2>
-            <p className="text-sm sm:text-base text-white/80 mb-6 max-w-xl mx-auto">
-              Explore the full library and find your next learning adventure.
-            </p>
-            <Link
-              href="/student"
-              className="inline-block bg-cream text-navy font-bold px-7 py-3.5 rounded-full hover:scale-105 hover:shadow-xl hover:shadow-cyan/30 transition no-underline"
-            >
-              Browse all courses
-            </Link>
-          </div>
-        </section>
+          )}
+        </Section>
       </div>
     </div>
   );
@@ -433,27 +287,173 @@ function HScroll({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StatPill({ label, value, accent }: { label: string; value: string; accent: string }) {
+function CategoryCourseRail({
+  title,
+  courses,
+  courseProgress,
+}: {
+  title: string;
+  courses: Course[];
+  courseProgress: (courseId: string) => { pct: number; done: number; total: number };
+}) {
+  const railRef = useRef<HTMLDivElement>(null);
+
+  const scrollRail = (direction: 'left' | 'right') => {
+    railRef.current?.scrollBy({
+      left: direction === 'left' ? -340 : 340,
+      behavior: 'smooth',
+    });
+  };
+
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-2xl px-4 py-3.5 border border-white/20 hover:border-cyan/50 transition">
-      <p className={`text-2xl sm:text-3xl font-black ${accent}`}>{value}</p>
-      <p className="text-[10px] sm:text-xs text-white/70 mt-0.5 uppercase tracking-widest font-semibold">{label}</p>
-    </div>
+    <section>
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="min-w-0">
+          <h3 className="text-base sm:text-xl font-black text-navy truncate">{title}</h3>
+          <p className="text-xs sm:text-sm text-teal font-medium">
+            {courses.length} კურსი
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => scrollRail('left')}
+            className="h-9 w-9 rounded-full border border-cyan-50 bg-white text-navy hover:border-cyan hover:text-teal transition flex items-center justify-center"
+            aria-label="წინა კურსები"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollRail('right')}
+            className="h-9 w-9 rounded-full border border-cyan-50 bg-white text-navy hover:border-cyan hover:text-teal transition flex items-center justify-center"
+            aria-label="შემდეგი კურსები"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div className="-mx-4 sm:mx-0">
+        <div
+          ref={railRef}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory px-4 sm:px-0 pb-3 scrollbar-hide scroll-smooth"
+        >
+          {courses.map((course, index) => {
+            const { pct, done, total } = courseProgress(course.id);
+            return (
+              <CourseCard
+                key={course.id}
+                course={course}
+                coverIndex={index}
+                pct={pct}
+                done={done}
+                total={total}
+                className="snap-start flex-shrink-0 w-72 sm:w-80"
+              />
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
-function categoryColor(i: number) {
-  const colors = [
-    'bg-gradient-to-br from-navy to-teal',
-    'bg-gradient-to-br from-teal to-cyan',
-    'bg-gradient-to-br from-cyan to-teal',
-    'bg-gradient-to-br from-navy-light to-navy',
-    'bg-gradient-to-br from-navy to-cyan',
-    'bg-gradient-to-br from-teal to-navy-light',
-    'bg-gradient-to-br from-cyan-light to-teal',
-    'bg-gradient-to-br from-navy to-teal-light',
+function CourseCard({
+  course,
+  coverIndex,
+  pct,
+  done,
+  total,
+  className = '',
+}: {
+  course: Course;
+  coverIndex: number;
+  pct: number;
+  done: number;
+  total: number;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={`/courses/${course.id}`}
+      className={`group bg-white rounded-2xl border border-cyan-50 hover:shadow-2xl hover:shadow-navy/15 hover:-translate-y-1 hover:border-cyan transition-all overflow-hidden flex flex-col ${className}`}
+    >
+      <div className={`h-32 relative ${courseCover(coverIndex)}`}>
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{ backgroundImage: 'radial-gradient(circle at 70% 30%, #F6E7BC 0, transparent 60%)' }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-cream text-5xl font-black drop-shadow-lg">
+            {course.title.charAt(0)}
+          </span>
+        </div>
+        {pct > 0 && (
+          <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/25">
+            <div className="h-full bg-cream" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+      </div>
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="font-bold text-sm text-navy line-clamp-2 group-hover:text-teal">
+          {course.title}
+        </h3>
+        {course.description && (
+          <p className="text-xs text-navy-100 line-clamp-2 mt-1">{course.description}</p>
+        )}
+        <div className="mt-auto pt-3 flex items-center justify-between gap-3 text-[11px]">
+          <span className="text-navy-100 font-medium">{total} გაკვეთილი</span>
+          {pct > 0 ? (
+            <span className="font-bold text-teal whitespace-nowrap">{done}/{total} დასრულდა</span>
+          ) : (
+            <span className="font-bold bg-cream text-navy px-2 py-0.5 rounded-full">ახალი</span>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function getCourseCategories(course: Course) {
+  if (course.tags?.length) return course.tags;
+
+  const title = course.title.toLowerCase();
+  const matches = [
+    {
+      category: CATEGORIES[5],
+      keywords: ['ages', 'kids', 'children', 'storytelling'],
+    },
+    {
+      category: CATEGORIES[6],
+      keywords: ['creative', 'image', 'design', 'figma', 'music', 'audio', 'canva', 'firefly', 'ui ux'],
+    },
+    {
+      category: CATEGORIES[4],
+      keywords: ['coding', 'code', 'frontend', 'backend', 'database', 'api', 'server'],
+    },
+    {
+      category: CATEGORIES[2],
+      keywords: ['marketing', 'ads', 'seo', 'email', 'copywriting', 'social media', 'landing page'],
+    },
+    {
+      category: CATEGORIES[1],
+      keywords: ['prompt', 'prompting'],
+    },
+    {
+      category: CATEGORIES[7],
+      keywords: ['agent', 'chatbot'],
+    },
+    {
+      category: CATEGORIES[0],
+      keywords: ['what is ai', 'ai in everyday', 'machine learning', 'deep learning', 'ai tools', 'fundamentals'],
+    },
   ];
-  return colors[i % colors.length];
+
+  return [matches.find(({ keywords }) => keywords.some((keyword) => title.includes(keyword)))?.category ?? CATEGORIES[0]];
 }
 
 function courseCover(i: number) {

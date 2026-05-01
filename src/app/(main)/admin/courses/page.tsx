@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Course } from '@/types';
+import { CATEGORIES } from '@/lib/constants/categories';
 
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const fetchCourses = async () => {
     setLoading(true);
     try {
@@ -34,6 +36,12 @@ export default function AdminCoursesPage() {
     }
   };
 
+  const filteredCourses = courses.filter((course) => {
+    if (categoryFilter === 'all') return true;
+    if (categoryFilter === 'uncategorized') return course.tags.length === 0;
+    return course.tags.includes(categoryFilter);
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -52,6 +60,26 @@ export default function AdminCoursesPage() {
           </Link>
         </div>
 
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-5">
+          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 mb-2">
+            Filter by category
+          </label>
+          <select
+            id="categoryFilter"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full sm:w-80 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+          >
+            <option value="all">All courses</option>
+            <option value="uncategorized">Uncategorized</option>
+            {CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Course list */}
         {loading ? (
           <div className="flex justify-center py-12">
@@ -62,9 +90,14 @@ export default function AdminCoursesPage() {
             <p className="text-lg mb-1">No courses yet</p>
             <p className="text-sm">Courses are created when you upload a document on the admin page.</p>
           </div>
+        ) : filteredCourses.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 bg-white border border-gray-200 rounded-lg">
+            <p className="text-lg mb-1">No courses in this category</p>
+            <p className="text-sm">Choose another category or update a course from its Manage page.</p>
+          </div>
         ) : (
           <div className="space-y-3">
-            {courses.map((course) => (
+            {filteredCourses.map((course) => (
               <div
                 key={course.id}
                 className="bg-white border border-gray-200 rounded-lg p-5 flex items-center justify-between"
@@ -82,6 +115,7 @@ export default function AdminCoursesPage() {
                   <p className="text-xs text-gray-400 mt-1">
                     Created {new Date(course.createdAt).toLocaleDateString()}
                   </p>
+                  <CategoryBadges tags={course.tags} />
                 </div>
                 <div className="flex gap-2 ml-4">
                   <Link
@@ -102,6 +136,29 @@ export default function AdminCoursesPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CategoryBadges({ tags }: { tags: string[] }) {
+  if (!tags.length) {
+    return (
+      <div className="mt-3 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-100">
+        Uncategorized
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal border border-teal/20"
+        >
+          {tag}
+        </span>
+      ))}
     </div>
   );
 }
