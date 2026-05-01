@@ -448,11 +448,11 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">AI Academy — Admin</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">AI Academy — Admin</h1>
           <p className="text-gray-600 mt-1">Upload a full-course PDF to generate lessons</p>
           <div className="flex gap-4 mt-2 flex-wrap">
             <Link href="/admin/lessons" className="text-teal hover:text-navy text-sm">View all lessons →</Link>
@@ -466,8 +466,8 @@ export default function AdminPage() {
             ============================================================ */}
         {step === 'upload' && (
           <div>
-            <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label htmlFor="courseName" className="block text-sm font-medium text-gray-700 mb-1">
                     Course Name <span className="text-gray-400 font-normal">(single-file mode; ignored for queue)</span>
@@ -506,7 +506,7 @@ export default function AdminPage() {
             </div>
 
             {/* Provider toggle */}
-            <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 AI Provider <span className="text-gray-400 font-normal">(detects sections + generates lessons)</span>
               </label>
@@ -557,7 +557,7 @@ export default function AdminPage() {
             ) : (
               <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+                className={`border-2 border-dashed rounded-lg p-6 sm:p-12 text-center cursor-pointer transition-colors ${
                   isDragActive ? 'border-teal bg-teal-50' :
                   fullPdfJobs.length > 0 ? 'border-green-300 bg-green-50/30' :
                   'border-gray-300 hover:border-gray-400 bg-white'
@@ -583,8 +583,8 @@ export default function AdminPage() {
 
             {/* Queue list */}
             {fullPdfJobs.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-lg p-5 mt-4">
-                <div className="flex items-center justify-between mb-3">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mt-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
                   <h3 className="text-sm font-semibold text-gray-700">
                     {fullPdfJobs.length} {fullPdfJobs.length === 1 ? 'file' : 'files'} queued
                   </h3>
@@ -597,7 +597,7 @@ export default function AdminPage() {
                 </div>
                 <div className="space-y-2 mb-4">
                   {fullPdfJobs.map((job, i) => (
-                    <div key={job.id} className="grid grid-cols-[auto_1fr_auto] gap-3 bg-gray-50 rounded-lg px-4 py-3">
+                    <div key={job.id} className="grid grid-cols-[auto_1fr_auto] gap-3 bg-gray-50 rounded-lg px-3 sm:px-4 py-3">
                       <span className="w-7 h-7 rounded-full bg-green-50 text-green-700 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                       <div className="min-w-0 space-y-2">
                         <input
@@ -635,7 +635,7 @@ export default function AdminPage() {
                 <button
                   onClick={startFullPdfQueue}
                   disabled={fullPdfJobs.length === 0}
-                  className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-5 py-3 sm:py-2.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   Generate {fullPdfJobs.length} {fullPdfJobs.length === 1 ? 'Course' : 'Courses'}
                 </button>
@@ -659,7 +659,7 @@ export default function AdminPage() {
             ============================================================ */}
         {step === 'preview-sections' && (
           <div>
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-start gap-3 mb-6">
               <button onClick={() => setStep('upload')} className="text-gray-400 hover:text-gray-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
@@ -670,7 +670,7 @@ export default function AdminPage() {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
                   <input
@@ -703,7 +703,7 @@ export default function AdminPage() {
             <div className="space-y-2 mb-6">
               {sections.map((section, i) => (
                 <div key={section.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <span className="shrink-0 w-8 h-8 rounded-full bg-teal-50 text-teal flex items-center justify-center text-sm font-semibold mt-0.5">
                         {i + 1}
@@ -715,14 +715,14 @@ export default function AdminPage() {
                           onChange={(e) => renameSection(i, e.target.value)}
                           className="w-full font-medium text-gray-900 text-sm border-0 border-b border-transparent hover:border-gray-200 focus:border-teal focus:outline-none px-0 py-0.5 transition"
                         />
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                           <span className="text-xs text-gray-400">{section.wordCount.toLocaleString()} words</span>
                           <span className="text-xs text-gray-300">|</span>
                           <span className="text-xs text-gray-400 truncate">{section.preview}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-1 shrink-0">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-1 sm:shrink-0">
                       {i < sections.length - 1 && (
                         <button
                           onClick={() => mergeSections(i, i + 1)}
@@ -776,13 +776,13 @@ export default function AdminPage() {
                   startFullPdfQueue();
                 }}
                 disabled={sections.length === 0 || !courseName.trim()}
-                className="px-6 py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                className="w-full sm:w-auto px-6 py-3 sm:py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition"
               >
                 Generate Course ({sections.length} lessons)
               </button>
               <button
                 onClick={() => setStep('upload')}
-                className="px-4 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
               >
                 Upload Different File
               </button>
@@ -798,7 +798,7 @@ export default function AdminPage() {
             {/* Queue panel — only when multi-file queue is active */}
             {(fullPdfJobs.length > 1 || fullPdfRunning) && (
               <div className="bg-white border border-gray-200 rounded-lg p-5">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
                   <h3 className="text-sm font-semibold text-gray-900">
                     Queue: {fullPdfJobs.filter(j => j.status === 'complete').length}/{fullPdfJobs.length} complete
                     {fullPdfJobs.filter(j => j.status === 'queued').length > 0 && (
@@ -810,7 +810,7 @@ export default function AdminPage() {
                 </div>
                 <div className="space-y-2">
                   {fullPdfJobs.map((job, i) => (
-                    <div key={job.id} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+                    <div key={job.id} className={`flex flex-wrap items-center gap-3 rounded-lg px-3 py-2 text-sm ${
                       job.status === 'running' ? 'bg-green-50 border border-green-200' :
                       job.status === 'complete' ? 'bg-green-50' :
                       job.status === 'failed' ? 'bg-red-50' :
@@ -872,7 +872,7 @@ export default function AdminPage() {
             )}
 
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-teal-50 flex items-center justify-center">
                     <div className="w-5 h-5 border-2 border-navy-100 border-t-navy rounded-full animate-spin" />
@@ -893,7 +893,7 @@ export default function AdminPage() {
                 {fullPdfRunning && (
                   <button
                     onClick={stopFullPdfGeneration}
-                    className="shrink-0 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition"
+                    className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 hover:border-red-300 transition"
                     title="Cancel generation and stop the queue"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -941,7 +941,7 @@ export default function AdminPage() {
             ============================================================ */}
         {step === 'complete' && fullPdfJobs.length > 1 && (
           <div className="bg-white border border-green-200 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-start gap-3 mb-6">
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                 <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
               </div>
@@ -959,7 +959,7 @@ export default function AdminPage() {
 
             <div className="space-y-2 mb-6">
               {fullPdfJobs.map((job, i) => (
-                <div key={job.id} className={`flex items-center justify-between border rounded-lg p-3 ${
+                <div key={job.id} className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border rounded-lg p-3 ${
                   job.status === 'complete' ? 'border-green-100 bg-green-50/40' :
                   job.status === 'failed' ? 'border-red-100 bg-red-50/40' :
                   'border-gray-100'
@@ -995,11 +995,11 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="flex gap-3">
-              <Link href="/admin/courses" className="px-5 py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium transition">
+            <div className="grid grid-cols-1 gap-3 sm:flex">
+              <Link href="/admin/courses" className="text-center px-5 py-3 sm:py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium transition">
                 View All Courses →
               </Link>
-              <button onClick={resetAll} className="px-5 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition">
+              <button onClick={resetAll} className="px-5 py-3 sm:py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition">
                 Create Another
               </button>
             </div>
@@ -1011,7 +1011,7 @@ export default function AdminPage() {
             ============================================================ */}
         {step === 'complete' && fullPdfJobs.length <= 1 && courseGenProgress?.status === 'complete' && (
           <div className="bg-white border border-green-200 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-start gap-3 mb-6">
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                 <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
               </div>
@@ -1031,13 +1031,13 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="flex gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:flex">
               {courseGenProgress.courseId && (
-                <Link href={`/admin/courses/${courseGenProgress.courseId}`} className="px-5 py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium transition">
+                <Link href={`/admin/courses/${courseGenProgress.courseId}`} className="text-center px-5 py-3 sm:py-2.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium transition">
                   Manage Course →
                 </Link>
               )}
-              <button onClick={resetAll} className="px-5 py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition">
+              <button onClick={resetAll} className="px-5 py-3 sm:py-2.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition">
                 Create Another
               </button>
             </div>

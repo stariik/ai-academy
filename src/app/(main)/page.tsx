@@ -119,14 +119,14 @@ export default function Home() {
             backgroundSize: '48px 48px',
           }}
         />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-20">
           <div className="inline-flex items-center gap-2 bg-cyan/10 border border-cyan/30 rounded-full px-3 py-1 mb-4">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan animate-pulse" />
             <p className="text-[11px] sm:text-xs uppercase tracking-widest text-cyan font-bold">
               AI Academy
             </p>
           </div>
-          <h1 className="text-4xl sm:text-6xl font-black leading-[1.1] mb-4 max-w-3xl">
+          <h1 className="text-3xl sm:text-6xl font-black leading-[1.1] mb-4 max-w-3xl">
             ისწავლე <span className="text-cream">უსაზღვროდ.</span>
           </h1>
           <p className="text-base sm:text-xl text-white/75 max-w-2xl mb-8 leading-relaxed">
@@ -150,7 +150,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-10 sm:space-y-12">
         {/* CONTINUE LEARNING — hidden while searching */}
         {!query.trim() && inProgressLessons.length > 0 && (
           <Section
@@ -162,7 +162,7 @@ export default function Home() {
                 <Link
                   key={l.id}
                   href={`/student/lesson/${l.id}`}
-                  className="group snap-start flex-shrink-0 w-72 bg-white rounded-2xl border border-cyan-50 hover:shadow-2xl hover:shadow-navy/10 hover:-translate-y-1 hover:border-cyan transition-all overflow-hidden"
+                  className="group snap-start flex-shrink-0 w-[82vw] max-w-72 bg-white rounded-2xl border border-cyan-50 hover:shadow-2xl hover:shadow-navy/10 hover:-translate-y-1 hover:border-cyan transition-all overflow-hidden"
                 >
                   <div className="h-28 bg-gradient-to-br from-navy via-teal to-cyan relative">
                     <div className="absolute inset-0 opacity-20"
@@ -265,12 +265,12 @@ function Section({
 }) {
   return (
     <section>
-      <div className="flex items-end justify-between mb-4 sm:mb-5">
-        <div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-4 sm:mb-5">
+        <div className="min-w-0">
           <h2 className="text-xl sm:text-3xl font-black text-navy tracking-tight">{title}</h2>
           {subtitle && <p className="text-sm text-teal mt-1 font-medium">{subtitle}</p>}
         </div>
-        {action}
+        {action && <div className="shrink-0">{action}</div>}
       </div>
       {children}
     </section>
@@ -309,7 +309,7 @@ function CategoryCourseRail({
     <section>
       <div className="flex items-center justify-between gap-4 mb-3">
         <div className="min-w-0">
-          <h3 className="text-base sm:text-xl font-black text-navy truncate">{title}</h3>
+          <h3 className="text-base sm:text-xl font-black text-navy line-clamp-2 sm:truncate">{title}</h3>
           <p className="text-xs sm:text-sm text-teal font-medium">
             {courses.length} კურსი
           </p>
@@ -352,7 +352,7 @@ function CategoryCourseRail({
                 pct={pct}
                 done={done}
                 total={total}
-                className="snap-start flex-shrink-0 w-72 sm:w-80"
+                className="snap-start flex-shrink-0 w-[82vw] max-w-72 sm:w-80 sm:max-w-none"
               />
             );
           })}
@@ -380,7 +380,7 @@ function CourseCard({
   return (
     <Link
       href={`/courses/${course.id}`}
-      className={`group bg-white rounded-2xl border border-cyan-50 hover:shadow-2xl hover:shadow-navy/15 hover:-translate-y-1 hover:border-cyan transition-all overflow-hidden flex flex-col ${className}`}
+      className={`group bg-white rounded-2xl border border-cyan-50 hover:shadow-2xl hover:shadow-navy/15 hover:-translate-y-1 hover:border-cyan transition-all overflow-hidden flex flex-col min-w-0 ${className}`}
     >
       <div className={`h-32 relative ${courseCover(coverIndex)}`}>
         <div

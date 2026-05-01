@@ -181,7 +181,7 @@ export default function AdminCourseDetailPage({
   const availableLessons = allLessons.filter((l) => !courselesionIds.has(l.id));
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
       <div className="max-w-4xl mx-auto">
         <Link
           href="/admin/courses"
@@ -191,7 +191,7 @@ export default function AdminCourseDetailPage({
         </Link>
 
         {/* Course header */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
           {editing ? (
             <div className="space-y-3">
               <input
@@ -206,28 +206,28 @@ export default function AdminCourseDetailPage({
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
               <CategoryPicker selected={tags} onChange={setTags} />
-              <div className="flex gap-2">
-                <button onClick={handleSave} className="px-4 py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light">
+              <div className="grid grid-cols-2 gap-2 sm:flex">
+                <button onClick={handleSave} className="px-4 py-2 sm:py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light">
                   Save
                 </button>
-                <button onClick={() => setEditing(false)} className="px-4 py-1.5 text-sm border rounded-lg text-gray-600">
+                <button onClick={() => setEditing(false)} className="px-4 py-2 sm:py-1.5 text-sm border rounded-lg text-gray-600">
                   Cancel
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
                 <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
                 {course.description && (
                   <p className="text-gray-500 mt-1">{course.description}</p>
                 )}
                 <CategoryBadges tags={course.tags} />
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
                 <Link
                   href={`/admin/courses/${courseId}/preview`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded hover:bg-violet-100 hover:border-violet-300 transition"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded hover:bg-violet-100 hover:border-violet-300 transition"
                   title="Read the full course content end-to-end"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +238,7 @@ export default function AdminCourseDetailPage({
                 </Link>
                 <button
                   onClick={() => setEditing(true)}
-                  className="px-3 py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-50"
+                  className="px-3 py-2 sm:py-1.5 text-xs border rounded text-gray-600 hover:bg-gray-50"
                 >
                   Edit
                 </button>
@@ -248,15 +248,15 @@ export default function AdminCourseDetailPage({
         </div>
 
         {/* Course Lessons */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Lessons ({course.lessons.length})
             </h2>
             {course.lessons.some(l => l.status !== 'published') && (
               <button
                 onClick={publishAll}
-                className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                className="px-4 py-2 sm:py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
               >
                 Publish All
               </button>
@@ -269,9 +269,9 @@ export default function AdminCourseDetailPage({
               {course.lessons.map((lesson, i) => (
                 <div
                   key={lesson.id}
-                  className="flex items-center justify-between border border-gray-100 rounded-lg p-3"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-gray-100 rounded-lg p-3"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     <span className="text-sm font-medium text-gray-400 w-6">
                       {i + 1}.
                     </span>
@@ -283,7 +283,7 @@ export default function AdminCourseDetailPage({
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="grid grid-cols-4 gap-1 sm:flex sm:shrink-0">
                     <button
                       onClick={() => togglePublish(lesson.id, lesson.status)}
                       className={`px-2 py-1 text-xs rounded ${
@@ -323,7 +323,7 @@ export default function AdminCourseDetailPage({
 
         {/* Add lessons */}
         {availableLessons.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               Add Lessons
             </h2>
@@ -331,9 +331,9 @@ export default function AdminCourseDetailPage({
               {availableLessons.map((lesson) => (
                 <div
                   key={lesson.id}
-                  className="flex items-center justify-between border border-gray-100 rounded-lg p-3"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-gray-100 rounded-lg p-3"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900">{lesson.title}</p>
                     <p className="text-xs text-gray-500">
                       {lesson.difficulty} &middot; {lesson.status}
@@ -341,7 +341,7 @@ export default function AdminCourseDetailPage({
                   </div>
                   <button
                     onClick={() => addLesson(lesson.id)}
-                    className="px-3 py-1.5 text-xs bg-navy text-white rounded hover:bg-navy-light"
+                    className="px-3 py-2 sm:py-1.5 text-xs bg-navy text-white rounded hover:bg-navy-light"
                   >
                     Add to Course
                   </button>
@@ -384,13 +384,13 @@ function CategoryPicker({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {CATEGORIES.map((category) => {
           const checked = selected.includes(category);
           return (
             <label
               key={category}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm cursor-pointer transition ${
+              className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition ${
                 checked
                   ? 'border-teal bg-teal-50 text-navy'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-teal/50'
@@ -402,7 +402,7 @@ function CategoryPicker({
                 onChange={() => toggle(category)}
                 className="h-4 w-4 rounded border-gray-300 text-teal focus:ring-teal"
               />
-              <span className="font-medium">{category}</span>
+              <span className="font-medium leading-snug">{category}</span>
             </label>
           );
         })}

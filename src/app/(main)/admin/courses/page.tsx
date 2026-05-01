@@ -43,9 +43,9 @@ export default function AdminCoursesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Courses</h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -54,7 +54,7 @@ export default function AdminCoursesPage() {
           </div>
           <Link
             href="/admin"
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            className="inline-flex justify-center px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
           >
             Back to Admin
           </Link>
@@ -100,7 +100,7 @@ export default function AdminCoursesPage() {
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                className="bg-white border border-gray-200 rounded-lg p-5 flex items-center justify-between"
+                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex-1 min-w-0">
                   <Link
@@ -117,16 +117,16 @@ export default function AdminCoursesPage() {
                   </p>
                   <CategoryBadges tags={course.tags} />
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="grid grid-cols-2 gap-2 sm:ml-4 sm:flex sm:shrink-0 w-full sm:w-auto">
                   <Link
                     href={`/admin/courses/${course.id}`}
-                    className="px-3 py-1.5 text-xs border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
+                    className="text-center px-3 py-2 sm:py-1.5 text-xs border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
                   >
                     Manage
                   </Link>
                   <button
                     onClick={() => handleDelete(course.id)}
-                    className="px-3 py-1.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                    className="px-3 py-2 sm:py-1.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                   >
                     Delete
                   </button>
