@@ -27,24 +27,26 @@ const CONTAINER: Variants = {
     y: [0, -3, 0],
     transition: { y: { duration: 1.2, repeat: Infinity, ease: 'easeInOut' } },
   },
+  // Correct-answer celebration — crouch, joyful jump with arms up, smile, land, settle
   spin: {
-    rotate: 360,
-    scale: [1, 1.08, 1],
-    y: [0, -8, 0],
+    scaleY: [1, 0.85, 1.1, 1.0, 0.92, 1],
+    scaleX: [1, 1.1, 0.92, 1.0, 1.06, 1],
+    y: [0, 6, -14, -8, 0, 0],
+    rotate: [0, 0, 3, -2, 0, 0],
     transition: {
-      rotate: { duration: 0.75, ease: [0.34, 1.56, 0.64, 1] },
-      scale: { duration: 0.75, times: [0, 0.5, 1] },
-      y: { duration: 0.75, times: [0, 0.4, 1] },
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
     },
   },
   tilt: { rotate: 0, scale: 1, y: 0, transition: { type: 'spring', stiffness: 200, damping: 14 } },
-  // Dance v2 — side-to-side shimmy with subtle bounces (was a tall vertical hop)
+  // Dance — gentle groove (toned down from prior version)
   dance: {
-    rotate: [-6, 6, -6, 6, 0],
-    scaleX: [1, 1.04, 0.96, 1.04, 1],
-    scaleY: [1, 0.96, 1.04, 0.96, 1],
-    y: [0, -4, -1, -4, 0],
-    transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+    rotate: [-3, 3, -3, 3, 0],
+    scaleX: [1, 1.02, 0.98, 1.02, 1],
+    scaleY: [1, 0.98, 1.02, 0.98, 1],
+    y: [0, -1.5, 0, -1.5, 0],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
   sleep: {
     rotate: 0,
@@ -68,13 +70,22 @@ const HEAD: Variants = {
       rotate: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
     },
   },
-  spin: { y: 0, rotate: 0 },
+  // Correct-answer celebration — head bobs through the jump, tilts excitedly mid-air
+  spin: {
+    y: [0, 2, -3, -2, 1, 0],
+    rotate: [0, 0, -6, 4, 0, 0],
+    transition: {
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
+    },
+  },
   tilt: { y: -2, rotate: -20, transition: { type: 'spring', stiffness: 220, damping: 11 } },
-  // Dance v2 — head counter-rotates against body for shoulder-shimmy effect
+  // Dance — small head counter-bob
   dance: {
-    y: [0, -2, 2, -2, 0],
-    rotate: [8, -8, 8, -8, 0],
-    transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+    y: [0, -1, 1, -1, 0],
+    rotate: [4, -4, 4, -4, 0],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
   sleep: {
     y: [0, -2, 0],
@@ -98,13 +109,22 @@ const BODY: Variants = {
       rotate: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
     },
   },
-  spin: { y: 0, rotate: 0 },
+  // Correct-answer celebration — body squashes for jump, stretches at peak, lands compressed
+  spin: {
+    scaleY: [1, 0.92, 1.06, 1.0, 0.94, 1],
+    scaleX: [1, 1.06, 0.94, 1.0, 1.04, 1],
+    transition: {
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
+    },
+  },
   tilt: { rotate: -3, transition: { type: 'spring', stiffness: 180, damping: 14 } },
-  // Dance v2 — stronger hip-shake squash/stretch
+  // Dance — light hip sway
   dance: {
-    scaleX: [1, 1.07, 0.93, 1.07, 1],
-    scaleY: [1, 0.93, 1.07, 0.93, 1],
-    transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+    scaleX: [1, 1.03, 0.97, 1.03, 1],
+    scaleY: [1, 0.97, 1.03, 0.97, 1],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
   sleep: { y: [0, -1, 0], transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' } },
 };
@@ -115,12 +135,20 @@ const RIGHT_ARM: Variants = {
     rotate: [0, -75, -45, -75, -45, 0],
     transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.6 },
   },
-  spin: { rotate: 0 },
+  // Correct-answer celebration — arm raised triumphantly at peak, lowers back
+  spin: {
+    rotate: [0, 0, -85, -55, -20, 0],
+    transition: {
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
+    },
+  },
   tilt: { rotate: 0 },
-  // Dance v2 — bigger amplitude swings (was ±30°)
+  // Dance — small arm sway
   dance: {
-    rotate: [-50, 50, -50, 50, 0],
-    transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+    rotate: [-15, 15, -15, 15, 0],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
   sleep: { rotate: 0 },
 };
@@ -128,12 +156,20 @@ const RIGHT_ARM: Variants = {
 const LEFT_ARM: Variants = {
   idle: { rotate: 0 },
   wave: { rotate: 0 },
-  spin: { rotate: 0 },
+  // Correct-answer celebration — opposite arm also raises (both arms up)
+  spin: {
+    rotate: [0, 0, 85, 55, 20, 0],
+    transition: {
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
+    },
+  },
   tilt: { rotate: 0 },
-  // Dance v2 — opposite phase to right arm
+  // Dance — opposite small sway
   dance: {
-    rotate: [50, -50, 50, -50, 0],
-    transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+    rotate: [15, -15, 15, -15, 0],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
   sleep: { rotate: 0 },
 };
@@ -141,7 +177,17 @@ const LEFT_ARM: Variants = {
 const EYE_SYMM: Variants = {
   idle: { scaleY: 1, scaleX: 1, y: 0 },
   wave: { scaleY: 0.5, scaleX: 1, y: -1 },
-  spin: { scaleY: 1, scaleX: 1, y: 0 },
+  // Correct-answer celebration — eyes squint into smile during the airborne joy
+  spin: {
+    scaleY: [1, 1, 0.5, 0.55, 0.75, 1],
+    scaleX: [1, 1, 1.1, 1.08, 1.04, 1],
+    y: [0, 0, -1.5, -1, -0.5, 0],
+    transition: {
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
+    },
+  },
   dance: { scaleY: 0.55, scaleX: 1, y: -1 },
   sleep: { scaleY: 0.06, scaleX: 1, y: 0 },
 };
@@ -167,13 +213,22 @@ const AURA: Variants = {
     scale: [1, 1.06, 1],
     transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
-  spin: { opacity: 1, scale: 1.1, transition: { duration: 0.4 } },
+  // Correct-answer celebration — bright burst at peak, settles back
+  spin: {
+    opacity: [0.7, 0.5, 1.3, 1.1, 0.9, 0.7],
+    scale: [1, 0.9, 1.25, 1.15, 1.05, 1],
+    transition: {
+      duration: 1.0,
+      times: [0, 0.15, 0.4, 0.65, 0.85, 1],
+      ease: 'easeInOut',
+    },
+  },
   tilt: { opacity: 0.8, scale: 1, transition: { duration: 0.4 } },
-  // Dance v2 — pulses match the new 1.4s rhythm
+  // Dance — gentle aura pulse
   dance: {
-    opacity: [0.9, 1.15, 0.9, 1.15, 0.9],
-    scale: [1, 1.1, 1, 1.1, 1],
-    transition: { duration: 1.4, repeat: Infinity, ease: 'easeInOut' },
+    opacity: [0.85, 1.05, 0.85, 1.05, 0.85],
+    scale: [1, 1.05, 1, 1.05, 1],
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
   },
   sleep: { opacity: 0.4, scale: 1, transition: { duration: 0.6 } },
 };
@@ -295,12 +350,12 @@ export function Walli({
             <stop offset="100%" stopColor="#B8C2D1" />
           </radialGradient>
 
-          {/* Eye scanline clip-paths */}
+          {/* Eye scanline clip-paths — elliptical to match Eve's eye shape */}
           <clipPath id={`lec-${id}`}>
-            <rect x="74" y="68" width="42" height="22" rx="11" ry="11" />
+            <ellipse cx="102" cy="78" rx="14" ry="10" />
           </clipPath>
           <clipPath id={`rec-${id}`}>
-            <rect x="124" y="68" width="42" height="22" rx="11" ry="11" />
+            <ellipse cx="138" cy="78" rx="14" ry="10" />
           </clipPath>
 
           {/* Eye glow */}
@@ -384,100 +439,91 @@ export function Walli({
           />
         </motion.g>
 
-        {/* ===== HEAD — smaller, whiter ===== */}
-        <motion.g variants={HEAD} animate={state} initial="idle" style={{ transformOrigin: '120px 80px' }}>
-          {/* Head shadow on body — softer */}
-          <ellipse cx="120" cy="148" rx="46" ry="3" fill="#000" opacity="0.13" filter={`url(#sh-${id})`} />
+        {/* ===== HEAD — smaller for proper Eve proportions ===== */}
+        <motion.g variants={HEAD} animate={state} initial="idle" style={{ transformOrigin: '120px 90px' }}>
+          {/* Head shadow on body */}
+          <ellipse cx="120" cy="146" rx="42" ry="2.8" fill="#000" opacity="0.13" filter={`url(#sh-${id})`} />
 
-          {/* Head dome — smaller egg (was 180×152, now 156×128) */}
+          {/* Head dome — shrunk ~15% (now 132×106, was 156×128) */}
           <path
-            d="M 120 16
-               C 180 16, 198 52, 198 94
-               C 198 128, 178 144, 120 144
-               C 62 144, 42 128, 42 94
-               C 42 52, 60 16, 120 16 Z"
+            d="M 120 38
+               C 168 38, 184 64, 184 92
+               C 184 122, 166 142, 120 142
+               C 74 142, 56 122, 56 92
+               C 56 64, 72 38, 120 38 Z"
             fill={`url(#h-${id})`}
             stroke="#C8D0DC"
             strokeWidth="0.9"
           />
 
-          {/* Strong top sheen */}
+          {/* Top sheen — re-positioned for smaller head */}
           <path
-            d="M 64 32
-               Q 92 16, 128 20
-               Q 122 24, 108 30
-               Q 90 38, 78 54
-               Q 68 72, 64 90
-               Q 56 64, 64 32 Z"
+            d="M 74 50
+               Q 96 36, 126 40
+               Q 120 44, 108 50
+               Q 92 58, 82 72
+               Q 74 86, 72 100
+               Q 66 76, 74 50 Z"
             fill={`url(#hs-${id})`}
           />
 
           {/* Right-side rim light */}
           <path
-            d="M 188 60
-               Q 194 84, 190 108
-               Q 184 100, 182 86
-               Q 182 74, 188 60 Z"
+            d="M 176 70
+               Q 182 90, 178 110
+               Q 172 102, 170 92
+               Q 170 82, 176 70 Z"
             fill="#FFFFFF"
-            opacity="0.30"
+            opacity="0.28"
           />
 
-          {/* Visor inner shadow ring — softer (was 0.55 opacity, now 0.30) */}
+          {/* Visor inner shadow ring — egg-shape mirrors head silhouette */}
           <path
-            d="M 48 48
-               Q 48 28, 70 24
-               L 170 24
-               Q 192 28, 192 48
-               L 192 108
-               Q 192 128, 170 132
-               Q 120 140, 70 132
-               Q 48 128, 48 108 Z"
+            d="M 68 78
+               C 68 58, 86 50, 120 50
+               C 154 50, 172 58, 172 78
+               C 172 100, 154 110, 120 110
+               C 86 110, 68 100, 68 78 Z"
             fill="#000"
             opacity="0.30"
           />
 
-          {/* Visor face */}
+          {/* Visor face — same egg-shape as head, smaller */}
           <path
-            d="M 54 50
-               Q 54 32, 74 28
-               L 166 28
-               Q 186 32, 186 50
-               L 186 104
-               Q 186 122, 166 126
-               Q 120 132, 74 126
-               Q 54 122, 54 104 Z"
+            d="M 72 78
+               C 72 62, 88 54, 120 54
+               C 152 54, 168 62, 168 78
+               C 168 96, 152 104, 120 104
+               C 88 104, 72 96, 72 78 Z"
             fill={`url(#v-${id})`}
           />
 
           {/* Visor cyan inner glow */}
           <path
-            d="M 54 50
-               Q 54 32, 74 28
-               L 166 28
-               Q 186 32, 186 50
-               L 186 104
-               Q 186 122, 166 126
-               Q 120 132, 74 126
-               Q 54 122, 54 104 Z"
+            d="M 72 78
+               C 72 62, 88 54, 120 54
+               C 152 54, 168 62, 168 78
+               C 168 96, 152 104, 120 104
+               C 88 104, 72 96, 72 78 Z"
             fill={`url(#vg-${id})`}
           />
 
-          {/* Visor top diagonal sheen */}
+          {/* Visor top sheen — follows the egg's top curve */}
           <path
-            d="M 60 44
-               Q 80 34, 124 38
-               L 116 52
-               Q 80 52, 60 60 Z"
+            d="M 88 62
+               Q 104 56, 134 58
+               Q 116 64, 94 68
+               Q 88 66, 88 62 Z"
             fill="#FFFFFF"
-            opacity="0.13"
+            opacity="0.14"
           />
 
           {/* Visor bottom subtle sheen */}
           <path
-            d="M 64 116
-               Q 102 122, 178 116
-               L 174 124
-               Q 102 130, 64 124 Z"
+            d="M 92 95
+               Q 120 99, 150 95
+               Q 132 102, 110 102
+               Q 96 100, 92 95 Z"
             fill="#FFFFFF"
             opacity="0.05"
           />
@@ -532,14 +578,15 @@ export function Walli({
             state === 'idle' || state === 'sleep'
               ? { width: ['54%', '44%', '54%'], opacity: [0.20, 0.10, 0.20] }
               : state === 'dance'
-              ? { width: ['46%', '60%', '46%', '60%', '46%'], opacity: [0.14, 0.20, 0.14, 0.20, 0.14] }
+              ? { width: ['50%', '54%', '50%', '54%', '50%'], opacity: [0.16, 0.20, 0.16, 0.20, 0.16] }
               : state === 'spin'
-              ? { width: ['52%', '58%', '52%'], opacity: [0.16, 0.22, 0.16] }
+              ? { width: ['52%', '60%', '32%', '38%', '60%', '52%'], opacity: [0.16, 0.24, 0.06, 0.10, 0.22, 0.16] }
               : { width: '50%', opacity: 0.16 }
           }
           transition={{
-            duration: state === 'dance' ? 1.4 : state === 'spin' ? 0.75 : 4,
-            repeat: Infinity,
+            duration: state === 'dance' ? 1.6 : state === 'spin' ? 1.0 : 4,
+            times: state === 'spin' ? [0, 0.15, 0.4, 0.65, 0.85, 1] : undefined,
+            repeat: state === 'spin' ? 0 : Infinity,
             ease: 'easeInOut',
           }}
           style={{ height: size * 0.045, marginTop: -size * 0.04 }}
