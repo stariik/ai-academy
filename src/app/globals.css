@@ -1,22 +1,60 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* Class-based dark mode for next-themes */
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   walle.school — Eve Design System
+   Light theme (default)
+   ============================================================ */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted: #f5f5f5;
-  --muted-foreground: #737373;
-  --border: #e5e5e5;
-  --accent: #2563eb;
-  --accent-light: #dbeafe;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --bg-base: #f4f6fc;
+  /* shadcn-compatible tokens — Eve palette, light */
+  --background: #F8FAFC;          /* Bone */
+  --foreground: #0F172A;          /* Carbon */
+  --card: #FFFFFF;                /* Shell */
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --primary: #06B6D4;             /* Pulse Cyan (light variant) */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent: #ECFEFF;              /* Cyan tint */
+  --accent-foreground: #0E7490;
+  --destructive: #EC4899;         /* Heart Pink */
+  --destructive-foreground: #FFFFFF;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #06B6D4;
+  --radius: 1rem;                 /* 16px — kid-friendly rounded */
+
+  /* Eve aliases — for Walli flair / glow effects */
+  --canvas: var(--background);
+  --surface: var(--card);
+  --hull: #FFFFFF;
+  --pulse: #06B6D4;
+  --pulse-soft: #67E8F9;
+  --pulse-glow: rgba(6, 182, 212, 0.30);
+  --heart: #EC4899;
+  --heart-soft: #F9A8D4;
+  --heart-glow: rgba(236, 72, 153, 0.30);
+  --grid-line: rgba(15, 23, 42, 0.06);
+
+  /* Legacy / onboarding tokens (kept for transition; will be retired per page) */
+  --accent-light: #ECFEFF;
+  --success: #06B6D4;
+  --warning: #F59E0B;
+  --danger: #EC4899;
+  --bg-base: #F8FAFC;
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.85);
-  --glass-shadow: 0 4px 24px rgba(37, 99, 235, 0.07), 0 1px 4px rgba(0,0,0,0.05);
+  --glass-shadow: 0 4px 24px rgba(6, 182, 212, 0.08), 0 1px 4px rgba(0,0,0,0.05);
 
-  /* Brand palette */
+  /* Brand palette (preserved for unmigrated pages) */
   --brand-navy: #0B2D72;
   --brand-teal: #0992C2;
   --brand-cyan: #0AC4E0;
@@ -27,13 +65,95 @@
   --brand-cream-light: #faf1d8;
 }
 
+/* ============================================================
+   Dark theme — class-based via next-themes
+   ============================================================ */
+
+.dark {
+  --background: #0A0E1A;          /* Void */
+  --foreground: #E2E8F0;          /* Eve White */
+  --card: #141A2E;                /* Hull */
+  --card-foreground: #E2E8F0;
+  --popover: #141A2E;
+  --popover-foreground: #E2E8F0;
+  --primary: #22D3EE;             /* Pulse Cyan (dark — punchy glow) */
+  --primary-foreground: #042F36;
+  --secondary: #1E2540;
+  --secondary-foreground: #E2E8F0;
+  --muted: #1E2540;
+  --muted-foreground: #94A3B8;
+  --accent: #0E2B30;
+  --accent-foreground: #67E8F9;
+  --destructive: #F472B6;         /* Heart Pink (dark variant) */
+  --destructive-foreground: #4A0E29;
+  --border: #1E2540;
+  --input: #1E2540;
+  --ring: #22D3EE;
+
+  --canvas: var(--background);
+  --surface: var(--card);
+  --hull: #141A2E;
+  --pulse: #22D3EE;
+  --pulse-soft: #67E8F9;
+  --pulse-glow: rgba(34, 211, 238, 0.40);
+  --heart: #F472B6;
+  --heart-soft: #FBCFE8;
+  --heart-glow: rgba(244, 114, 182, 0.35);
+  --grid-line: rgba(226, 232, 240, 0.05);
+
+  --accent-light: #0E2B30;
+  --success: #22D3EE;
+  --warning: #FBBF24;
+  --danger: #F472B6;
+  --bg-base: #0A0E1A;
+  --glass-bg: rgba(20, 26, 46, 0.72);
+  --glass-border: rgba(34, 211, 238, 0.18);
+  --glass-shadow: 0 4px 24px rgba(34, 211, 238, 0.10), 0 1px 4px rgba(0,0,0,0.30);
+}
+
 @theme inline {
+  /* shadcn-compatible color mappings */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Eve aliases */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-hull: var(--hull);
+  --color-pulse: var(--pulse);
+  --color-pulse-soft: var(--pulse-soft);
+  --color-heart: var(--heart);
+  --color-heart-soft: var(--heart-soft);
+
+  /* Radius scale */
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Fonts — Geist + Space Grotesk display */
   --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
 
-  /* Brand colors */
+  /* Brand colors (preserved for transition period) */
   --color-navy: #0B2D72;
   --color-navy-light: #1a3f8a;
   --color-navy-50: #e8edf5;
@@ -54,19 +174,88 @@
   --breakpoint-widecontent: 1200px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #1a1a1a;
-    --muted-foreground: #a3a3a3;
-    --border: #262626;
-    --accent: #3b82f6;
-    --accent-light: #1e3a5f;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+/* ============================================================
+   View Transition — circular reveal on theme toggle
+   ============================================================ */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 999;
+  animation: walli-reveal 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes walli-reveal {
+  from {
+    clip-path: circle(0% at var(--toggle-x, 100%) var(--toggle-y, 0%));
   }
+  to {
+    clip-path: circle(150% at var(--toggle-x, 100%) var(--toggle-y, 0%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Walli — mascot helpers + glow utilities
+   ============================================================ */
+
+@keyframes walli-blink {
+  0%, 88%, 100% { transform: scaleY(1); }
+  92%, 96% { transform: scaleY(0.05); }
+}
+
+@keyframes walli-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulse-aura {
+  0%, 100% { box-shadow: 0 0 0 0 var(--pulse-glow), 0 0 24px 0 var(--pulse-glow); }
+  50% { box-shadow: 0 0 0 8px transparent, 0 0 36px 4px var(--pulse-glow); }
+}
+
+.walli-eye {
+  transform-origin: center;
+  animation: walli-blink 4s ease-in-out infinite;
+}
+
+.walli-float {
+  animation: walli-float 4s ease-in-out infinite;
+}
+
+.glow-pulse {
+  animation: pulse-aura 2.6s ease-in-out infinite;
+}
+
+.glow-cyan {
+  box-shadow: 0 0 24px var(--pulse-glow);
+}
+
+.glow-pink {
+  box-shadow: 0 0 24px var(--heart-glow);
+}
+
+/* Subtle starfield grid for the Void canvas */
+.bg-starfield {
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--pulse-glow) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, var(--heart-glow) 0%, transparent 40%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 64px 64px, 64px 64px;
 }
 
 /* Base */
@@ -185,7 +374,7 @@ body {
 }
 
 .lesson-prose blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--primary);
   padding-left: 1rem;
   margin: 0.875rem 0;
   color: var(--muted-foreground);
@@ -292,7 +481,7 @@ body {
 }
 
 .chat-prose blockquote {
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--primary);
   padding-left: 0.75rem;
   margin: 0.4rem 0;
   color: var(--muted-foreground);
@@ -346,8 +535,8 @@ body {
 }
 
 .chat-bubble-user {
-  background: var(--accent);
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   margin-left: auto;
   border-bottom-right-radius: 4px;
 }
@@ -370,7 +559,7 @@ body {
   width: 20px;
   height: 20px;
   border: 2px solid var(--border);
-  border-top-color: var(--accent);
+  border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -492,7 +681,7 @@ body {
 
 /* Active page glow */
 .page-active-glow {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px var(--pulse-glow);
 }
 
 /* Content card surface */
