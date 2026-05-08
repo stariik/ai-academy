@@ -148,10 +148,10 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* Fonts — Geist + Space Grotesk display */
-  --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-space-grotesk);
-  --font-mono: var(--font-geist-mono);
+  /* Fonts — FiraGO primary (Georgian + Latin in one voice), Geist Mono for code */
+  --font-sans: 'FiraGO', var(--font-geist-sans), system-ui, sans-serif;
+  --font-display: 'FiraGO', var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Brand colors (preserved for transition period) */
   --color-navy: #0B2D72;
@@ -262,7 +262,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: 'FiraGO', var(--font-geist-sans), system-ui, sans-serif;
   line-height: 1.6;
 }
 
