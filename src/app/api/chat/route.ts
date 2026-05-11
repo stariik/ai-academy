@@ -8,7 +8,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
   getLesson,
-  getLessonPage,
   getChatHistory,
   upsertChatHistory,
   getPageChatHistory,
@@ -78,6 +77,16 @@ export async function POST(request: NextRequest) {
         .sort((a, b) => a.pageNumber - b.pageNumber)
         .map((p) => p.title);
 
+      // Pedagogical enrichment — now threaded into the tutor so it
+      // actively uses misconceptions, real-world examples, bridges, and
+      // reflection prompts instead of leaving them as UI-only decoration.
+      const pageExtras = {
+        commonMisconceptions: page.commonMisconceptions,
+        realWorldApplications: page.realWorldApplications,
+        bridgeFromPrevious: page.bridgeFromPrevious,
+        reflectionPrompt: page.teachingFlow?.reflectionPrompt,
+      };
+
       if (sessionId) {
         try {
           const [profile, chatHistory] = await Promise.all([
@@ -97,6 +106,7 @@ export async function POST(request: NextRequest) {
             isFirstVisit: isFirstVisit ?? false,
             profile,
             previousMessageCount: chatHistory?.messages?.length ?? 0,
+            ...pageExtras,
           });
         } catch {
           systemPrompt = buildPageTutorPrompt({
@@ -109,6 +119,7 @@ export async function POST(request: NextRequest) {
             previousPageTitles,
             learningObjectives: lesson.learningObjectives,
             isFirstVisit: isFirstVisit ?? false,
+            ...pageExtras,
           });
         }
       } else {
@@ -122,6 +133,7 @@ export async function POST(request: NextRequest) {
           previousPageTitles,
           learningObjectives: lesson.learningObjectives,
           isFirstVisit: isFirstVisit ?? false,
+          ...pageExtras,
         });
       }
     } else {

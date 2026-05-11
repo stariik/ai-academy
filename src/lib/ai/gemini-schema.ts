@@ -91,58 +91,7 @@ export const geminiReviewResponseSchema = z.object({
   issues: z.array(z.string()).default([]),
 });
 
-// Syllabus parser (Stage 0 of the syllabus pipeline)
-const syllabusLessonSchema = z.object({
-  number: z.number().int().min(1),
-  title: z.string().min(1),
-  subtitle: z.string().default(''),
-});
-
-const syllabusModuleSchema = z.object({
-  number: z.number().int().min(1),
-  title: z.string().min(1),
-  weekNumber: z.number().int().nullable().optional(),
-  outcome: z.string(),
-  lessons: z.array(syllabusLessonSchema).min(1),
-});
-
-export const geminiSyllabusResponseSchema = z.object({
-  courseTitle: z.string().min(1),
-  courseSubtitle: z.string().default(''),
-  courseDescription: z.string().default(''),
-  language: z.string().default('English'),
-  audience: z.array(z.string()).default([]),
-  durationLabel: z.string().default(''),
-  totalLessonsLabel: z.string().default(''),
-  modules: z.array(syllabusModuleSchema).min(1),
-  finalOutcomes: z.array(z.string()).default([]),
-  toolsUsed: z
-    .array(
-      z.object({
-        category: z.string(),
-        tools: z.array(z.string()),
-      })
-    )
-    .default([]),
-});
-
-// Lesson expander (Stage 1 of the syllabus pipeline)
-const subLessonSpecSchema = z.object({
-  title: z.string().min(1),
-  keyPoints: z.array(z.string().min(1)).min(3).max(10),
-  estimatedPages: z.number().int().min(3).max(5),
-  estimatedMinutes: z.number().int().min(8).max(20),
-  splitReason: z.string().nullable().default(null),
-});
-
-export const geminiLessonExpansionResponseSchema = z.object({
-  subLessons: z.array(subLessonSpecSchema).min(1).max(3),
-});
-
 export type GeminiLessonResponseZ = z.infer<typeof geminiLessonResponseSchema>;
 export type GeminiChunkResponseZ = z.infer<typeof geminiChunkResponseSchema>;
 export type GeminiFinalQuizResponseZ = z.infer<typeof geminiFinalQuizResponseSchema>;
 export type GeminiReviewResponseZ = z.infer<typeof geminiReviewResponseSchema>;
-export type GeminiSyllabusResponseZ = z.infer<typeof geminiSyllabusResponseSchema>;
-export type GeminiLessonExpansionResponseZ = z.infer<typeof geminiLessonExpansionResponseSchema>;
-export type SubLessonSpec = z.infer<typeof subLessonSpecSchema>;

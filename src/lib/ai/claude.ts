@@ -155,6 +155,13 @@ type PageTutorContext = {
   previousPageTitles: string[];
   learningObjectives: string[];
   isFirstVisit: boolean;
+  // Pedagogical enrichment from the lesson's Page object — injected into
+  // the system prompt so the tutor actively teaches with them rather than
+  // just rendering them in the UI.
+  commonMisconceptions?: string[];
+  realWorldApplications?: string[];
+  bridgeFromPrevious?: string;
+  reflectionPrompt?: string;
 };
 
 export function buildPageTutorPrompt(context: PageTutorContext): string {
@@ -167,6 +174,22 @@ export function buildPageTutorPrompt(context: PageTutorContext): string {
     : '  (ეს არის პირველი გვერდი)';
 
   const conceptNames = context.pageKeyConcepts.map((c) => c.term);
+
+  const misconceptionsBlock = context.commonMisconceptions && context.commonMisconceptions.length > 0
+    ? `\n\n## გავრცელებული მცდარი წარმოდგენები — აქტიურად მოიქეცი\nმოსწავლეები ამ გვერდზე ხშირად ცდებიან:\n${context.commonMisconceptions.map((m, i) => `  ${i + 1}. ${m}`).join('\n')}\n\nროცა მოსწავლე ერთ-ერთი მცდარი წარმოდგენის შესაბამის პასუხს გასცემს, მოარგე ახსნა: ჯერ დაეთანხმე, რა გააკეთა სწორად, შემდეგ მოკლედ გაასწორე, და მიუთითე მასალის ნაწილზე.`
+    : '';
+
+  const realWorldBlock = context.realWorldApplications && context.realWorldApplications.length > 0
+    ? `\n\n## რეალური გამოყენება — გამოიყენე მაგალითებად\nეს ცნებები გვხვდება შემდეგ რეალურ სიტუაციებში:\n${context.realWorldApplications.map((a) => `  - ${a}`).join('\n')}\n\nროცა მოსწავლე კითხვაზე დაბნეულია ან აბსტრაქტული ჩანს ცნება, მოიშველიე ერთ-ერთი ეს მაგალითი კონკრეტულობისთვის.`
+    : '';
+
+  const bridgeBlock = context.bridgeFromPrevious
+    ? `\n\n## კავშირი წინა გვერდთან\n${context.bridgeFromPrevious}\n\nდაიწყე პირველი ვიზიტისას ამ ხიდის გამოყენებით — შეახსენე მოსწავლეს, რაზე იყო წინა გვერდი, და აჩვენე, რატომ მოდის ეს გვერდი ახლა.`
+    : '';
+
+  const reflectionBlock = context.reflectionPrompt
+    ? `\n\n## დახურვის რეფლექსია\nროცა გვერდის ძირითადი ნაწილები ასწავლე, და მოსწავლემ გაგება აჩვენა, სანამ [READY_FOR_QUIZ]-ს ჩასვამ, დასვი ეს რეფლექსიური კითხვა:\n> ${context.reflectionPrompt}\n\nეს ამაგრებს ცოდნას. გამოიყენე სიტყვა-სიტყვით ან ოდნავ მოარგე.`
+    : '';
 
   let prompt = `შენ ხარ AI აკადემიის ტუტორი. ასწავლი გაკვეთილს „${context.lessonTitle}". ახლა ხარ **გვერდი ${context.pageNumber}/${context.totalPages}: „${context.pageTitle}"**.
 
@@ -181,7 +204,7 @@ export function buildPageTutorPrompt(context: PageTutorContext): string {
 ${prevPages}
 
 ## ძირითადი ცნებები ამ გვერდზე
-${conceptsList}
+${conceptsList}${bridgeBlock}${misconceptionsBlock}${realWorldBlock}${reflectionBlock}
 
 ## === გვერდის მასალა ===
 **გვერდი ${context.pageNumber}: ${context.pageTitle}**
@@ -300,6 +323,60 @@ export function buildEnhancedPageTutorPrompt(context: EnhancedPageTutorContext):
   }
 
   return sections.join('\n\n');
+}
+
+// ---- Review Re-Explanation Prompt (Task 5) ----
+
+type ReviewExplanationContext = {
+  lessonTitle: string;
+  lessonSummary: string;
+  keyConcepts: { term: string; definition: string }[];
+  question: string;
+  correctAnswer: string;
+  explanation: string;
+  studentAnswer: string;
+  preferredStyle: 'direct' | 'socratic' | 'exploratory';
+};
+
+export function buildReviewExplanationPrompt(ctx: ReviewExplanationContext): string {
+  const conceptsList = ctx.keyConcepts
+    .map((c) => `  - **${c.term}**: ${c.definition}`)
+    .join('\n');
+
+  const styleNote = {
+    direct: 'ახსენი პირდაპირ და დაყავი ძალიან პატარა ნაწილებად.',
+    socratic: 'დასვი კითხვა, რომელიც ჩასვლის მოსწავლეს სწორ პასუხამდე.',
+    exploratory: 'სთხოვე მოსწავლეს ცნების საკუთარი სიტყვებით ახსნა, შემდეგ დაამატე სიღრმე.',
+  }[ctx.preferredStyle];
+
+  return `შენ ხარ AI აკადემიის ტუტორი. მოსწავლე ახლახან შეცდა გამეორების კითხვაზე გაკვეთილიდან „${ctx.lessonTitle}".
+
+## გაკვეთილის რეზიუმე
+${ctx.lessonSummary}
+
+## ძირითადი ცნებები
+${conceptsList}
+
+## კითხვა
+${ctx.question}
+
+## მოსწავლის პასუხი
+${ctx.studentAnswer || '(პასუხი არ არის)'}
+
+## სწორი პასუხი
+${ctx.correctAnswer}
+
+## ორიგინალი ახსნა
+${ctx.explanation}
+
+## შენი დავალება
+${styleNote}
+
+1. თბილად დაადასტურე, რომ შეცდომა სწავლის ნაწილია.
+2. ახსენი, სად ააცდინა.
+3. გადააკავშირე ძირითად ცნებასთან გაკვეთილიდან.
+4. დაასრულე მოკლე კითხვით, რომელიც ამოწმებს გაგებას.
+5. მოკლედ (მაქს. 4-5 წინადადება) და ქართულად.`;
 }
 
 // ---- Streaming Chat ----

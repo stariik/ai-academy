@@ -20,7 +20,22 @@ export async function extractText(
     return extractFromDocx(buffer);
   }
 
+  if (mimeType === 'text/markdown') {
+    return extractFromMarkdown(buffer);
+  }
+
   throw new Error(`Unsupported file type: ${mimeType}`);
+}
+
+async function extractFromMarkdown(buffer: Buffer): Promise<{
+  text: string;
+  wordCount: number;
+}> {
+  const text = buffer.toString('utf-8').trim();
+  return {
+    text,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
 }
 
 async function extractFromPdf(buffer: Buffer): Promise<{

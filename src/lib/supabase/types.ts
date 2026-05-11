@@ -19,8 +19,6 @@ export type LessonRow = {
   user_id: string | null;
   created_at: string;
   updated_at: string;
-  concept_map: { concept_id: string; label: string; prerequisite_ids: string[] }[] | null;
-  learning_path: string[] | null;
 };
 
 export type ContentBlockRow = {
@@ -56,8 +54,6 @@ export type LessonPageRow = {
   title: string;
   key_concepts: { term: string; definition: string }[];
   teaching_flow: Record<string, string> | null;
-  prerequisites: string[] | null;
-  concepts_introduced: string[] | null;
   difficulty_level: string | null;
   bridge_from_previous: string | null;
   common_misconceptions: string[] | null;
@@ -79,6 +75,7 @@ export type StudentSessionRow = {
   id: string;
   display_name: string;
   preferences: Record<string, unknown>;
+  share_token: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -127,6 +124,33 @@ export type StudentProfileRow = {
   total_quizzes: number;
   average_score: number;
   total_time_spent: number;
+  total_xp: number;
+  current_streak: number;
+  longest_streak: number;
+  last_activity_date: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ReviewItemRow = {
+  id: string;
+  session_id: string;
+  question_id: string;
+  lesson_id: string;
+  ease: number;
+  interval_days: number;
+  repetitions: number;
+  next_due_at: string;
+  last_reviewed_at: string | null;
+  last_quality: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserBadgeRow = {
+  id: string;
+  session_id: string;
+  badge_code: string;
+  metadata: Record<string, unknown>;
+  earned_at: string;
 };

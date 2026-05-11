@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Lesson, ChatMessage } from '@/types';
+import { LessonControls } from './LessonControls';
 
 const QUIZ_UNLOCK_MARKER = '[READY_FOR_QUIZ]';
 
@@ -409,21 +410,24 @@ export function ChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick concept buttons */}
-      {messages.length > 0 && conceptButtons.length > 0 && (
-        <div className="border-t px-2 sm:px-3 py-1.5 sm:py-2">
-          <div className="flex flex-wrap gap-1">
-            {conceptButtons.map((c, i) => (
-              <button
-                key={i}
-                onClick={() => sendMessage(`Can you explain "${c.term}" in more detail?`)}
-                disabled={isStreaming}
-                className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] sm:text-xs text-gray-600 hover:bg-teal-50 hover:text-teal transition disabled:opacity-50"
-              >
-                {c.term}
-              </button>
-            ))}
-          </div>
+      {/* Lesson controls + quick concept buttons */}
+      {messages.length > 0 && (
+        <div className="border-t px-2 sm:px-3 py-1.5 sm:py-2 space-y-1.5">
+          <LessonControls onPrompt={(p) => sendMessage(p)} disabled={isStreaming} compact />
+          {conceptButtons.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {conceptButtons.map((c, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(`Can you explain "${c.term}" in more detail?`)}
+                  disabled={isStreaming}
+                  className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] sm:text-xs text-gray-600 hover:bg-teal-50 hover:text-teal transition disabled:opacity-50"
+                >
+                  {c.term}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -214,14 +214,8 @@ alter table chat_history add constraint chat_history_session_lesson_page_key uni
 -- Lesson Upgrade: Pedagogical metadata, richer quizzes
 -- ============================================================
 
--- Lesson-level concept map and learning path
-alter table lessons add column if not exists concept_map jsonb default null;
-alter table lessons add column if not exists learning_path text[] default null;
-
--- Page-level pedagogical fields
+-- Page-level pedagogical fields (threaded into tutor system prompt)
 alter table lesson_pages add column if not exists teaching_flow jsonb default null;
-alter table lesson_pages add column if not exists prerequisites text[] default null;
-alter table lesson_pages add column if not exists concepts_introduced text[] default null;
 alter table lesson_pages add column if not exists difficulty_level text default null;
 alter table lesson_pages add column if not exists bridge_from_previous text default null;
 alter table lesson_pages add column if not exists common_misconceptions text[] default null;
@@ -260,3 +254,61 @@ create table leads (
 
 create index idx_leads_created_at on leads(created_at desc);
 create index idx_leads_age_group on leads(age_group);
+
+-- ============================================================
+-- Spaced Repetition (Task 5)
+-- One row per (session, question) pair. Seeded on wrong quiz answers,
+-- promoted via SM-2 when reviewed.
+-- ============================================================
+create table if not exists review_items (
+  id uuid primary key default uuid_generate_v4(),
+  session_id uuid not null references student_sessions(id) on delete cascade,
+  question_id text not null references quiz_questions(id) on delete cascade,
+  lesson_id text not null references lessons(id) on delete cascade,
+  ease real not null default 2.5,
+  interval_days int not null default 0,
+  repetitions int not null default 0,
+  next_due_at timestamptz not null default now(),
+  last_reviewed_at timestamptz null,
+  last_quality int null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(session_id, question_id)
+);
+
+create index if not exists idx_review_items_due
+  on review_items(session_id, next_due_at);
+create index if not exists idx_review_items_lesson
+  on review_items(session_id, lesson_id);
+
+create trigger review_items_updated_at before update on review_items
+  for each row execute function update_updated_at();
+
+-- ============================================================
+-- Gamification (Task 6)
+-- XP + streak live on student_profiles; badge unlocks in their own table.
+-- ============================================================
+alter table student_profiles add column if not exists total_xp int not null default 0;
+alter table student_profiles add column if not exists current_streak int not null default 0;
+alter table student_profiles add column if not exists longest_streak int not null default 0;
+alter table student_profiles add column if not exists last_activity_date date null;
+
+create table if not exists user_badges (
+  id uuid primary key default uuid_generate_v4(),
+  session_id uuid not null references student_sessions(id) on delete cascade,
+  badge_code text not null,
+  metadata jsonb not null default '{}',
+  earned_at timestamptz not null default now(),
+  unique(session_id, badge_code)
+);
+
+create index if not exists idx_user_badges_session on user_badges(session_id);
+
+-- ============================================================
+-- Parent/Teacher Share Tokens (Task 10)
+-- Revocable, opaque public tokens for read-only progress views.
+-- ============================================================
+alter table student_sessions add column if not exists share_token text null;
+create unique index if not exists idx_student_sessions_share_token
+  on student_sessions(share_token)
+  where share_token is not null;

@@ -8,6 +8,7 @@ import type { Lesson, ChatMessage, LessonPage } from '@/types';
 import { ContentBlockRenderer } from './ContentBlockRenderer';
 import { CheckQuestions } from './CheckQuestions';
 import { QuizModal } from './QuizModal';
+import { LessonControls } from './LessonControls';
 
 // ============================================================
 // CONVERSATIONAL LESSON VIEW
@@ -624,7 +625,7 @@ export function ConversationalLessonView({
       <header className="glass-panel border-b sticky top-0 z-20">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <a href="/student" className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition shrink-0" aria-label="Back">
+            <a href="/" className="rounded-lg p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition shrink-0" aria-label="უკან">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </a>
             <div className="min-w-0">
@@ -1045,6 +1046,13 @@ export function ConversationalLessonView({
 
       {/* ---- PINNED CHAT INPUT ---- */}
       <div className="border-t bg-white px-4 py-3 sticky bottom-0 z-10 safe-area-bottom">
+        {/* Lesson controls (simpler/deeper/example + style selector) */}
+        {chatMessages.length > 0 && (
+          <div className="mb-2">
+            <LessonControls onPrompt={(p) => sendMessage(p)} disabled={isStreaming} compact />
+          </div>
+        )}
+
         {/* Concept chips */}
         {currentPageData && currentPageData.keyConcepts.length > 0 && chatMessages.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">

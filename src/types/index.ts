@@ -50,12 +50,6 @@ export type TeachingFlow = {
   practiceHint?: string;
 };
 
-export type ConceptNode = {
-  conceptId: string;
-  label: string;
-  prerequisiteIds: string[];
-};
-
 export type LessonPage = {
   id: string;
   lessonId: string;
@@ -65,8 +59,6 @@ export type LessonPage = {
   contentBlocks: ContentBlock[];
   checkQuestions: QuizQuestion[];
   teachingFlow?: TeachingFlow;
-  prerequisites?: string[];
-  conceptsIntroduced?: string[];
   difficultyLevel?: 'foundational' | 'intermediate' | 'advanced' | 'synthesis';
   bridgeFromPrevious?: string;
   commonMisconceptions?: string[];
@@ -92,8 +84,6 @@ export type Lesson = {
   positionInCourse?: number;
   pages?: LessonPage[];
   totalPages?: number;
-  conceptMap?: ConceptNode[];
-  learningPath?: string[];
 };
 
 export type ChatMessage = {
@@ -237,8 +227,50 @@ export type StudentProfile = {
   totalQuizzes: number;
   averageScore: number;
   totalTimeSpent: number;
+  totalXp: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastActivityDate: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ReviewItem = {
+  id: string;
+  sessionId: string;
+  questionId: string;
+  lessonId: string;
+  ease: number;
+  intervalDays: number;
+  repetitions: number;
+  nextDueAt: string;
+  lastReviewedAt: string | null;
+  lastQuality: number | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ReviewQueueItem = {
+  reviewItem: ReviewItem;
+  question: QuizQuestion;
+  lessonId: string;
+  lessonTitle: string;
+};
+
+export type UserBadge = {
+  id: string;
+  sessionId: string;
+  badgeCode: string;
+  metadata: Record<string, unknown>;
+  earnedAt: string;
+};
+
+export type LeaderboardEntry = {
+  sessionId: string;
+  displayName: string;
+  xp: number;
+  lessonsCompleted: number;
+  rank: number;
 };
 
 // ============================================================

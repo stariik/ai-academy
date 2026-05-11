@@ -15,8 +15,24 @@ import type {
   QuizAttemptRow,
   ChatHistoryRow,
   StudentProfileRow,
+  ReviewItemRow,
+  UserBadgeRow,
 } from './types';
-import type { Lesson, ContentBlock, QuizQuestion, LessonPage, Course, StudentSession, LessonProgress, StudentProfile } from '@/types';
+import type {
+  Lesson,
+  ContentBlock,
+  QuizQuestion,
+  LessonPage,
+  Course,
+  StudentSession,
+  LessonProgress,
+  StudentProfile,
+  ReviewItem,
+  ReviewQueueItem,
+  UserBadge,
+  LeaderboardEntry,
+} from '@/types';
+import { applySm2, DEFAULT_EASE, qualityFromQuiz } from '@/lib/spaced-repetition/sm2';
 
 // ============================================================
 // Quiz Question Sanitizer — ensures all NOT NULL fields have defaults
@@ -125,26 +141,12 @@ export function assembleLesson(
           practiceHint: pr.teaching_flow.practice_hint ?? '',
           reflectionPrompt: pr.teaching_flow.reflection_prompt ?? '',
         } : undefined,
-        prerequisites: pr.prerequisites ?? undefined,
-        conceptsIntroduced: pr.concepts_introduced ?? undefined,
         difficultyLevel: pr.difficulty_level as LessonPage['difficultyLevel'],
         bridgeFromPrevious: pr.bridge_from_previous ?? undefined,
         commonMisconceptions: pr.common_misconceptions ?? undefined,
         realWorldApplications: pr.real_world_applications ?? undefined,
       }));
     lesson.totalPages = lesson.pages.length;
-  }
-
-  // Map lesson-level pedagogical fields
-  if (row.concept_map) {
-    lesson.conceptMap = row.concept_map.map(n => ({
-      conceptId: n.concept_id,
-      label: n.label,
-      prerequisiteIds: n.prerequisite_ids,
-    }));
-  }
-  if (row.learning_path) {
-    lesson.learningPath = row.learning_path;
   }
 
   return lesson;
@@ -155,8 +157,6 @@ export function assembleLesson(
 // ============================================================
 
 export async function saveLesson(supabase: SupabaseClient, lesson: Lesson): Promise<void> {
-  // Insert lesson row
-  // Build insert data — concept_map and learning_path may not exist in all schemas
   const insertData: Record<string, unknown> = {
     id: lesson.id,
     title: lesson.title,
@@ -173,38 +173,13 @@ export async function saveLesson(supabase: SupabaseClient, lesson: Lesson): Prom
     position_in_course: lesson.positionInCourse ?? null,
   };
 
-  // Try with concept_map/learning_path first, fallback without them
-  const conceptMapData = lesson.conceptMap?.map(n => ({
-    concept_id: n.conceptId,
-    label: n.label,
-    prerequisite_ids: n.prerequisiteIds,
-  })) ?? null;
-
-  const { error: lessonError } = await supabase.from('lessons').insert({
-    ...insertData,
-    concept_map: conceptMapData,
-    learning_path: lesson.learningPath ?? null,
-  });
+  const { error: lessonError } = await supabase.from('lessons').insert(insertData);
 
   if (lessonError) {
-    // Retry without concept_map/learning_path if column doesn't exist
-    if (lessonError.message.includes('concept_map') || lessonError.message.includes('learning_path')) {
+    if (lessonError.message.includes('fetch failed') || lessonError.message.includes('TIMEOUT')) {
+      await new Promise(r => setTimeout(r, 3000));
       const { error: retryError } = await supabase.from('lessons').insert(insertData);
       if (retryError) throw new Error(`Failed to save lesson: ${retryError.message}`);
-    } else if (lessonError.message.includes('fetch failed') || lessonError.message.includes('TIMEOUT')) {
-      // Network error — retry after delay
-      await new Promise(r => setTimeout(r, 3000));
-      const { error: retryError } = await supabase.from('lessons').insert({
-        ...insertData,
-        concept_map: conceptMapData,
-        learning_path: lesson.learningPath ?? null,
-      });
-      if (retryError) {
-        // Final attempt without optional fields
-        await new Promise(r => setTimeout(r, 2000));
-        const { error: finalError } = await supabase.from('lessons').insert(insertData);
-        if (finalError) throw new Error(`Failed to save lesson: ${finalError.message}`);
-      }
     } else {
       throw new Error(`Failed to save lesson: ${lessonError.message}`);
     }
@@ -645,6 +620,60 @@ export async function getQuizAttemptsForLesson(
   return data as QuizAttemptRow[];
 }
 
+export type RecentQuizAttempt = {
+  id: string;
+  lessonId: string;
+  lessonTitle: string;
+  score: number;
+  totalPoints: number;
+  percentage: number;
+  passed: boolean;
+  createdAt: string;
+};
+
+export async function getRecentQuizAttempts(
+  supabase: SupabaseClient,
+  sessionId: string,
+  limit = 5
+): Promise<RecentQuizAttempt[]> {
+  const { data } = await supabase
+    .from('quiz_attempts')
+    .select('id, lesson_id, score, total_points, percentage, passed, created_at')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (!data || data.length === 0) return [];
+
+  const lessonIds = Array.from(new Set(data.map((r: { lesson_id: string }) => r.lesson_id)));
+  const { data: lessonRows } = await supabase
+    .from('lessons')
+    .select('id, title')
+    .in('id', lessonIds);
+  const titleById = new Map(
+    (lessonRows ?? []).map((l: { id: string; title: string }) => [l.id, l.title])
+  );
+
+  return data.map((r: {
+    id: string;
+    lesson_id: string;
+    score: number;
+    total_points: number;
+    percentage: number;
+    passed: boolean;
+    created_at: string;
+  }) => ({
+    id: r.id,
+    lessonId: r.lesson_id,
+    lessonTitle: titleById.get(r.lesson_id) ?? 'გაკვეთილი',
+    score: r.score,
+    totalPoints: r.total_points,
+    percentage: r.percentage,
+    passed: r.passed,
+    createdAt: r.created_at,
+  }));
+}
+
 // ============================================================
 // Chat History
 // ============================================================
@@ -715,8 +744,6 @@ export async function saveLessonPages(
       practice_hint: p.teachingFlow.practiceHint,
       reflection_prompt: p.teachingFlow.reflectionPrompt,
     } : null,
-    prerequisites: p.prerequisites ?? null,
-    concepts_introduced: p.conceptsIntroduced ?? null,
     difficulty_level: p.difficultyLevel ?? null,
     bridge_from_previous: p.bridgeFromPrevious ?? null,
     common_misconceptions: p.commonMisconceptions ?? null,
@@ -820,8 +847,6 @@ export async function getLessonPage(
       practiceHint: pr.teaching_flow.practice_hint ?? '',
       reflectionPrompt: pr.teaching_flow.reflection_prompt ?? '',
     } : undefined,
-    prerequisites: pr.prerequisites ?? undefined,
-    conceptsIntroduced: pr.concepts_introduced ?? undefined,
     difficultyLevel: pr.difficulty_level as LessonPage['difficultyLevel'],
     bridgeFromPrevious: pr.bridge_from_previous ?? undefined,
     commonMisconceptions: pr.common_misconceptions ?? undefined,
@@ -935,6 +960,10 @@ export async function updateProfile(
     totalQuizzes: number;
     averageScore: number;
     totalTimeSpent: number;
+    totalXp: number;
+    currentStreak: number;
+    longestStreak: number;
+    lastActivityDate: string | null;
   }>
 ): Promise<StudentProfile> {
   const rowUpdates: Record<string, unknown> = {};
@@ -944,6 +973,10 @@ export async function updateProfile(
   if (updates.totalQuizzes !== undefined) rowUpdates.total_quizzes = updates.totalQuizzes;
   if (updates.averageScore !== undefined) rowUpdates.average_score = updates.averageScore;
   if (updates.totalTimeSpent !== undefined) rowUpdates.total_time_spent = updates.totalTimeSpent;
+  if (updates.totalXp !== undefined) rowUpdates.total_xp = updates.totalXp;
+  if (updates.currentStreak !== undefined) rowUpdates.current_streak = updates.currentStreak;
+  if (updates.longestStreak !== undefined) rowUpdates.longest_streak = updates.longestStreak;
+  if (updates.lastActivityDate !== undefined) rowUpdates.last_activity_date = updates.lastActivityDate;
 
   const { data, error } = await supabase
     .from('student_profiles')
@@ -966,6 +999,10 @@ function mapProfileRow(row: StudentProfileRow): StudentProfile {
     totalQuizzes: row.total_quizzes,
     averageScore: row.average_score,
     totalTimeSpent: row.total_time_spent,
+    totalXp: row.total_xp ?? 0,
+    currentStreak: row.current_streak ?? 0,
+    longestStreak: row.longest_streak ?? 0,
+    lastActivityDate: row.last_activity_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -1029,4 +1066,555 @@ export async function getRecommendedLessons(
     .slice(0, limit);
 
   return scored.map((s) => s.lesson);
+}
+
+// ============================================================
+// Admin Analytics (Task 14)
+// ============================================================
+
+export type LessonPassRate = {
+  lessonId: string;
+  lessonTitle: string;
+  courseId: string | null;
+  attempts: number;
+  passed: number;
+  passRate: number; // 0–100
+  averagePercentage: number;
+};
+
+export async function getLessonPassRates(
+  supabase: SupabaseClient,
+  limit = 50
+): Promise<LessonPassRate[]> {
+  const { data: attempts } = await supabase
+    .from('quiz_attempts')
+    .select('lesson_id, passed, percentage');
+  if (!attempts || attempts.length === 0) return [];
+
+  type Row = { lesson_id: string; passed: boolean; percentage: number };
+  const by = new Map<string, { attempts: number; passed: number; sumPct: number }>();
+  for (const a of attempts as Row[]) {
+    const agg = by.get(a.lesson_id) ?? { attempts: 0, passed: 0, sumPct: 0 };
+    agg.attempts += 1;
+    if (a.passed) agg.passed += 1;
+    agg.sumPct += a.percentage ?? 0;
+    by.set(a.lesson_id, agg);
+  }
+
+  const lessonIds = Array.from(by.keys());
+  const { data: lessonRows } = await supabase
+    .from('lessons')
+    .select('id, title, course_id')
+    .in('id', lessonIds);
+  const byLesson = new Map(
+    ((lessonRows ?? []) as { id: string; title: string; course_id: string | null }[]).map((l) => [l.id, l])
+  );
+
+  const entries: LessonPassRate[] = lessonIds.map((id) => {
+    const agg = by.get(id)!;
+    const lesson = byLesson.get(id);
+    return {
+      lessonId: id,
+      lessonTitle: lesson?.title ?? id,
+      courseId: lesson?.course_id ?? null,
+      attempts: agg.attempts,
+      passed: agg.passed,
+      passRate: agg.attempts > 0 ? Math.round((agg.passed / agg.attempts) * 100) : 0,
+      averagePercentage: agg.attempts > 0 ? Math.round(agg.sumPct / agg.attempts) : 0,
+    };
+  });
+
+  // Most-attempted first, then worst pass-rate — the combo surfaces "tough lessons with real traffic".
+  entries.sort((a, b) => {
+    if (b.attempts !== a.attempts) return b.attempts - a.attempts;
+    return a.passRate - b.passRate;
+  });
+  return entries.slice(0, limit);
+}
+
+export type PageDropOff = {
+  lessonId: string;
+  lessonTitle: string;
+  totalStudents: number;
+  completedLesson: number;
+  stuckOnPage: { page: number; count: number }[]; // most-common last pages
+};
+
+export async function getPageDropOff(
+  supabase: SupabaseClient,
+  limit = 20
+): Promise<PageDropOff[]> {
+  const { data: progress } = await supabase
+    .from('lesson_progress')
+    .select('lesson_id, status, current_page');
+  if (!progress || progress.length === 0) return [];
+
+  type Row = { lesson_id: string; status: string; current_page: number };
+  const byLesson = new Map<string, { students: number; completed: number; pages: Map<number, number> }>();
+  for (const p of progress as Row[]) {
+    const agg =
+      byLesson.get(p.lesson_id) ?? { students: 0, completed: 0, pages: new Map<number, number>() };
+    agg.students += 1;
+    if (p.status === 'completed') agg.completed += 1;
+    else {
+      // Only count the non-completed students against the stuck-on-page histogram.
+      const pg = p.current_page ?? 1;
+      agg.pages.set(pg, (agg.pages.get(pg) ?? 0) + 1);
+    }
+    byLesson.set(p.lesson_id, agg);
+  }
+
+  const lessonIds = Array.from(byLesson.keys());
+  const { data: lessonRows } = await supabase
+    .from('lessons')
+    .select('id, title')
+    .in('id', lessonIds);
+  const titleById = new Map(
+    ((lessonRows ?? []) as { id: string; title: string }[]).map((l) => [l.id, l.title])
+  );
+
+  const entries: PageDropOff[] = lessonIds.map((id) => {
+    const agg = byLesson.get(id)!;
+    const pages = Array.from(agg.pages.entries())
+      .map(([page, count]) => ({ page, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    return {
+      lessonId: id,
+      lessonTitle: titleById.get(id) ?? id,
+      totalStudents: agg.students,
+      completedLesson: agg.completed,
+      stuckOnPage: pages,
+    };
+  });
+
+  // Lessons with the most non-completion count first.
+  entries.sort((a, b) => {
+    const aStuck = a.totalStudents - a.completedLesson;
+    const bStuck = b.totalStudents - b.completedLesson;
+    return bStuck - aStuck;
+  });
+  return entries.slice(0, limit);
+}
+
+export type CourseCompletionStat = {
+  courseId: string;
+  courseTitle: string;
+  totalLessons: number;
+  fullCompleters: number;
+  averageMinutes: number | null;
+};
+
+export async function getCourseCompletionStats(
+  supabase: SupabaseClient
+): Promise<CourseCompletionStat[]> {
+  const [{ data: courses }, { data: lessons }, { data: progress }] = await Promise.all([
+    supabase.from('courses').select('id, title'),
+    supabase.from('lessons').select('id, course_id'),
+    supabase.from('lesson_progress').select('session_id, lesson_id, status, time_spent_seconds'),
+  ]);
+  if (!courses || courses.length === 0) return [];
+
+  type Lsn = { id: string; course_id: string | null };
+  type Prog = { session_id: string; lesson_id: string; status: string; time_spent_seconds: number };
+
+  const lessonsByCourse = new Map<string, string[]>();
+  for (const l of (lessons ?? []) as Lsn[]) {
+    if (!l.course_id) continue;
+    const arr = lessonsByCourse.get(l.course_id) ?? [];
+    arr.push(l.id);
+    lessonsByCourse.set(l.course_id, arr);
+  }
+
+  // Group progress rows by session+course
+  const bySessionCourse = new Map<string, { completedLessons: Set<string>; totalSeconds: number }>();
+  const lessonToCourse = new Map<string, string>();
+  for (const l of (lessons ?? []) as Lsn[]) {
+    if (l.course_id) lessonToCourse.set(l.id, l.course_id);
+  }
+  for (const p of (progress ?? []) as Prog[]) {
+    const courseId = lessonToCourse.get(p.lesson_id);
+    if (!courseId) continue;
+    const key = `${p.session_id}::${courseId}`;
+    const entry = bySessionCourse.get(key) ?? { completedLessons: new Set<string>(), totalSeconds: 0 };
+    if (p.status === 'completed') entry.completedLessons.add(p.lesson_id);
+    entry.totalSeconds += p.time_spent_seconds ?? 0;
+    bySessionCourse.set(key, entry);
+  }
+
+  return (courses as { id: string; title: string }[]).map((c) => {
+    const lessonIds = lessonsByCourse.get(c.id) ?? [];
+    const totalLessons = lessonIds.length;
+
+    let fullCompleters = 0;
+    const completionSeconds: number[] = [];
+    for (const [key, entry] of bySessionCourse.entries()) {
+      if (!key.endsWith(`::${c.id}`)) continue;
+      if (totalLessons > 0 && entry.completedLessons.size === totalLessons) {
+        fullCompleters += 1;
+        completionSeconds.push(entry.totalSeconds);
+      }
+    }
+
+    const averageMinutes =
+      completionSeconds.length > 0
+        ? Math.round(
+            completionSeconds.reduce((a, b) => a + b, 0) / completionSeconds.length / 60
+          )
+        : null;
+
+    return {
+      courseId: c.id,
+      courseTitle: c.title,
+      totalLessons,
+      fullCompleters,
+      averageMinutes,
+    };
+  });
+}
+
+// ============================================================
+// Share Tokens (Task 10)
+// Revocable public tokens for parent/teacher progress view.
+// ============================================================
+
+function generateShareToken(): string {
+  // URL-safe random — 24 bytes → ~32 chars.
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function getOrCreateShareToken(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<string> {
+  const { data } = await supabase
+    .from('student_sessions')
+    .select('share_token')
+    .eq('id', sessionId)
+    .single();
+  if (data?.share_token) return data.share_token as string;
+
+  const token = generateShareToken();
+  const { error } = await supabase
+    .from('student_sessions')
+    .update({ share_token: token })
+    .eq('id', sessionId);
+  if (error) throw new Error(`Failed to create share token: ${error.message}`);
+  return token;
+}
+
+export async function rotateShareToken(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<string> {
+  const token = generateShareToken();
+  const { error } = await supabase
+    .from('student_sessions')
+    .update({ share_token: token })
+    .eq('id', sessionId);
+  if (error) throw new Error(`Failed to rotate share token: ${error.message}`);
+  return token;
+}
+
+export async function revokeShareToken(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('student_sessions')
+    .update({ share_token: null })
+    .eq('id', sessionId);
+  if (error) throw new Error(`Failed to revoke share token: ${error.message}`);
+}
+
+export async function getSessionByShareToken(
+  supabase: SupabaseClient,
+  token: string
+): Promise<{ id: string; displayName: string } | null> {
+  const { data } = await supabase
+    .from('student_sessions')
+    .select('id, display_name')
+    .eq('share_token', token)
+    .maybeSingle();
+  if (!data) return null;
+  return { id: data.id as string, displayName: data.display_name as string };
+}
+
+// ============================================================
+// Review Items (Spaced Repetition — Task 5)
+// ============================================================
+
+function mapReviewItemRow(row: ReviewItemRow): ReviewItem {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    questionId: row.question_id,
+    lessonId: row.lesson_id,
+    ease: row.ease,
+    intervalDays: row.interval_days,
+    repetitions: row.repetitions,
+    nextDueAt: row.next_due_at,
+    lastReviewedAt: row.last_reviewed_at,
+    lastQuality: row.last_quality,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// Seed an item on first wrong answer or bump an existing item's state after a review.
+export async function applyQuizReviewUpdate(
+  supabase: SupabaseClient,
+  sessionId: string,
+  questionId: string,
+  lessonId: string,
+  isCorrect: boolean,
+  difficulty: 'easy' | 'medium' | 'hard'
+): Promise<void> {
+  const { data: existing } = await supabase
+    .from('review_items')
+    .select('*')
+    .eq('session_id', sessionId)
+    .eq('question_id', questionId)
+    .maybeSingle();
+
+  // Wrong answer with no prior item → seed a new one due immediately.
+  if (!existing && !isCorrect) {
+    const quality = qualityFromQuiz(false, difficulty);
+    const sm2 = applySm2({ ease: DEFAULT_EASE, intervalDays: 0, repetitions: 0 }, quality);
+    const { error } = await supabase.from('review_items').insert({
+      session_id: sessionId,
+      question_id: questionId,
+      lesson_id: lessonId,
+      ease: sm2.ease,
+      interval_days: sm2.intervalDays,
+      repetitions: sm2.repetitions,
+      next_due_at: sm2.nextDueAt.toISOString(),
+      last_reviewed_at: new Date().toISOString(),
+      last_quality: quality,
+    });
+    if (error) throw new Error(`Failed to seed review item: ${error.message}`);
+    return;
+  }
+
+  // Correct answer with no prior item → nothing to track.
+  if (!existing) return;
+
+  // Prior item exists → update it based on this outcome.
+  const quality = qualityFromQuiz(isCorrect, difficulty);
+  const sm2 = applySm2(
+    { ease: existing.ease, intervalDays: existing.interval_days, repetitions: existing.repetitions },
+    quality
+  );
+  const { error } = await supabase
+    .from('review_items')
+    .update({
+      ease: sm2.ease,
+      interval_days: sm2.intervalDays,
+      repetitions: sm2.repetitions,
+      next_due_at: sm2.nextDueAt.toISOString(),
+      last_reviewed_at: new Date().toISOString(),
+      last_quality: quality,
+    })
+    .eq('id', existing.id);
+  if (error) throw new Error(`Failed to update review item: ${error.message}`);
+}
+
+export async function getDueReviewItems(
+  supabase: SupabaseClient,
+  sessionId: string,
+  limit = 10
+): Promise<ReviewQueueItem[]> {
+  const nowIso = new Date().toISOString();
+  const { data: rows } = await supabase
+    .from('review_items')
+    .select('*')
+    .eq('session_id', sessionId)
+    .lte('next_due_at', nowIso)
+    .order('next_due_at', { ascending: true })
+    .limit(limit);
+
+  if (!rows || rows.length === 0) return [];
+
+  const questionIds = (rows as ReviewItemRow[]).map((r) => r.question_id);
+  const lessonIds = Array.from(new Set((rows as ReviewItemRow[]).map((r) => r.lesson_id)));
+
+  const [{ data: qRows }, { data: lRows }] = await Promise.all([
+    supabase.from('quiz_questions').select('*').in('id', questionIds),
+    supabase.from('lessons').select('id, title').in('id', lessonIds),
+  ]);
+
+  const byQuestion = new Map((qRows ?? []).map((q) => [q.id, q as QuizQuestionRow]));
+  const titleByLesson = new Map((lRows ?? []).map((l: { id: string; title: string }) => [l.id, l.title]));
+
+  const queue: ReviewQueueItem[] = [];
+  for (const r of rows as ReviewItemRow[]) {
+    const q = byQuestion.get(r.question_id);
+    if (!q) continue;
+    queue.push({
+      reviewItem: mapReviewItemRow(r),
+      question: mapQuizQuestion(q),
+      lessonId: r.lesson_id,
+      lessonTitle: titleByLesson.get(r.lesson_id) ?? '',
+    });
+  }
+  return queue;
+}
+
+export async function countDueReviewItems(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<number> {
+  const nowIso = new Date().toISOString();
+  const { count } = await supabase
+    .from('review_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('session_id', sessionId)
+    .lte('next_due_at', nowIso);
+  return count ?? 0;
+}
+
+export async function countReviewAnswers(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<number> {
+  // Rough proxy — reps across all items is how many times the user has reviewed.
+  const { data } = await supabase
+    .from('review_items')
+    .select('repetitions')
+    .eq('session_id', sessionId);
+  if (!data) return 0;
+  return (data as { repetitions: number }[]).reduce((sum, r) => sum + (r.repetitions ?? 0), 0);
+}
+
+export async function getReviewItem(
+  supabase: SupabaseClient,
+  sessionId: string,
+  questionId: string
+): Promise<ReviewItem | null> {
+  const { data } = await supabase
+    .from('review_items')
+    .select('*')
+    .eq('session_id', sessionId)
+    .eq('question_id', questionId)
+    .maybeSingle();
+  return data ? mapReviewItemRow(data as ReviewItemRow) : null;
+}
+
+// ============================================================
+// Badges (Task 6)
+// ============================================================
+
+export async function getUserBadges(
+  supabase: SupabaseClient,
+  sessionId: string
+): Promise<UserBadge[]> {
+  const { data } = await supabase
+    .from('user_badges')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('earned_at', { ascending: false });
+  if (!data) return [];
+  return (data as UserBadgeRow[]).map((row) => ({
+    id: row.id,
+    sessionId: row.session_id,
+    badgeCode: row.badge_code,
+    metadata: row.metadata ?? {},
+    earnedAt: row.earned_at,
+  }));
+}
+
+// Insert badges the user has just earned, skipping any already owned.
+// Returns the codes that were newly inserted.
+export async function unlockBadges(
+  supabase: SupabaseClient,
+  sessionId: string,
+  codes: string[],
+  metadata: Record<string, unknown> = {}
+): Promise<string[]> {
+  if (codes.length === 0) return [];
+  const { data: existing } = await supabase
+    .from('user_badges')
+    .select('badge_code')
+    .eq('session_id', sessionId)
+    .in('badge_code', codes);
+  const owned = new Set((existing ?? []).map((r: { badge_code: string }) => r.badge_code));
+  const toInsert = codes.filter((c) => !owned.has(c));
+  if (toInsert.length === 0) return [];
+  const { error } = await supabase.from('user_badges').insert(
+    toInsert.map((c) => ({ session_id: sessionId, badge_code: c, metadata }))
+  );
+  if (error) throw new Error(`Failed to unlock badges: ${error.message}`);
+  return toInsert;
+}
+
+// ============================================================
+// Leaderboard (Task 6)
+// Ranked by total XP earned from this course's lessons.
+// ============================================================
+
+export async function getCourseLeaderboard(
+  supabase: SupabaseClient,
+  courseId: string,
+  limit = 20
+): Promise<LeaderboardEntry[]> {
+  const { data: lessonsInCourse } = await supabase
+    .from('lessons')
+    .select('id')
+    .eq('course_id', courseId);
+
+  const lessonIds = (lessonsInCourse ?? []).map((l: { id: string }) => l.id);
+  if (lessonIds.length === 0) return [];
+
+  const { data: attempts } = await supabase
+    .from('quiz_attempts')
+    .select('session_id, percentage, passed, lesson_id')
+    .in('lesson_id', lessonIds);
+
+  // Aggregate rough XP proxy per session from attempts.
+  // (Canonical XP lives on student_profiles.total_xp, but that's global — this
+  // slice is course-specific so we recompute from attempts against course lessons.)
+  const bySession = new Map<
+    string,
+    { xp: number; lessonsCompleted: Set<string> }
+  >();
+  for (const a of (attempts ?? []) as {
+    session_id: string;
+    percentage: number;
+    passed: boolean;
+    lesson_id: string;
+  }[]) {
+    const entry = bySession.get(a.session_id) ?? { xp: 0, lessonsCompleted: new Set<string>() };
+    entry.xp += Math.round(50 + a.percentage * 2);
+    if (a.passed) entry.lessonsCompleted.add(a.lesson_id);
+    bySession.set(a.session_id, entry);
+  }
+
+  if (bySession.size === 0) return [];
+
+  const sessionIds = Array.from(bySession.keys());
+  const { data: sessionRows } = await supabase
+    .from('student_sessions')
+    .select('id, display_name')
+    .in('id', sessionIds);
+  const nameById = new Map(
+    (sessionRows ?? []).map((s: { id: string; display_name: string }) => [s.id, s.display_name])
+  );
+
+  const entries: Omit<LeaderboardEntry, 'rank'>[] = sessionIds.map((sid) => {
+    const info = bySession.get(sid)!;
+    return {
+      sessionId: sid,
+      displayName: nameById.get(sid) ?? 'Student',
+      xp: info.xp,
+      lessonsCompleted: info.lessonsCompleted.size,
+    };
+  });
+
+  entries.sort((a, b) => b.xp - a.xp);
+
+  return entries.slice(0, limit).map((e, i) => ({ ...e, rank: i + 1 }));
 }

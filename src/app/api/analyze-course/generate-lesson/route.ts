@@ -6,7 +6,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { analyzeSectionAsLesson } from '@/lib/ai/gemini';
+import { analyzeSectionAsLesson, type LLMProvider } from '@/lib/ai/gemini';
 import { createClient } from '@/lib/supabase/server';
 import { saveLesson } from '@/lib/supabase/db';
 import { buildLessonFromGeminiResponse } from '@/lib/lesson-builder';
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       courseId,
       fileName,
       previousContext,
+      provider: providerRaw,
     } = body;
 
     if (!sectionText || !courseId) {
@@ -35,13 +36,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate lesson with Gemini
+    const provider: LLMProvider = providerRaw === 'claude' ? 'claude' : 'gemini';
+
+    // Generate lesson with selected provider
     const geminiResponse = await analyzeSectionAsLesson(sectionText, {
       targetLevel: targetLevel || 'intermediate',
       sectionTitle: sectionTitle || 'Untitled Section',
       sectionIndex: sectionIndex ?? 0,
       totalSections: totalSections ?? 1,
       previousSectionContext: previousContext || '',
+      provider,
     });
 
     let lesson = buildLessonFromGeminiResponse(

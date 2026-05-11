@@ -285,6 +285,33 @@ body {
   background: var(--foreground);
 }
 
+/* Hide scrollbar (used on horizontal sliders for a clean tactile feel) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Soft fade-out at the right edge of horizontal sliders */
+.slider-mask {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 24px,
+    black calc(100% - 80px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 24px,
+    black calc(100% - 80px),
+    transparent 100%
+  );
+}
+
 /* ============================================================
    Lesson Content Prose — used in ContentBlockRenderer
    ============================================================ */

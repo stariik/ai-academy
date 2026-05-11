@@ -1,10 +1,8 @@
 // ============================================================
-// Gemini AI Client — Document Analysis for Lesson Generation
-// Single entry points:
-//   - analyzeDocument            PDF → multi-page lesson
-//   - analyzeSectionAsLesson     section of a larger course
-//   - generateLessonFromOutline  topic + key points → lesson
-//   - extractDocumentOutline     detect sections for course flow
+// Gemini/Claude AI Client — Document Analysis for Lesson Generation
+// Entry points:
+//   - extractDocumentOutline     detect sections in a full-course PDF
+//   - analyzeSectionAsLesson     one section → one lesson (with pages)
 // ============================================================
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -12,15 +10,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import type { GeminiPagedLessonResponse } from '@/types';
 import {
-  ANALYSIS_PROMPT,
   CHUNK_PAGES_PROMPT,
   FINAL_QUIZ_PROMPT,
-  GENERATIVE_LESSON_PROMPT,
   REVIEW_PROMPT,
-  SYLLABUS_PARSER_PROMPT,
-  LESSON_EXPANDER_PROMPT,
-  GOLD_STANDARD_PAGE_EXAMPLE_EN,
-  GOLD_STANDARD_PAGE_EXAMPLE_KA,
+  buildAnalysisSystemPrompt,
+  buildAnalysisUserPrompt,
 } from './prompts';
 import {
   geminiLessonResponseSchema,
@@ -28,14 +22,7 @@ import {
   geminiFinalQuizResponseSchema,
   geminiOutlineResponseSchema,
   geminiReviewResponseSchema,
-  geminiSyllabusResponseSchema,
-  geminiLessonExpansionResponseSchema,
-  type GeminiSyllabusResponseZ,
-  type GeminiLessonExpansionResponseZ,
-  type SubLessonSpec,
 } from './gemini-schema';
-
-export type { GeminiSyllabusResponseZ, GeminiLessonExpansionResponseZ, SubLessonSpec };
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const anthropic = new Anthropic();
@@ -57,19 +44,12 @@ const MAX_CHUNK_SIZE = 60_000;
 const MAX_DOCUMENT_CHARS = 500_000;
 
 // Quality review: if generated lesson scores below this, regenerate once.
-const QUALITY_THRESHOLD = 9;
+// Lowered from 9 → 8: Georgian content routinely scores 8.5–8.9 due to
+// language-specific phrasing quirks that aren't real quality issues, so
+// threshold 9 triggered ~25–30% regens of already-good lessons.
+const QUALITY_THRESHOLD = 8;
 // Set GEMINI_SKIP_REVIEW=1 to disable the self-review pass (faster, cheaper).
 const SKIP_REVIEW = process.env.GEMINI_SKIP_REVIEW === '1';
-
-// Few-shot example picker: select the example in the target language
-// so Gemini sees native-language output as the gold standard to imitate.
-function pickFewShotExample(language: string): string {
-  const lower = language.toLowerCase();
-  if (lower.includes('georgian') || lower.includes('ქართულ') || lower === 'ka') {
-    return GOLD_STANDARD_PAGE_EXAMPLE_KA;
-  }
-  return GOLD_STANDARD_PAGE_EXAMPLE_EN;
-}
 
 // ============================================================
 // Config
@@ -197,7 +177,10 @@ interface PageBudget {
 }
 
 function calculateDynamicPageCount(structure: DocumentStructure): PageBudget {
-  const wordBasedPages = Math.ceil(structure.wordCount / 200);
+  // One page per ~300 words (was 200). A 600-word lesson naturally
+  // splits into 2 pages, 900-word into 3. Georgian tokenization makes
+  // every page expensive, so we target fewer, denser pages.
+  const wordBasedPages = Math.ceil(structure.wordCount / 300);
   let targetPages = Math.min(structure.estimatedTopicCount, wordBasedPages);
 
   if (structure.avgWordsPerSection > 1500) targetPages = Math.ceil(targetPages * 1.3);
@@ -205,13 +188,20 @@ function calculateDynamicPageCount(structure: DocumentStructure): PageBudget {
   if (structure.informationDensity === 'high') targetPages = Math.ceil(targetPages * 1.2);
   else if (structure.informationDensity === 'low') targetPages = Math.ceil(targetPages * 0.8);
 
-  targetPages = Math.max(2, Math.min(15, targetPages));
-  const minPages = Math.max(2, Math.floor(targetPages * 0.8));
-  const maxPages = Math.min(25, Math.ceil(targetPages * 1.2));
+  // Cap 2-6 pages. Keeps cost predictable while allowing longer
+  // source sections (1500+ words) to expand past 3 pages when the
+  // content genuinely warrants it. A 600-word lesson still targets
+  // 2 pages via wordBasedPages; only richer source sections push
+  // toward 6.
+  targetPages = Math.max(2, Math.min(6, targetPages));
+  const minPages = 2;
+  const maxPages = 6;
 
-  const tokensPerPage = 3000;
+  // Lower budget floor: 10k tokens is enough for 2-3 Georgian pages
+  // with check questions + pedagogical fields. Was 16384 (too generous).
+  const tokensPerPage = 2200;
   const overheadTokens = 1000;
-  const outputTokens = Math.min(65_536, Math.max(16_384, targetPages * tokensPerPage + overheadTokens));
+  const outputTokens = Math.min(65_536, Math.max(10_000, targetPages * tokensPerPage + overheadTokens));
 
   return { targetPages, minPages, maxPages, outputTokens };
 }
@@ -231,9 +221,67 @@ interface DocumentOutline {
   totalSections: number;
 }
 
-export async function extractDocumentOutline(text: string): Promise<DocumentOutline> {
-  if (!process.env.GEMINI_API_KEY) {
+// Fast regex path for AI Academy template documents.
+// Matches both languages: "## გაკვეთილი 01 — ..." and "## Lesson 01 — ...".
+// Also matches "Lesson 1", "Chapter 3", etc. for flexibility.
+function tryRegexOutline(text: string): DocumentOutline['sections'] | null {
+  const LESSON_HEADING_RE = /^[#*\s]*(?:გაკვეთილი|lesson|chapter|module|unit)\s*\d+[.:\s—–-]\s*(.+?)$/gim;
+  const matches: { title: string; startIndex: number; fullLine: string }[] = [];
+  let m: RegExpExecArray | null;
+  LESSON_HEADING_RE.lastIndex = 0;
+  while ((m = LESSON_HEADING_RE.exec(text)) !== null) {
+    const fullLine = m[0].trim();
+    // Use the full matched line (trimmed) as the title so the downstream
+    // pipeline sees something like "გაკვეთილი 01 — ChatGPT Prompt-ის ანატომია"
+    const cleanTitle = fullLine.replace(/^#+\s*/, '').replace(/^\*+\s*/, '').trim();
+    matches.push({
+      title: cleanTitle,
+      startIndex: m.index,
+      fullLine,
+    });
+  }
+  // Only activate fast path if we found 3+ lesson headings — fewer than
+  // that and the document probably isn't using the AI Academy template,
+  // so defer to the LLM detector.
+  if (matches.length < 3) return null;
+
+  const sections: DocumentOutline['sections'] = matches.map((match, i) => {
+    const endIndex = i < matches.length - 1 ? matches[i + 1].startIndex : text.length;
+    return {
+      title: match.title,
+      startIndex: match.startIndex,
+      endIndex,
+      estimatedWordCount: text
+        .substring(match.startIndex, endIndex)
+        .split(/\s+/)
+        .filter(Boolean).length,
+      topicSummary: '',
+    };
+  });
+  return sections;
+}
+
+export async function extractDocumentOutline(
+  text: string,
+  provider: LLMProvider = DEFAULT_PROVIDER
+): Promise<DocumentOutline> {
+  // Fast deterministic path for AI Academy template documents. A doc
+  // with 3+ "## გაკვეთილი NN — ..." (or "## Lesson NN — ...") headings
+  // gets split by regex directly. Skips the Gemini call entirely —
+  // faster, free, and avoids the failure mode where Gemini returns 3-5
+  // merged mega-sections (each containing multiple lessons) which then
+  // trigger the chunked generation path and emit 80K-char broken JSON.
+  const regexSections = tryRegexOutline(text);
+  if (regexSections) {
+    console.log(`[Outline] Regex fast path: found ${regexSections.length} lesson heading(s).`);
+    return { sections: regexSections, totalSections: regexSections.length };
+  }
+
+  if (provider === 'gemini' && !process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY environment variable is not set.');
+  }
+  if (provider === 'claude' && !process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is not set.');
   }
 
   const sampleText =
@@ -255,12 +303,16 @@ Respond ONLY with: {"sections": [{"title": "...", "start_marker": "..."}]}`;
 
   try {
     const config = getGeminiConfig('outline_extraction');
-    const parsed = await callGeminiForJson(
+    const parsed = await callLLMForJson(
+      provider,
       prompt,
       config,
       geminiOutlineResponseSchema,
-      'Gemini-Outline',
-      2
+      'Outline',
+      2,
+      undefined,
+      undefined,
+      'light'
     );
 
     const mapped: DocumentOutline['sections'] = [];
@@ -424,6 +476,24 @@ function normalizeQuizQuestion(q: any): any | null {
 function normalizePage(page: any): any {
   if (!page || typeof page !== 'object') return page;
 
+  // Unwrap nested page wrappers — Claude sometimes emits { "page": {...} }
+  // instead of the flat page object.
+  if (page.page && typeof page.page === 'object' && !page.content_blocks) {
+    page = { ...page.page, ...page };
+    delete page.page;
+  }
+
+  // camelCase → snake_case safety net (Claude sometimes flips).
+  if (page.pageNumber != null && page.page_number == null) page.page_number = page.pageNumber;
+  if (page.contentBlocks != null && page.content_blocks == null) page.content_blocks = page.contentBlocks;
+  if (page.keyConcepts != null && page.key_concepts == null) page.key_concepts = page.keyConcepts;
+  if (page.checkQuestions != null && page.check_questions == null) page.check_questions = page.checkQuestions;
+  if (page.teachingFlow != null && page.teaching_flow == null) page.teaching_flow = page.teachingFlow;
+  if (page.difficultyLevel != null && page.difficulty_level == null) page.difficulty_level = page.difficultyLevel;
+  if (page.bridgeFromPrevious != null && page.bridge_from_previous == null) page.bridge_from_previous = page.bridgeFromPrevious;
+  if (page.commonMisconceptions != null && page.common_misconceptions == null) page.common_misconceptions = page.commonMisconceptions;
+  if (page.realWorldApplications != null && page.real_world_applications == null) page.real_world_applications = page.realWorldApplications;
+
   if (Array.isArray(page.content_blocks)) {
     page.content_blocks = page.content_blocks
       .map(normalizeContentBlock)
@@ -442,12 +512,32 @@ function normalizePage(page: any): any {
   return page;
 }
 
+// A page is "salvageable" if it has the three required fields after
+// normalization: page_number, title, and at least one content_block.
+// Pages missing any of these would fail Zod validation and kill the
+// whole lesson — better to drop them and keep the rest.
+function isValidPage(page: any): boolean {
+  if (!page || typeof page !== 'object') return false;
+  if (typeof page.page_number !== 'number') return false;
+  if (typeof page.title !== 'string' || !page.title.trim()) return false;
+  if (!Array.isArray(page.content_blocks) || page.content_blocks.length === 0) return false;
+  return true;
+}
+
 function normalizeLessonResponse(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') return raw;
   const obj = raw as Record<string, any>;
 
   if (Array.isArray(obj.pages)) {
-    obj.pages = obj.pages.map(normalizePage);
+    const before = obj.pages.length;
+    obj.pages = obj.pages.map(normalizePage).filter(isValidPage);
+    // Re-number sequentially if we dropped anything, so there are no gaps.
+    if (obj.pages.length < before) {
+      console.warn(`[Normalize] Dropped ${before - obj.pages.length} malformed page(s); kept ${obj.pages.length}`);
+      obj.pages.forEach((p: any, i: number) => {
+        p.page_number = i + 1;
+      });
+    }
   }
 
   if (Array.isArray(obj.final_quiz_questions)) {
@@ -611,8 +701,14 @@ async function callGeminiForJson<T>(
 
       if (attempt >= maxRetries) break;
 
-      const isRateLimit = /429|RATE_LIMIT|Resource has been exhausted/i.test(lastError.message);
-      const waitTime = isRateLimit ? Math.pow(2, attempt) * 1000 : 1000 * attempt;
+      const isRateLimit = /429|RATE_LIMIT|Resource has been exhausted|Resource exhausted/i.test(lastError.message);
+      // Rate-limit errors need real backoff (server wants us to slow down).
+      // Per-minute quotas take ~60s to replenish, so wait in tens of seconds.
+      // Parse/schema/network errors are transient hiccups — retry fast.
+      const rateLimitBackoff = [15_000, 30_000, 60_000, 120_000];
+      const waitTime = isRateLimit
+        ? rateLimitBackoff[Math.min(attempt - 1, rateLimitBackoff.length - 1)]
+        : 200 * attempt;
       console.log(`[${label}] Retrying in ${waitTime}ms...`);
       await sleep(waitTime);
     }
@@ -640,7 +736,8 @@ async function callClaudeForJson<T>(
   taskHint: ClaudeTaskHint,
   maxRetries = 3,
   recoveryFn?: (rawText: string) => unknown | null,
-  normalizeFn?: (parsed: unknown) => unknown
+  normalizeFn?: (parsed: unknown) => unknown,
+  cachedSystemBlock?: string
 ): Promise<T> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY environment variable is not set.');
@@ -650,15 +747,31 @@ async function callClaudeForJson<T>(
   // Claude Sonnet 4.5 supports up to 64k output tokens. Clamp to be safe.
   const maxTokens = Math.min(64_000, Math.max(1024, maxOutputTokens));
 
-  const systemPrompt =
+  const jsonInstruction =
     'You respond ONLY with a single valid JSON object. No markdown code fences. ' +
     'No commentary before or after. Your entire response must be parseable as JSON.';
+
+  // When a cached system block is supplied, use Anthropic's content-array
+  // form on `system` so we can mark the big stable prefix with
+  // cache_control=ephemeral (5-min TTL, ~90% discount on cached input).
+  // The short JSON-only instruction stays uncached — it's tiny and
+  // doesn't need to be kept warm.
+  const systemParam = cachedSystemBlock
+    ? [
+        { type: 'text' as const, text: jsonInstruction },
+        {
+          type: 'text' as const,
+          text: cachedSystemBlock,
+          cache_control: { type: 'ephemeral' as const },
+        },
+      ]
+    : jsonInstruction;
 
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`[${label}] (claude/${model}) Attempt ${attempt}/${maxRetries}...`);
+      console.log(`[${label}] (claude/${model}) Attempt ${attempt}/${maxRetries}${cachedSystemBlock ? ' [cache]' : ''}...`);
       // Use the streaming helper to bypass the SDK's 10-minute non-streaming
       // cap (triggered automatically when max_tokens is high). `.finalMessage()`
       // still returns the complete Message object once streaming finishes, so
@@ -666,10 +779,23 @@ async function callClaudeForJson<T>(
       const stream = anthropic.messages.stream({
         model,
         max_tokens: maxTokens,
-        system: systemPrompt,
+        system: systemParam,
         messages: [{ role: 'user', content: prompt }],
       });
       const response = await stream.finalMessage();
+
+      // Log cache stats when available so we can verify hits in prod
+      if (cachedSystemBlock && response.usage) {
+        const u = response.usage as {
+          cache_creation_input_tokens?: number;
+          cache_read_input_tokens?: number;
+        };
+        const created = u.cache_creation_input_tokens ?? 0;
+        const read = u.cache_read_input_tokens ?? 0;
+        if (created > 0 || read > 0) {
+          console.log(`[${label}] cache: created=${created} read=${read}`);
+        }
+      }
 
       const firstBlock = response.content[0];
       const responseText =
@@ -702,6 +828,25 @@ async function callClaudeForJson<T>(
 
       const validated = schema.safeParse(parsed);
       if (!validated.success) {
+        // On the final attempt only, log a shape summary so we can
+        // diagnose recurring failures without flooding the console on
+        // every transient retry.
+        if (attempt >= maxRetries) {
+          try {
+            const shape = parsed && typeof parsed === 'object' ? {
+              topLevelKeys: Object.keys(parsed as Record<string, unknown>),
+              pagesCount: Array.isArray((parsed as { pages?: unknown }).pages)
+                ? ((parsed as { pages: unknown[] }).pages.length)
+                : 'not an array',
+              firstPageKeys: Array.isArray((parsed as { pages?: unknown[] }).pages) && (parsed as { pages: unknown[] }).pages[0]
+                ? Object.keys((parsed as { pages: Record<string, unknown>[] }).pages[0] ?? {})
+                : 'no first page',
+            } : 'non-object response';
+            console.error(`[${label}] Shape of last failed response:`, JSON.stringify(shape));
+          } catch {
+            // ignore
+          }
+        }
         throw new Error(`Schema validation failed: ${validated.error.message.substring(0, 500)}`);
       }
       return validated.data;
@@ -711,8 +856,14 @@ async function callClaudeForJson<T>(
 
       if (attempt >= maxRetries) break;
 
-      const isRateLimit = /429|rate_limit|rate limit|overloaded/i.test(lastError.message);
-      const waitTime = isRateLimit ? Math.pow(2, attempt) * 1000 : 1000 * attempt;
+      const isRateLimit = /429|rate_limit|rate limit|overloaded|Resource exhausted/i.test(lastError.message);
+      // Rate-limit errors need real backoff (server wants us to slow down).
+      // Per-minute quotas take ~60s to replenish, so wait in tens of seconds.
+      // Parse/schema/network errors are transient hiccups — retry fast.
+      const rateLimitBackoff = [15_000, 30_000, 60_000, 120_000];
+      const waitTime = isRateLimit
+        ? rateLimitBackoff[Math.min(attempt - 1, rateLimitBackoff.length - 1)]
+        : 200 * attempt;
       console.log(`[${label}] Retrying in ${waitTime}ms...`);
       await sleep(waitTime);
     }
@@ -736,7 +887,8 @@ async function callLLMForJson<T>(
   maxRetries = 3,
   recoveryFn?: (rawText: string) => unknown | null,
   normalizeFn?: (parsed: unknown) => unknown,
-  claudeTaskHint: ClaudeTaskHint = 'heavy'
+  claudeTaskHint: ClaudeTaskHint = 'heavy',
+  cachedSystemBlock?: string
 ): Promise<T> {
   const providerLabel = `${label}/${provider}`;
   if (provider === 'claude') {
@@ -748,11 +900,18 @@ async function callLLMForJson<T>(
       claudeTaskHint,
       maxRetries,
       recoveryFn,
-      normalizeFn
+      normalizeFn,
+      cachedSystemBlock
     );
   }
+  // Gemini doesn't have the same content-block caching API, so the
+  // cacheable prefix just gets prepended to the user prompt. It still
+  // produces the same output — we just don't get the cost savings.
+  const combinedPrompt = cachedSystemBlock
+    ? `${cachedSystemBlock}\n\n${prompt}`
+    : prompt;
   return callGeminiForJson(
-    prompt,
+    combinedPrompt,
     geminiConfig,
     schema,
     providerLabel,
@@ -816,7 +975,7 @@ async function reviewLessonQuality(
     config,
     geminiReviewResponseSchema,
     'Review',
-    2,
+    4,
     undefined,
     undefined,
     'light'
@@ -851,67 +1010,6 @@ async function withQualityCheck(
 // ============================================================
 // Single-Document Analysis (unified entry point)
 // ============================================================
-
-export async function analyzeDocument(
-  text: string,
-  options: { targetLevel: string; provider?: LLMProvider }
-): Promise<GeminiPagedLessonResponse> {
-  const provider = options.provider ?? DEFAULT_PROVIDER;
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY environment variable is not set. Please add it to .env.local');
-  }
-  if (!text || text.trim().length < 50) {
-    throw new Error('Document text is too short to analyze.');
-  }
-
-  const truncated =
-    text.length > MAX_DOCUMENT_CHARS
-      ? text.substring(0, MAX_DOCUMENT_CHARS) + '\n\n[Document truncated for processing]'
-      : text;
-
-  const structure = analyzeDocumentStructure(truncated);
-  const budget = calculateDynamicPageCount(structure);
-  const sourceLanguage = detectLanguage(truncated);
-
-  console.log(
-    `[Gemini] Document: ${structure.wordCount} words, density=${structure.informationDensity}, ` +
-      `target ${budget.targetPages} pages (${budget.minPages}-${budget.maxPages}), lang=${sourceLanguage}`
-  );
-
-  if (truncated.length > CHUNKED_THRESHOLD || budget.targetPages > 12 || budget.outputTokens > 32_768) {
-    console.log('[Gemini] Routing to chunked generation.');
-    return withQualityCheck(
-      () => analyzeDocumentChunked(truncated, { targetLevel: options.targetLevel, provider }),
-      sourceLanguage,
-      'Analyze',
-      provider
-    );
-  }
-
-  const runSingleCall = async () => {
-    const prompt = ANALYSIS_PROMPT.replace('{targetLevel}', options.targetLevel)
-      .replace('{documentText}', truncated)
-      .replace(/\{wordCount\}/g, String(structure.wordCount))
-      .replace(/\{targetPages\}/g, String(budget.targetPages))
-      .replace(/\{minPages\}/g, String(budget.minPages))
-      .replace(/\{maxPages\}/g, String(budget.maxPages));
-
-    const config = getGeminiConfig('content_generation', budget.outputTokens);
-    const validated = await callLLMForJson(
-      provider,
-      prompt,
-      config,
-      geminiLessonResponseSchema,
-      'Analyze',
-      3,
-      recoverTruncatedLessonJson,
-      normalizeLessonResponse
-    );
-    return validated as GeminiPagedLessonResponse;
-  };
-
-  return withQualityCheck(runSingleCall, sourceLanguage, 'Analyze', provider);
-}
 
 // ============================================================
 // Section → Lesson (course flow, one section at a time)
@@ -958,23 +1056,32 @@ export async function analyzeSectionAsLesson(
     : '';
 
   const runSingleCall = async () => {
-    const prompt = ANALYSIS_PROMPT.replace('{targetLevel}', options.targetLevel)
-      .replace('{documentText}', contextPreamble + sectionText)
-      .replace(/\{wordCount\}/g, String(structure.wordCount))
-      .replace(/\{targetPages\}/g, String(budget.targetPages))
-      .replace(/\{minPages\}/g, String(budget.minPages))
-      .replace(/\{maxPages\}/g, String(budget.maxPages));
+    // Split the prompt into a stable cacheable prefix (instructions +
+    // few-shot + output contract — same bytes every call in a course)
+    // and a variable user message (section-specific targets + text).
+    // Claude uses cache_control on the prefix; Gemini concatenates.
+    const systemBlock = buildAnalysisSystemPrompt(sourceLanguage);
+    const userPrompt = buildAnalysisUserPrompt({
+      targetLevel: options.targetLevel,
+      wordCount: structure.wordCount,
+      targetPages: budget.targetPages,
+      minPages: budget.minPages,
+      maxPages: budget.maxPages,
+      documentText: contextPreamble + sectionText,
+    });
 
     const config = getGeminiConfig('content_generation', budget.outputTokens);
     const validated = await callLLMForJson(
       provider,
-      prompt,
+      userPrompt,
       config,
       geminiLessonResponseSchema,
       label,
       3,
       recoverTruncatedLessonJson,
-      normalizeLessonResponse
+      normalizeLessonResponse,
+      'heavy',
+      systemBlock
     );
     return validated as GeminiPagedLessonResponse;
   };
@@ -1029,13 +1136,17 @@ async function analyzeDocumentChunked(
         .replace('{sectionTitles}', 'N/A');
 
       const config = getGeminiConfig('content_generation', chunkTarget * 3000);
+      // Chunk calls cap at 1 attempt: a Claude chunk can emit 80K+ chars
+      // of Georgian text and if the JSON is malformed, retrying the same
+      // prompt produces the same broken output — we waste 15 min per
+      // retry. Better to fail the chunk fast and continue with the rest.
       const validated = await callLLMForJson(
         provider,
         prompt,
         config,
         geminiChunkResponseSchema,
         `Chunk-${i + 1}`,
-        3
+        1
       );
 
       validated.pages.forEach((page, idx: number) => {
@@ -1133,197 +1244,6 @@ ${misconceptions ? `Common misconceptions: ${misconceptions}` : ''}`;
     undefined,
     'light'
   );
-}
-
-// ============================================================
-// Generative Lesson (topic + key points → lesson, no document)
-// ============================================================
-
-export async function generateLessonFromOutline(options: {
-  lessonTitle: string;
-  keyPoints: string[];
-  language: string;
-  lessonIndex: number;
-  totalLessons: number;
-  previousLessonContext?: string;
-  targetPages?: number; // 3-5, defaults to 5 if not specified
-  provider?: LLMProvider;
-}): Promise<GeminiPagedLessonResponse> {
-  const provider = options.provider ?? DEFAULT_PROVIDER;
-  if (provider === 'gemini' && !process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY environment variable is not set.');
-  }
-
-  const keyPointsFormatted = options.keyPoints.map((kp, i) => `${i + 1}. ${kp}`).join('\n');
-
-  const contextBlock = options.previousLessonContext
-    ? `\nCONTEXT: This is lesson ${options.lessonIndex + 1} of ${options.totalLessons} in a course.\n` +
-      `Previous lessons covered (do NOT repeat — build on this knowledge):\n${options.previousLessonContext}\n`
-    : '';
-
-  const targetPages = Math.max(3, Math.min(5, options.targetPages ?? 5));
-  const label = `Generate-${options.lessonIndex + 1}`;
-  console.log(
-    `[${label}] "${options.lessonTitle}" — ` +
-      `${options.keyPoints.length} key points, language=${options.language}, pages=${targetPages}, provider=${provider}`
-  );
-
-  const runGenerate = async () => {
-    const fewShotExample = pickFewShotExample(options.language);
-    const prompt = GENERATIVE_LESSON_PROMPT.replace(/\{lessonTitle\}/g, options.lessonTitle)
-      .replace(/\{keyPoints\}/g, keyPointsFormatted)
-      .replace(/\{language\}/g, options.language)
-      .replace(/\{previousContext\}/g, contextBlock)
-      .replace(/\{targetPages\}/g, String(targetPages))
-      .replace('{fewShotExample}', fewShotExample);
-
-    // Generous budget — Georgian uses ~2.5 tokens/char, so 5 pages of
-    // content + quiz + metadata can exceed 20k tokens easily. Cap at
-    // 65536 which is the gemini-2.5-flash / claude-sonnet hard limit.
-    const outputTokens = Math.min(65_536, targetPages * 12_000 + 8_000);
-    const config = getGeminiConfig('content_generation', outputTokens);
-
-    const validated = await callLLMForJson(
-      provider,
-      prompt,
-      config,
-      geminiLessonResponseSchema,
-      label,
-      3,
-      recoverTruncatedLessonJson,
-      normalizeLessonResponse
-    );
-    return validated as GeminiPagedLessonResponse;
-  };
-
-  return withQualityCheck(runGenerate, options.language, label, provider);
-}
-
-// ============================================================
-// Syllabus Pipeline — Stage 0: Parse
-// Extract the course structure from a raw syllabus PDF text.
-// ============================================================
-
-export async function parseSyllabus(
-  documentText: string,
-  provider: LLMProvider = DEFAULT_PROVIDER
-): Promise<GeminiSyllabusResponseZ> {
-  if (provider === 'gemini' && !process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY environment variable is not set.');
-  }
-  if (!documentText || documentText.trim().length < 100) {
-    throw new Error('Syllabus document is too short to parse.');
-  }
-
-  // Syllabi are small — cap to 40k chars to be safe
-  const truncated = documentText.length > 40_000
-    ? documentText.substring(0, 40_000) + '\n\n[Truncated]'
-    : documentText;
-
-  const prompt = SYLLABUS_PARSER_PROMPT.replace('{documentText}', truncated);
-  const config = getGeminiConfig('metadata_generation', 8192);
-
-  console.log(`[SyllabusParse] Parsing syllabus (${truncated.length} chars, provider=${provider})...`);
-  const parsed = await callLLMForJson(
-    provider,
-    prompt,
-    config,
-    geminiSyllabusResponseSchema,
-    'SyllabusParse',
-    3,
-    undefined,
-    undefined,
-    'light'
-  );
-
-  // Renumber modules and lessons sequentially to ensure consistency
-  parsed.modules.forEach((module, mIdx) => {
-    module.number = mIdx + 1;
-    module.lessons.forEach((lesson, lIdx) => {
-      lesson.number = lIdx + 1;
-    });
-  });
-
-  const totalLessons = parsed.modules.reduce((sum, m) => sum + m.lessons.length, 0);
-  console.log(
-    `[SyllabusParse] "${parsed.courseTitle}" — ${parsed.modules.length} modules, ` +
-      `${totalLessons} lessons, language=${parsed.language}`
-  );
-
-  return parsed;
-}
-
-// ============================================================
-// Syllabus Pipeline — Stage 1: Expand
-// Turn ONE syllabus lesson into 1-3 sub-lessons with detailed key points.
-// ============================================================
-
-export async function expandLessonToSubLessons(input: {
-  courseTitle: string;
-  audience: string[];
-  finalOutcomes: string[];
-  tools: string[];
-  moduleTitle: string;
-  moduleOutcome: string;
-  lessonNumber: number;
-  lessonTitle: string;
-  lessonSubtitle: string;
-  previousLessonsList: string;
-  language: string;
-  provider?: LLMProvider;
-}): Promise<GeminiLessonExpansionResponseZ> {
-  const provider = input.provider ?? DEFAULT_PROVIDER;
-  if (provider === 'gemini' && !process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY environment variable is not set.');
-  }
-
-  const formattedFinalOutcomes = input.finalOutcomes.length > 0
-    ? input.finalOutcomes.map((o) => `- ${o}`).join('\n')
-    : '- (none specified)';
-
-  const formattedTools = input.tools.length > 0
-    ? input.tools.join(', ')
-    : '(none specified)';
-
-  const formattedAudience = input.audience.length > 0
-    ? input.audience.join(', ')
-    : '(general audience)';
-
-  const prompt = LESSON_EXPANDER_PROMPT
-    .replace(/\{language\}/g, input.language)
-    .replace('{courseTitle}', input.courseTitle)
-    .replace('{audience}', formattedAudience)
-    .replace('{finalOutcomes}', formattedFinalOutcomes)
-    .replace('{tools}', formattedTools)
-    .replace('{moduleTitle}', input.moduleTitle)
-    .replace('{moduleOutcome}', input.moduleOutcome || '(no explicit outcome — infer from lesson)')
-    .replace('{lessonNumber}', String(input.lessonNumber))
-    .replace('{lessonTitle}', input.lessonTitle)
-    .replace('{lessonSubtitle}', input.lessonSubtitle || '(none)')
-    .replace('{previousLessonsList}', input.previousLessonsList || '(this is the first lesson)');
-
-  const label = `Expand-L${input.lessonNumber}`;
-  const config = getGeminiConfig('metadata_generation', 4096);
-
-  console.log(`[${label}] Expanding "${input.lessonTitle}" (provider=${provider})...`);
-  const expansion = await callLLMForJson(
-    provider,
-    prompt,
-    config,
-    geminiLessonExpansionResponseSchema,
-    label,
-    3,
-    undefined,
-    undefined,
-    'light'
-  );
-
-  const splitNote = expansion.subLessons.length > 1
-    ? ` (split into ${expansion.subLessons.length})`
-    : '';
-  console.log(`[${label}] Produced ${expansion.subLessons.length} sub-lesson(s)${splitNote}`);
-
-  return expansion;
 }
 
 // ============================================================
