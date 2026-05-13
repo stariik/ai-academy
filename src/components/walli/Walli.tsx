@@ -202,6 +202,33 @@ const rightEyeVariants: Variants = {
   tilt: { scaleY: 0.78, scaleX: 0.94, y: 0 },
 };
 
+/* ============================================================
+   Path data — kept as single-line constants so SSR and CSR emit
+   identical `d` attribute strings. Multi-line template strings
+   inside JSX attributes triggered hydration mismatches under
+   Next.js 16 / Turbopack (whitespace normalized differently on
+   the server vs. the client).
+   ============================================================ */
+
+const PATH_BODY =
+  'M 84 158 Q 84 152, 92 152 L 148 152 Q 156 152, 156 158 C 168 174, 174 196, 172 216 C 168 236, 148 244, 120 244 C 92 244, 72 236, 68 216 C 66 196, 72 174, 84 158 Z';
+const PATH_BODY_HIGHLIGHT =
+  'M 90 164 Q 100 160, 108 164 Q 98 172, 90 192 Q 84 214, 86 234 Q 80 212, 82 188 Q 84 172, 90 164 Z';
+const PATH_HEAD =
+  'M 120 38 C 168 38, 184 64, 184 92 C 184 122, 166 142, 120 142 C 74 142, 56 122, 56 92 C 56 64, 72 38, 120 38 Z';
+const PATH_HEAD_SHEEN =
+  'M 74 50 Q 96 36, 126 40 Q 120 44, 108 50 Q 92 58, 82 72 Q 74 86, 72 100 Q 66 76, 74 50 Z';
+const PATH_HEAD_RIM =
+  'M 176 70 Q 182 90, 178 110 Q 172 102, 170 92 Q 170 82, 176 70 Z';
+const PATH_VISOR_SHADOW =
+  'M 68 78 C 68 58, 86 50, 120 50 C 154 50, 172 58, 172 78 C 172 100, 154 110, 120 110 C 86 110, 68 100, 68 78 Z';
+const PATH_VISOR =
+  'M 72 78 C 72 62, 88 54, 120 54 C 152 54, 168 62, 168 78 C 168 96, 152 104, 120 104 C 88 104, 72 96, 72 78 Z';
+const PATH_VISOR_TOP =
+  'M 88 62 Q 104 56, 134 58 Q 116 64, 94 68 Q 88 66, 88 62 Z';
+const PATH_VISOR_BOTTOM =
+  'M 92 95 Q 120 99, 150 95 Q 132 102, 110 102 Q 96 100, 92 95 Z';
+
 const AURA: Variants = {
   idle: {
     opacity: [0.7, 1, 0.7],
@@ -413,30 +440,14 @@ export function Walli({
 
           {/* Body — bigger pebble (was 92×84, now 108×92) */}
           <path
-            d="M 84 158
-               Q 84 152, 92 152
-               L 148 152
-               Q 156 152, 156 158
-               C 168 174, 174 196, 172 216
-               C 168 236, 148 244, 120 244
-               C 92 244, 72 236, 68 216
-               C 66 196, 72 174, 84 158 Z"
+            d={PATH_BODY}
             fill={`url(#b-${id})`}
             stroke="#B8C2D1"
             strokeWidth="0.9"
           />
 
           {/* Body specular highlight */}
-          <path
-            d="M 90 164
-               Q 100 160, 108 164
-               Q 98 172, 90 192
-               Q 84 214, 86 234
-               Q 80 212, 82 188
-               Q 84 172, 90 164 Z"
-            fill="#FFFFFF"
-            opacity="0.55"
-          />
+          <path d={PATH_BODY_HIGHLIGHT} fill="#FFFFFF" opacity="0.55" />
         </motion.g>
 
         {/* ===== HEAD — smaller for proper Eve proportions ===== */}
@@ -446,87 +457,32 @@ export function Walli({
 
           {/* Head dome — shrunk ~15% (now 132×106, was 156×128) */}
           <path
-            d="M 120 38
-               C 168 38, 184 64, 184 92
-               C 184 122, 166 142, 120 142
-               C 74 142, 56 122, 56 92
-               C 56 64, 72 38, 120 38 Z"
+            d={PATH_HEAD}
             fill={`url(#h-${id})`}
             stroke="#C8D0DC"
             strokeWidth="0.9"
           />
 
           {/* Top sheen — re-positioned for smaller head */}
-          <path
-            d="M 74 50
-               Q 96 36, 126 40
-               Q 120 44, 108 50
-               Q 92 58, 82 72
-               Q 74 86, 72 100
-               Q 66 76, 74 50 Z"
-            fill={`url(#hs-${id})`}
-          />
+          <path d={PATH_HEAD_SHEEN} fill={`url(#hs-${id})`} />
 
           {/* Right-side rim light */}
-          <path
-            d="M 176 70
-               Q 182 90, 178 110
-               Q 172 102, 170 92
-               Q 170 82, 176 70 Z"
-            fill="#FFFFFF"
-            opacity="0.28"
-          />
+          <path d={PATH_HEAD_RIM} fill="#FFFFFF" opacity="0.28" />
 
           {/* Visor inner shadow ring — egg-shape mirrors head silhouette */}
-          <path
-            d="M 68 78
-               C 68 58, 86 50, 120 50
-               C 154 50, 172 58, 172 78
-               C 172 100, 154 110, 120 110
-               C 86 110, 68 100, 68 78 Z"
-            fill="#000"
-            opacity="0.30"
-          />
+          <path d={PATH_VISOR_SHADOW} fill="#000" opacity="0.30" />
 
           {/* Visor face — same egg-shape as head, smaller */}
-          <path
-            d="M 72 78
-               C 72 62, 88 54, 120 54
-               C 152 54, 168 62, 168 78
-               C 168 96, 152 104, 120 104
-               C 88 104, 72 96, 72 78 Z"
-            fill={`url(#v-${id})`}
-          />
+          <path d={PATH_VISOR} fill={`url(#v-${id})`} />
 
           {/* Visor cyan inner glow */}
-          <path
-            d="M 72 78
-               C 72 62, 88 54, 120 54
-               C 152 54, 168 62, 168 78
-               C 168 96, 152 104, 120 104
-               C 88 104, 72 96, 72 78 Z"
-            fill={`url(#vg-${id})`}
-          />
+          <path d={PATH_VISOR} fill={`url(#vg-${id})`} />
 
           {/* Visor top sheen — follows the egg's top curve */}
-          <path
-            d="M 88 62
-               Q 104 56, 134 58
-               Q 116 64, 94 68
-               Q 88 66, 88 62 Z"
-            fill="#FFFFFF"
-            opacity="0.14"
-          />
+          <path d={PATH_VISOR_TOP} fill="#FFFFFF" opacity="0.14" />
 
           {/* Visor bottom subtle sheen */}
-          <path
-            d="M 92 95
-               Q 120 99, 150 95
-               Q 132 102, 110 102
-               Q 96 100, 92 95 Z"
-            fill="#FFFFFF"
-            opacity="0.05"
-          />
+          <path d={PATH_VISOR_BOTTOM} fill="#FFFFFF" opacity="0.05" />
 
           {/* ===== EYES ===== */}
           {/* Left eye — slightly compacted to fit smaller visor */}
