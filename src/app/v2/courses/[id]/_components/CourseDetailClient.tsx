@@ -925,8 +925,8 @@ function LessonRow({
       </div>
 
       {(isEnrolled || lesson.isFree) ? (
-        <button
-          type="button"
+        <a
+          href={`/v2/lessons/${lesson.id}`}
           className={cn(
             'flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold rounded-full px-2.5 py-1 transition-all',
             isCompleted
@@ -936,7 +936,7 @@ function LessonRow({
         >
           {isCompleted ? 'გადახედვა' : 'დაწყება'}
           <ChevronRight className="w-3.5 h-3.5" />
-        </button>
+        </a>
       ) : (
         <span className="flex-shrink-0 text-[11px] font-semibold text-muted-foreground">—</span>
       )}
