@@ -585,6 +585,12 @@ function HorizontalSlider({
         onDragStart={(e) => e.preventDefault()}
         className={cn(
           'overflow-x-auto scrollbar-hide select-none touch-pan-y',
+          // `overflow-x: auto` silently clips overflow-y too (CSS spec), which
+          // crops the top of cards that lift on hover. Padding + matching
+          // negative margin reserves vertical room for hover transforms + glow
+          // shadows without shifting layout — buttons and section margins are
+          // unaffected because the scroller's outer box stays the same size.
+          'py-10 -my-10',
           // Snap is disabled while dragging so movement is pixel-perfect;
           // it re-engages on release so the slider settles on the nearest card.
           isGrabbing ? 'cursor-grabbing' : 'snap-x snap-mandatory md:cursor-grab',
