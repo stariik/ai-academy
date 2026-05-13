@@ -148,9 +148,12 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* Fonts — FiraGO primary (Georgian + Latin in one voice), Geist Mono for code */
-  --font-sans: 'FiraGO', var(--font-geist-sans), system-ui, sans-serif;
-  --font-display: 'FiraGO', var(--font-geist-sans), system-ui, sans-serif;
+  /* Fonts — MarkGEO primary (Georgian + Latin in one voice), Geist Mono for code.
+     MarkGEO-CAPS is a dedicated all-caps variant used wherever text-transform
+     is uppercase (eyebrows, badges, labels). */
+  --font-sans: var(--font-markgeo), system-ui, sans-serif;
+  --font-display: var(--font-markgeo), system-ui, sans-serif;
+  --font-caps: var(--font-markgeo-caps), var(--font-markgeo), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Brand colors (preserved for transition period) */
@@ -262,8 +265,15 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'FiraGO', var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-markgeo), system-ui, sans-serif;
   line-height: 1.6;
+}
+
+/* Every uppercased element renders in MarkGEO-CAPS automatically — covers
+   tracking-widest eyebrows, badges, and any label that already uses the
+   `uppercase` Tailwind utility. Override per-element if needed. */
+.uppercase {
+  font-family: var(--font-caps);
 }
 
 /* Scrollbar */
