@@ -145,6 +145,18 @@ function CoursePage({
   const completedCount = progress.size;
   const progressPct = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
 
+  // First free lesson — used by every "preview" CTA on this page.
+  // Falls back to the very first lesson if no `isFree` flag was set.
+  const previewLessonId = React.useMemo(() => {
+    for (const m of detail.modules) {
+      for (const l of m.lessons) {
+        if (l.isFree) return l.id;
+      }
+    }
+    return detail.modules[0]?.lessons[0]?.id ?? null;
+  }, [detail.modules]);
+  const previewHref = previewLessonId ? `/v2/lessons/${previewLessonId}` : '#curriculum';
+
   // --- render ---------------------------------------------------------------
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -160,6 +172,7 @@ function CoursePage({
           progressPct={progressPct}
           completedCount={completedCount}
           totalLessons={totalLessons}
+          previewHref={previewHref}
         />
 
         <section className="px-4 sm:px-6 pb-20 sm:pb-28">
@@ -191,13 +204,19 @@ function CoursePage({
                 completedCount={completedCount}
                 totalLessons={totalLessons}
                 onEnroll={toggleEnrollment}
+                previewHref={previewHref}
               />
               <WalliIntroSection course={course} detail={detail} />
             </aside>
           </div>
         </section>
 
-        <CtaBanner course={course} isEnrolled={isEnrolled} onEnroll={toggleEnrollment} />
+        <CtaBanner
+          course={course}
+          isEnrolled={isEnrolled}
+          onEnroll={toggleEnrollment}
+          previewHref={previewHref}
+        />
       </main>
 
       <Footer />
@@ -303,6 +322,7 @@ function Hero({
   progressPct,
   completedCount,
   totalLessons,
+  previewHref,
 }: {
   course: Course;
   category: Category;
@@ -312,6 +332,7 @@ function Hero({
   progressPct: number;
   completedCount: number;
   totalLessons: number;
+  previewHref: string;
 }) {
   const t = TONE_CLASSES[category.tone];
   const reduced = useReducedMotion();
@@ -408,7 +429,7 @@ function Hero({
                   <ArrowRight className="w-4 h-4" />
                 </a>
               ) : (
-                <a href="#preview" className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
+                <a href={previewHref} className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
                   უფასო გასინჯვა
                   <Play className="w-4 h-4 fill-current" />
                 </a>
@@ -1006,6 +1027,7 @@ function PurchaseCard({
   completedCount,
   totalLessons,
   onEnroll,
+  previewHref,
 }: {
   course: Course;
   category: Category;
@@ -1016,6 +1038,7 @@ function PurchaseCard({
   completedCount: number;
   totalLessons: number;
   onEnroll: () => void;
+  previewHref: string;
 }) {
   const t = TONE_CLASSES[category.tone];
   const hasPrice = typeof course.price === 'number' && course.price > 0;
@@ -1056,6 +1079,7 @@ function PurchaseCard({
           tone={category.tone}
           isLoggedIn={isLoggedIn}
           onEnroll={onEnroll}
+          previewHref={previewHref}
         />
       )}
 
@@ -1180,6 +1204,7 @@ function BuyRailContent({
   tone,
   isLoggedIn,
   onEnroll,
+  previewHref,
 }: {
   course: Course;
   detail: CourseDetail;
@@ -1188,6 +1213,7 @@ function BuyRailContent({
   tone: keyof typeof TONE_CLASSES;
   isLoggedIn: boolean;
   onEnroll: () => void;
+  previewHref: string;
 }) {
   const t = TONE_CLASSES[tone];
   return (
@@ -1260,9 +1286,9 @@ function BuyRailContent({
         <ArrowRight className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
       </button>
 
-      {/* Secondary inline CTA */}
+      {/* Secondary inline CTA — jumps straight into the first free lesson. */}
       <a
-        href="#curriculum"
+        href={previewHref}
         className="mt-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-pulse transition-colors"
       >
         <Play className="w-3 h-3 fill-current" />
@@ -1378,10 +1404,12 @@ function CtaBanner({
   course,
   isEnrolled,
   onEnroll,
+  previewHref,
 }: {
   course: Course;
   isEnrolled: boolean;
   onEnroll: () => void;
+  previewHref: string;
 }) {
   return (
     <section className="px-4 sm:px-6 pb-16 sm:pb-24">
@@ -1423,7 +1451,7 @@ function CtaBanner({
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <a
-                      href="#preview"
+                      href={previewHref}
                       className="text-sm font-bold text-pulse hover:underline"
                     >
                       ჯერ გავსინჯო
