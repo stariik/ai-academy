@@ -109,7 +109,7 @@ function Navbar() {
               <LanguageSwitcher />
               <ThemeToggle />
               <a
-                href="#"
+                href={href('profile')}
                 className="text-sm font-semibold px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {dict.navbar.signIn}
@@ -246,7 +246,8 @@ function MobileMenu({
             {dict.navbar.signUp}
           </a>
           <a
-            href="#"
+            href={href('profile')}
+            onClick={onClose}
             className="block text-center text-base font-semibold text-foreground hover:text-pulse transition-colors py-2"
           >
             {dict.navbar.signIn}
