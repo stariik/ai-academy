@@ -63,57 +63,64 @@ function Navbar() {
     <>
       <header
         className={cn(
-          'sticky top-0 z-40 transition-all',
+          'sticky top-0 z-40 transition-all duration-300',
           scrolled
-            ? 'backdrop-blur-md bg-background/80 border-b border-border'
+            ? 'backdrop-blur-md bg-background/85 border-b border-border shadow-[0_4px_24px_-16px_rgba(0,0,0,0.18)]'
             : 'bg-transparent border-b border-transparent',
         )}
       >
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-16">
-          <a href="/v2" className="flex items-center gap-2">
-            <Walli size={36} state="idle" noShadow />
-            <div>
-              <p className="text-base font-bold leading-none tracking-tight">walle.school</p>
-              <p className="text-[10px] text-muted-foreground leading-none mt-1">AI ქართულად</p>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between gap-3 h-14 sm:h-16">
+          <a href="/v2" className="flex items-center gap-2 shrink-0 min-w-0">
+            <Walli size={32} state="idle" noShadow />
+            <div className="leading-tight min-w-0">
+              <p className="text-sm sm:text-base font-bold tracking-tight truncate">walle.school</p>
+              <p className="hidden sm:block text-[10px] text-muted-foreground -mt-0.5">AI ქართულად</p>
             </div>
           </a>
 
-          <nav className="hidden md:flex items-center gap-7 text-sm font-semibold">
+          <nav className="hidden md:flex items-center gap-5 lg:gap-7 text-sm font-semibold">
             {NAV_LINKS.map((l) => (
               <a
                 key={l.label}
                 href={l.href}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="relative text-muted-foreground hover:text-foreground transition-colors py-1.5 after:absolute after:left-0 after:right-0 after:bottom-0 after:mx-auto after:h-[2px] after:w-0 after:rounded-full after:bg-pulse after:transition-[width] after:duration-300 hover:after:w-full"
               >
                 {l.label}
               </a>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher />
-            <ThemeToggle />
-            <a
-              href="#"
-              className="hidden sm:inline-flex text-sm font-semibold px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              შესვლა
-            </a>
-            <a
-              href="#"
-              className="hidden sm:inline-flex text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
-            >
-              რეგისტრაცია
-            </a>
-            <button
-              onClick={() => setMobileOpen(true)}
-              aria-label="Menu"
-              className="md:hidden p-2 rounded-lg hover:bg-muted text-foreground"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="hidden md:flex items-center gap-2">
+              <LanguageSwitcher />
+              <ThemeToggle />
+              <a
+                href="#"
+                className="text-sm font-semibold px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                შესვლა
+              </a>
+              <a
+                href="#"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+              >
+                რეგისტრაცია
+                <span aria-hidden>→</span>
+              </a>
+            </div>
+
+            <div className="md:hidden flex items-center gap-1">
+              <ThemeToggle />
+              <button
+                onClick={() => setMobileOpen(true)}
+                aria-label="Menu"
+                className="p-2 rounded-lg hover:bg-muted text-foreground"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -123,16 +130,22 @@ function Navbar() {
   );
 }
 
-function LanguageSwitcher() {
+function LanguageSwitcher({ full = false }: { full?: boolean }) {
   const [lang, setLang] = React.useState<'KA' | 'EN'>('KA');
   return (
-    <div className="hidden sm:flex items-center text-[11px] font-bold rounded-full border border-border bg-card overflow-hidden">
+    <div
+      className={cn(
+        'inline-flex items-center font-bold rounded-full border border-border bg-card overflow-hidden',
+        full ? 'text-sm' : 'text-[11px]',
+      )}
+    >
       {(['KA', 'EN'] as const).map((l) => (
         <button
           key={l}
           onClick={() => setLang(l)}
           className={cn(
-            'px-2 py-1 transition-colors',
+            'transition-colors',
+            full ? 'px-3.5 py-1.5' : 'px-2 py-1',
             lang === l
               ? 'bg-pulse text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground',
@@ -161,10 +174,10 @@ function MobileMenu({
 
   return (
     <div className="fixed inset-0 z-50 bg-background/98 backdrop-blur-md md:hidden flex flex-col">
-      <div className="flex items-center justify-between px-4 h-16 border-b border-border">
+      <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border">
         <a href="/v2" className="flex items-center gap-2" onClick={onClose}>
           <Walli size={32} state="idle" noShadow />
-          <span className="text-base font-bold">walle.school</span>
+          <span className="text-sm sm:text-base font-bold tracking-tight">walle.school</span>
         </a>
         <button
           onClick={onClose}
@@ -177,23 +190,30 @@ function MobileMenu({
         </button>
       </div>
 
-      <nav className="flex-1 flex flex-col px-6 py-6 gap-1 overflow-y-auto">
-        {links.map((l) => (
+      <nav className="flex-1 flex flex-col px-5 sm:px-6 py-6 gap-1 overflow-y-auto">
+        {links.map((l, i) => (
           <a
             key={l.label}
             href={l.href}
             onClick={onClose}
-            className="py-4 border-b border-border text-2xl font-bold hover:text-pulse transition-colors"
+            className="group flex items-center justify-between py-4 border-b border-border text-2xl font-bold hover:text-pulse transition-colors"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            {l.label}
+            <span>{l.label}</span>
+            <span
+              aria-hidden
+              className="text-base text-muted-foreground/60 group-hover:text-pulse group-hover:translate-x-0.5 transition-all"
+            >
+              →
+            </span>
+            <span className="sr-only">{i + 1}</span>
           </a>
         ))}
 
         <div className="mt-8 space-y-3">
           <a
             href="#"
-            className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)]"
+            className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
           >
             რეგისტრაცია
           </a>
@@ -203,6 +223,13 @@ function MobileMenu({
           >
             შესვლა
           </a>
+        </div>
+
+        <div className="mt-auto pt-6 flex items-center justify-between border-t border-border">
+          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
+            ენა
+          </span>
+          <LanguageSwitcher full />
         </div>
       </nav>
     </div>
@@ -218,10 +245,11 @@ function useHeroWalliSize() {
   React.useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      if (w < 380) setSize(180);
-      else if (w < 640) setSize(220);
+      if (w < 380) setSize(160);
+      else if (w < 640) setSize(200);
       else if (w < 1024) setSize(240);
-      else setSize(280);
+      else if (w < 1280) setSize(280);
+      else setSize(320);
     };
     update();
     window.addEventListener('resize', update);
@@ -234,39 +262,50 @@ function Hero() {
   const walliSize = useHeroWalliSize();
 
   return (
-    <section className="relative pt-10 pb-16 sm:pt-16 sm:pb-24 lg:pt-20 lg:pb-32 px-4 sm:px-6">
-      <div className="absolute inset-0 -z-10 bg-starfield opacity-50" aria-hidden />
-      <div className="absolute top-1/4 left-0 w-96 h-96 rounded-full bg-pulse/10 blur-3xl -z-10" aria-hidden />
-      <div className="absolute bottom-0 right-1/4 w-72 h-72 rounded-full bg-heart/10 blur-3xl -z-10" aria-hidden />
+    <section className="relative pt-8 pb-14 sm:pt-14 sm:pb-20 lg:pt-20 lg:pb-28 px-4 sm:px-6 overflow-hidden">
+      <div className="absolute inset-0 -z-10 bg-starfield opacity-40" aria-hidden />
+      <div
+        className="absolute top-1/3 -right-24 w-[420px] h-[420px] rounded-full bg-pulse/15 blur-3xl -z-10 lg:block hidden"
+        aria-hidden
+      />
+      <div
+        className="absolute -bottom-20 -left-20 w-[320px] h-[320px] rounded-full bg-heart/10 blur-3xl -z-10"
+        aria-hidden
+      />
 
-      <div className="mx-auto max-w-7xl grid gap-10 lg:gap-16 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+      <div className="mx-auto max-w-7xl grid gap-8 sm:gap-10 lg:gap-16 lg:grid-cols-[1.15fr_1fr] lg:items-center">
         <div className="order-1 lg:order-2 flex items-center justify-center">
           <div className="relative">
+            {/* Soft radial glow grounding the mascot */}
+            <div
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-pulse/25 via-pulse/5 to-transparent blur-2xl scale-[1.15] -z-10"
+              aria-hidden
+            />
             <Walli size={walliSize} state="wave" />
 
-            <FloatingChip className="-top-2 -left-4 sm:-left-12" delay="0s" tone="pulse">
+            <FloatingChip className="-top-1 -left-2 sm:-left-10 lg:-left-14" delay="0s" tone="pulse">
               <span>🧭</span>
               <span>AI საფუძვლები</span>
             </FloatingChip>
-            <FloatingChip className="top-12 -right-2 sm:-right-12" delay="0.6s" tone="heart">
+            <FloatingChip className="top-14 -right-1 sm:-right-10 lg:-right-14" delay="0.6s" tone="heart">
               <span>🎨</span>
               <span>შემოქმედება</span>
             </FloatingChip>
-            <FloatingChip className="-bottom-2 left-6 sm:left-2" delay="1.2s" tone="amber">
+            <FloatingChip className="-bottom-1 left-4 sm:left-0 lg:-left-4" delay="1.2s" tone="amber">
               <span>🎈</span>
               <span>ბავშვებისთვის</span>
             </FloatingChip>
           </div>
         </div>
 
-        <div className="order-2 lg:order-1 space-y-6 text-center lg:text-left">
+        <div className="order-2 lg:order-1 text-center lg:text-left">
           <div className="inline-flex items-center gap-2 rounded-full border border-pulse/30 bg-pulse/10 text-pulse px-3 py-1.5 text-xs font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" />
             ქართული AI აკადემია
           </div>
 
           <h1
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight"
+            className="mt-5 sm:mt-6 text-[42px] sm:text-[56px] lg:text-7xl xl:text-[80px] font-bold leading-[1.08] tracking-tight"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             შენი პირადი{' '}
@@ -275,32 +314,79 @@ function Hero() {
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
+          <p className="mt-5 sm:mt-6 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
             Walli ასწავლის ქართულად — შენი ტემპით, არასოდეს იღლება. ბავშვებიდან პროფესიონალებამდე,
             კურსი ყველასთვის მოიძებნება.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-1">
+          <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center lg:justify-start gap-3">
             <a
               href="#categories"
-              className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 text-sm sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
               კატეგორიების ნახვა
               <span aria-hidden>→</span>
             </a>
             <a
               href="#categories"
-              className="inline-flex items-center gap-2 rounded-full bg-card border border-border px-6 py-3 text-sm font-bold text-foreground hover:border-pulse/40 transition-colors"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-6 py-3.5 text-sm sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
             >
+              <span
+                aria-hidden
+                className="flex items-center justify-center w-5 h-5 rounded-full bg-pulse/15 text-pulse text-[10px] group-hover:bg-pulse group-hover:text-primary-foreground transition-colors"
+              >
+                ▶
+              </span>
               უფასო გაკვეთილი
             </a>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-3">
-            <span className="text-xs text-muted-foreground">აგებული ყველასთვის:</span>
-            <AudiencePill>ბავშვები 6-12</AudiencePill>
-            <AudiencePill>ახალგაზრდები</AudiencePill>
-            <AudiencePill>უფროსები</AudiencePill>
+          <div className="mt-8 sm:mt-10 grid grid-cols-3 max-w-md mx-auto lg:mx-0 divide-x divide-border border-y border-border py-3">
+            <div className="text-center lg:text-left lg:px-4 first:lg:px-0">
+              <p
+                className="text-lg sm:text-xl font-bold tabular-nums"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                2.4K+
+              </p>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                მოსწავლე
+              </p>
+            </div>
+            <div className="text-center lg:px-4">
+              <p
+                className="text-lg sm:text-xl font-bold tabular-nums"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                9
+              </p>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                კატეგორია
+              </p>
+            </div>
+            <div className="text-center lg:text-left lg:px-4">
+              <p
+                className="text-lg sm:text-xl font-bold tabular-nums inline-flex items-center gap-1"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                4.8
+                <span className="text-amber-500 text-base">★</span>
+              </p>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
+                შეფასება
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center lg:justify-start gap-x-3 gap-y-2">
+            <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">
+              აგებული ყველასთვის:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              <AudiencePill>ბავშვები 6-12</AudiencePill>
+              <AudiencePill>ახალგაზრდები</AudiencePill>
+              <AudiencePill>უფროსები</AudiencePill>
+            </div>
           </div>
         </div>
       </div>
@@ -382,7 +468,7 @@ function CatalogSection({
             კატალოგი
           </p>
           <h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.05]"
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             ცხრა გზა,{' '}
@@ -590,7 +676,11 @@ function HorizontalSlider({
         onClickCapture={onClickCapture}
         onDragStart={(e) => e.preventDefault()}
         className={cn(
-          'overflow-x-auto scrollbar-hide select-none touch-pan-y',
+          // touch-manipulation lets the browser handle native touch scrolling
+          // (both axes), while our JS only takes over for mouse click-drag.
+          // touch-pan-y alone blocks horizontal touch swipes — slider becomes
+          // un-swipeable on mobile.
+          'overflow-x-auto scrollbar-hide select-none touch-manipulation overscroll-x-contain',
           // `overflow-x: auto` silently clips overflow-y too (CSS spec), which
           // crops the top of cards that lift on hover. Padding + matching
           // negative margin reserves vertical room for hover transforms + glow
@@ -682,8 +772,8 @@ function CategoryMiniCard({
       data-slide-item
       draggable={false}
       className={cn(
-        'group snap-start shrink-0 relative overflow-hidden rounded-[28px] border transition-all duration-300 ease-out',
-        'w-[220px] sm:w-[240px] aspect-[3/4] bg-card',
+        'group snap-start shrink-0 relative overflow-hidden rounded-[24px] sm:rounded-[28px] border transition-all duration-300 ease-out',
+        'w-[180px] sm:w-[220px] lg:w-[240px] aspect-[3/4] bg-card',
         disabled
           ? 'opacity-40 pointer-events-none border-border'
           : 'border-border hover:-translate-y-2 hover:border-transparent hover:shadow-[0_24px_60px_-20px_var(--pulse-glow)]',
@@ -713,10 +803,10 @@ function CategoryMiniCard({
       />
 
       {/* TOP: floating icon medallion + oversized numeral */}
-      <div className="relative h-1/2 p-5 sm:p-6 flex items-start justify-between">
+      <div className="relative h-1/2 p-4 sm:p-5 lg:p-6 flex items-start justify-between">
         <div
           className={cn(
-            'flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl text-3xl sm:text-[34px]',
+            'flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-2xl text-2xl sm:text-3xl lg:text-[34px]',
             'bg-card border border-border shadow-[0_8px_24px_rgba(0,0,0,0.08)]',
             'transition-all duration-300 group-hover:scale-110 group-hover:rotate-[-4deg]',
           )}
@@ -725,7 +815,7 @@ function CategoryMiniCard({
         </div>
         <span
           className={cn(
-            'text-[56px] sm:text-[64px] font-black tabular-nums leading-none select-none',
+            'text-[44px] sm:text-[56px] lg:text-[64px] font-black tabular-nums leading-none select-none',
             t.text,
             'opacity-25 group-hover:opacity-40 transition-opacity',
           )}
@@ -736,19 +826,19 @@ function CategoryMiniCard({
       </div>
 
       {/* BOTTOM: title block (always anchored) */}
-      <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 space-y-2">
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6 space-y-1.5 sm:space-y-2">
         <h3
-          className="text-lg sm:text-xl font-bold leading-tight tracking-tight"
+          className="text-[15px] sm:text-lg lg:text-xl font-bold leading-tight tracking-tight line-clamp-2"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {c.nameKa}
         </h3>
-        <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.6em]">
+        <p className="text-[10px] sm:text-[11px] lg:text-xs text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.4em]">
           {c.taglineKa}
         </p>
 
-        <div className="pt-3 flex items-center justify-between border-t border-border/70">
-          <span className="text-[11px] text-muted-foreground font-medium">
+        <div className="pt-2 sm:pt-3 flex items-center justify-between border-t border-border/70">
+          <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">
             {c.courses > 0 ? (
               <>
                 <span className="font-bold text-foreground tabular-nums">{c.courses}</span> კურსი
@@ -762,7 +852,7 @@ function CategoryMiniCard({
           {c.courses > 0 && (
             <span
               className={cn(
-                'flex items-center justify-center w-8 h-8 rounded-full text-base font-bold transition-all duration-300',
+                'flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-sm sm:text-base font-bold transition-all duration-300',
                 t.bg,
                 'text-primary-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0',
               )}
@@ -795,11 +885,11 @@ function CourseSliderRow({
   return (
     <div id={`cat-${c.id}`} className="scroll-mt-20">
       {/* Row header with editorial numeral */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-6 sm:mb-8 flex items-end justify-between gap-4">
-        <div className="flex items-end gap-4 sm:gap-5 min-w-0">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-5 sm:mb-7 flex items-end justify-between gap-3 sm:gap-4">
+        <div className="flex items-end gap-3 sm:gap-5 min-w-0">
           <span
             className={cn(
-              'shrink-0 text-4xl sm:text-5xl font-black tabular-nums leading-none select-none',
+              'shrink-0 text-[28px] sm:text-4xl lg:text-5xl font-bold tabular-nums leading-none select-none',
               t.text,
               'opacity-30',
             )}
@@ -807,15 +897,15 @@ function CourseSliderRow({
           >
             {num}
           </span>
-          <div className="min-w-0 pb-1">
+          <div className="min-w-0 pb-0.5 sm:pb-1">
             <h3
-              className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight tracking-tight truncate"
+              className="text-lg sm:text-2xl lg:text-3xl font-bold leading-[1.15] tracking-tight line-clamp-2"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              <span className={cn('mr-2', t.text)}>{c.icon}</span>
+              <span className={cn('mr-1.5 sm:mr-2', t.text)}>{c.icon}</span>
               {c.nameKa}
             </h3>
-            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 font-medium">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium">
               <span className="font-bold text-foreground tabular-nums">{c.courses}</span> კურსი
               <span className="opacity-50"> · </span>
               <span className="font-bold text-foreground tabular-nums">{c.lessons}</span> გაკვეთილი
@@ -833,7 +923,7 @@ function CourseSliderRow({
           <div
             key={co.id}
             data-slide-item
-            className="snap-start shrink-0 w-[260px] sm:w-[300px]"
+            className="snap-start shrink-0 w-[220px] sm:w-[260px] lg:w-[300px]"
           >
             <CourseCard course={co} category={c} />
           </div>
@@ -867,7 +957,7 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
         <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
         <div
           className={cn(
-            'absolute -bottom-12 -right-10 w-44 h-44 rounded-full blur-3xl transition-all duration-700',
+            'absolute -bottom-12 -right-10 w-40 h-40 sm:w-44 sm:h-44 rounded-full blur-3xl transition-all duration-700',
             t.bg,
             'opacity-30 group-hover:opacity-70 group-hover:translate-x-2 group-hover:-translate-y-2',
           )}
@@ -878,7 +968,7 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className={cn(
-              'flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-3xl text-5xl sm:text-6xl',
+              'flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl text-4xl sm:text-5xl lg:text-6xl',
               'bg-card border border-border/80 shadow-[0_12px_30px_rgba(0,0,0,0.10)]',
               'transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-6',
             )}
@@ -888,32 +978,32 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
         </div>
 
         {/* Level signal bars + label */}
-        <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-card/85 backdrop-blur-sm border border-border/60 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest">
+        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 inline-flex items-center gap-1.5 rounded-full bg-card/85 backdrop-blur-sm border border-border/60 px-2 py-1 sm:px-2.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
           <LevelSignal level={co.level} tone={c.tone} />
           <span className="text-foreground/85">{LEVEL_LABEL_INLINE[co.level]}</span>
         </div>
       </div>
 
       {/* Body */}
-      <div className="flex-1 p-5 flex flex-col">
+      <div className="flex-1 p-4 sm:p-5 flex flex-col">
         <h4
-          className="text-base sm:text-lg font-bold leading-snug line-clamp-2 min-h-[2.6em]"
+          className="text-sm sm:text-base lg:text-lg font-bold leading-snug line-clamp-2 min-h-[2.6em]"
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {co.titleKa}
         </h4>
 
         {/* Meta pills */}
-        <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+        <div className="mt-2.5 sm:mt-3 flex items-center gap-1.5 flex-wrap">
           <MetaPill>{co.lessons} გაკვ.</MetaPill>
           <MetaPill>~{co.hours} სთ</MetaPill>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="px-5 pb-5 flex items-center justify-between border-t border-border pt-4">
+      <div className="px-4 pb-4 sm:px-5 sm:pb-5 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
         {typeof co.price === 'number' && co.price > 0 ? (
-          <span className="text-base font-bold tabular-nums">₾{co.price}</span>
+          <span className="text-sm sm:text-base font-bold tabular-nums">₾{co.price}</span>
         ) : (
           <span className={cn('text-[10px] font-bold uppercase tracking-widest', t.text)}>
             უფასოდ
@@ -921,7 +1011,7 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
         )}
         <span
           className={cn(
-            'flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-300',
+            'flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border transition-all duration-300 text-sm sm:text-base',
             'border-border bg-card text-foreground',
             'group-hover:bg-pulse group-hover:border-pulse group-hover:text-primary-foreground group-hover:shadow-[0_8px_20px_var(--pulse-glow)]',
           )}
@@ -988,21 +1078,29 @@ function HowItWorks() {
           title="სამი ნაბიჯი — მერე უკვე შენ ხარ მგზავრობაში"
         />
 
-        <div className="mt-10 sm:mt-14 grid gap-5 md:grid-cols-3">
+        <div className="relative mt-10 sm:mt-14 grid gap-4 sm:gap-5 md:grid-cols-3">
+          {/* Subtle connector behind cards on md+ */}
+          <div
+            className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-px -z-10 bg-gradient-to-r from-transparent via-border to-transparent"
+            aria-hidden
+          />
           <Step
             number="01"
+            tone="pulse"
             walliState="idle"
             title="აირჩიე გზა"
             description="ცხრა კატეგორია, AI საფუძვლებიდან აგენტებამდე — შენთვის საჭირო კურსი მოიძებნება."
           />
           <Step
             number="02"
+            tone="heart"
             walliState="wave"
             title="Walli ასწავლის"
             description="სასაუბრო გაკვეთილები ქართულად. შეცდომაზე — ნაზად ხსნის. სწორ პასუხზე — აღნიშნავს."
           />
           <Step
             number="03"
+            tone="amber"
             walliState="dance"
             title="შეაგროვე ბარათები"
             description="ყოველ დასრულებულ გაკვეთილზე — ულამაზესი ბარათი ბიბლიოთეკაში. გაუზიარე ოჯახს."
@@ -1018,24 +1116,57 @@ function Step({
   walliState,
   title,
   description,
+  tone,
 }: {
   number: string;
   walliState: 'idle' | 'wave' | 'dance';
   title: string;
   description: string;
+  tone: keyof typeof TONE_CLASSES;
 }) {
+  const t = TONE_CLASSES[tone];
   return (
-    <div className="relative rounded-3xl border border-border bg-card p-6 sm:p-7 hover:border-pulse/40 hover:-translate-y-1 hover:shadow-[0_8px_30px_var(--pulse-glow)] transition-all">
+    <div
+      className={cn(
+        'group relative rounded-3xl border border-border bg-card p-5 sm:p-7 transition-all duration-300',
+        'hover:-translate-y-1 hover:shadow-[0_12px_40px_-12px_var(--pulse-glow)]',
+        'hover:border-transparent',
+      )}
+    >
+      {/* Tone-tinted soft halo behind Walli */}
       <div
-        className="absolute top-6 right-6 text-5xl font-black text-pulse/15 tabular-nums leading-none"
+        className={cn(
+          'absolute -top-6 -left-6 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500',
+          t.bg,
+        )}
+        aria-hidden
+      />
+      {/* Tone-tinted hover ring */}
+      <div
+        className={cn(
+          'absolute inset-0 rounded-3xl ring-2 ring-inset opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+          t.ring,
+        )}
+        aria-hidden
+      />
+
+      <div
+        className={cn(
+          'absolute top-5 sm:top-6 right-5 sm:right-6 text-4xl sm:text-5xl font-black tabular-nums leading-none transition-opacity',
+          t.text,
+          'opacity-20 group-hover:opacity-40',
+        )}
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {number}
       </div>
-      <div className="mb-4 inline-block">
-        <Walli size={72} state={walliState} noShadow />
+      <div className="relative mb-3 sm:mb-4 inline-block">
+        <Walli size={68} state={walliState} noShadow />
       </div>
-      <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+      <h3
+        className="text-lg sm:text-xl font-bold mb-2 leading-tight"
+        style={{ fontFamily: 'var(--font-display)' }}
+      >
         {title}
       </h3>
       <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
@@ -1106,15 +1237,25 @@ function AudienceCard({
     <a
       href="#"
       className={cn(
-        'group relative rounded-3xl border bg-card p-6 sm:p-8 hover:-translate-y-1 hover:shadow-[0_12px_40px_var(--pulse-glow)] transition-all overflow-hidden',
-        highlighted ? 'border-pulse/40' : 'border-border hover:border-pulse/40',
+        'group relative rounded-3xl border bg-card p-5 sm:p-7 lg:p-8 transition-all duration-300 overflow-hidden',
+        'hover:-translate-y-1.5 hover:shadow-[0_18px_50px_-16px_var(--pulse-glow)]',
+        highlighted
+          ? 'border-2 border-pulse/50 lg:scale-[1.02]'
+          : 'border border-border hover:border-pulse/40',
       )}
     >
+      {highlighted && (
+        <div className="absolute -top-px left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-b-full bg-pulse text-primary-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] whitespace-nowrap shadow-[0_4px_16px_var(--pulse-glow)]">
+          <span>★</span>
+          ყველაზე პოპულარული
+        </div>
+      )}
+
       <div
         className={cn(
           'absolute inset-0 -z-10 rounded-3xl transition-opacity',
           t.gradient,
-          highlighted ? 'opacity-30' : 'opacity-0 group-hover:opacity-30',
+          highlighted ? 'opacity-40' : 'opacity-0 group-hover:opacity-30',
         )}
         aria-hidden
       />
@@ -1124,30 +1265,40 @@ function AudienceCard({
           'inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest',
           t.iconBg,
           t.text,
+          highlighted && 'mt-3 sm:mt-4',
         )}
       >
         {ageBand} წელი
       </div>
 
-      <h3 className="mt-4 text-2xl font-bold" style={{ fontFamily: 'var(--font-display)' }}>
+      <h3
+        className="mt-3 sm:mt-4 text-xl sm:text-2xl font-bold leading-tight"
+        style={{ fontFamily: 'var(--font-display)' }}
+      >
         {title}
       </h3>
-      <p className="mt-1 text-sm text-muted-foreground">{tagline}</p>
+      <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{tagline}</p>
 
-      <ul className="mt-6 space-y-2.5">
+      <ul className="mt-5 sm:mt-6 space-y-2.5">
         {features.map((f) => (
           <li key={f} className="flex items-start gap-2.5 text-sm">
-            <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-full bg-pulse/15 text-pulse flex items-center justify-center text-[10px] font-bold">
+            <span
+              className={cn(
+                'flex-shrink-0 mt-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold',
+                t.iconBg,
+                t.text,
+              )}
+            >
               ✓
             </span>
-            <span className="text-foreground/80">{f}</span>
+            <span className="text-foreground/85">{f}</span>
           </li>
         ))}
       </ul>
 
       <div
         className={cn(
-          'mt-7 inline-flex items-center gap-2 text-sm font-bold transition-all group-hover:gap-3',
+          'mt-6 sm:mt-7 inline-flex items-center gap-2 text-sm font-bold transition-all group-hover:gap-3',
           t.text,
         )}
       >
@@ -1174,37 +1325,9 @@ function PricingTeaser() {
         />
 
         <div className="mt-10 sm:mt-14 grid gap-5 md:grid-cols-2">
-          <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-              ცალკე კურსი
-            </p>
-            <p
-              className="mt-3 text-4xl font-bold tabular-nums"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              ₾19<span className="text-base font-medium text-muted-foreground">-დან</span>
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">თითო კურსი — სამუდამო წვდომა</p>
-            <ul className="mt-6 space-y-2.5 text-sm">
-              {['სრული წვდომა კურსზე', 'ყოველდღიური განმეორება', 'AI მასწავლებელი 24/7'].map((f) => (
-                <li key={f} className="flex items-start gap-2.5">
-                  <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-full bg-pulse/15 text-pulse flex items-center justify-center text-[10px] font-bold">
-                    ✓
-                  </span>
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-            <a
-              href="#"
-              className="mt-7 block text-center rounded-full bg-card border border-border px-5 py-3 text-sm font-bold hover:border-pulse/40 transition-colors"
-            >
-              კურსების ნახვა
-            </a>
-          </div>
-
-          <div className="relative rounded-3xl border-2 border-pulse bg-card p-6 sm:p-8 shadow-[0_12px_40px_var(--pulse-glow)]">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full bg-pulse text-primary-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+          {/* Bundle card — first on mobile (conversion priority), right on desktop */}
+          <div className="order-1 md:order-2 relative rounded-3xl border-2 border-pulse bg-card p-6 pt-8 sm:p-8 sm:pt-10 shadow-[0_18px_50px_-12px_var(--pulse-glow)]">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] whitespace-nowrap shadow-[0_4px_16px_var(--pulse-glow)]">
               <span>💎</span>
               საუკეთესო ფასი
             </div>
@@ -1212,17 +1335,22 @@ function PricingTeaser() {
             <p className="text-[10px] uppercase tracking-widest text-pulse font-bold">
               კატეგორიის ბანდლი
             </p>
-            <p
-              className="mt-3 text-4xl font-bold tabular-nums"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              ₾79<span className="text-base font-medium text-muted-foreground">-დან</span>
+            <div className="mt-2 sm:mt-3 flex items-baseline gap-2 flex-wrap">
+              <p
+                className="text-[44px] sm:text-5xl font-bold tabular-nums leading-none bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                ₾79
+              </p>
+              <span className="text-sm font-medium text-muted-foreground">-დან</span>
+              <span className="inline-flex items-center rounded-full bg-pulse/15 text-pulse border border-pulse/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
+                −40%
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="line-through">₾145</span> — დაზოგე ₾66
             </p>
-            <p className="mt-1 text-sm">
-              <span className="line-through text-muted-foreground">₾145</span>{' '}
-              <span className="text-pulse font-bold">−40% ფასდაკლება</span>
-            </p>
-            <ul className="mt-6 space-y-2.5 text-sm">
+            <ul className="mt-5 sm:mt-6 space-y-2.5 text-sm">
               {[
                 'მთელი კატეგორიის კურსები',
                 'მომავალი კურსები ჩართულია',
@@ -1239,9 +1367,44 @@ function PricingTeaser() {
             </ul>
             <a
               href="#"
-              className="mt-7 block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3 text-sm font-bold hover:shadow-[0_8px_30px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+              className="mt-6 sm:mt-7 inline-flex items-center justify-center gap-2 w-full rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-sm font-bold shadow-[0_8px_24px_var(--pulse-glow)] hover:shadow-[0_12px_36px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
               ბანდლების ნახვა
+              <span aria-hidden>→</span>
+            </a>
+          </div>
+
+          {/* Solo course card */}
+          <div className="order-2 md:order-1 rounded-3xl border border-border bg-card p-6 sm:p-8 hover:border-pulse/40 transition-colors">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+              ცალკე კურსი
+            </p>
+            <div className="mt-2 sm:mt-3 flex items-baseline gap-2">
+              <p
+                className="text-[44px] sm:text-5xl font-bold tabular-nums leading-none"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                ₾19
+              </p>
+              <span className="text-sm font-medium text-muted-foreground">-დან</span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">თითო კურსი — სამუდამო წვდომა</p>
+            <ul className="mt-5 sm:mt-6 space-y-2.5 text-sm">
+              {['სრული წვდომა კურსზე', 'ყოველდღიური განმეორება', 'AI მასწავლებელი 24/7'].map((f) => (
+                <li key={f} className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-full bg-pulse/15 text-pulse flex items-center justify-center text-[10px] font-bold">
+                    ✓
+                  </span>
+                  <span className="text-foreground/85">{f}</span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href="#"
+              className="mt-6 sm:mt-7 inline-flex items-center justify-center gap-2 w-full rounded-full bg-card border border-border px-5 py-3.5 text-sm font-bold hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
+            >
+              კურსების ნახვა
+              <span aria-hidden>→</span>
             </a>
           </div>
         </div>
@@ -1256,39 +1419,57 @@ function PricingTeaser() {
 
 function CtaBanner() {
   return (
-    <section className="py-16 sm:py-24 px-4 sm:px-6">
+    <section className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <div className="relative overflow-hidden rounded-3xl border border-pulse/40 bg-card p-8 sm:p-12">
+        <div className="relative overflow-hidden rounded-3xl border border-pulse/40 bg-card p-6 sm:p-10 lg:p-12">
           <div className="absolute inset-0 -z-10 opacity-50 bg-starfield" aria-hidden />
-          <div className="absolute -bottom-12 -right-12 w-72 h-72 rounded-full bg-pulse/20 blur-3xl" aria-hidden />
-          <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-heart/15 blur-3xl" aria-hidden />
+          <div
+            className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full bg-pulse/25 blur-3xl"
+            aria-hidden
+          />
+          <div
+            className="absolute -top-10 -left-10 w-48 h-48 rounded-full bg-heart/15 blur-3xl"
+            aria-hidden
+          />
 
-          <div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
-            <div className="space-y-4 text-center md:text-left">
+          <div className="relative grid gap-6 sm:gap-8 md:grid-cols-[1fr_auto] md:items-center">
+            <div className="text-center md:text-left">
               <h2
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight"
+                className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                მზად ხარ AI-ს სამყაროსთვის?
+                მზად ხარ{' '}
+                <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
+                  AI-ს სამყაროსთვის?
+                </span>
               </h2>
-              <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0">
+              <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0 leading-relaxed">
                 დაიწყე უფასოდ. პირველი გაკვეთილი ჩემგან — შემდეგ შენი არჩევანია.
               </p>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+              <div className="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
                 <a
                   href="#"
-                  className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 text-sm sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                 >
                   უფასოდ დაწყება
                   <span aria-hidden>→</span>
                 </a>
-                <a href="#categories" className="text-sm font-bold text-pulse hover:underline">
+                <a
+                  href="#categories"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-6 py-3.5 text-sm sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
+                >
                   კურსების ნახვა
                 </a>
               </div>
+              <p className="mt-3 text-[11px] text-muted-foreground inline-flex items-center gap-1.5 md:justify-start justify-center w-full">
+                <span className="text-pulse">✓</span>
+                გადახდის გარეშე · გაუქმდება ნებისმიერ დროს
+              </p>
             </div>
             <div className="flex justify-center md:justify-end">
-              <Walli size={180} state="wave" />
+              <Walli size={140} state="wave" className="sm:hidden" />
+              <Walli size={180} state="wave" className="hidden sm:block lg:hidden" />
+              <Walli size={210} state="wave" className="hidden lg:block" />
             </div>
           </div>
         </div>
@@ -1304,20 +1485,34 @@ function CtaBanner() {
 function Footer({ categories }: { categories: Category[] }) {
   return (
     <footer className="border-t border-border bg-muted/30">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-12 sm:py-16">
-        <div className="grid gap-10 md:grid-cols-[2fr_1fr_1fr_1fr]">
-          <div>
-            <a href="/v2" className="inline-flex items-center gap-2 mb-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14 lg:py-16">
+        <div className="grid gap-8 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr]">
+          <div className="col-span-2 md:col-span-1">
+            <a href="/v2" className="inline-flex items-center gap-2 mb-3 sm:mb-4">
               <Walli size={32} state="idle" noShadow />
-              <span className="text-base font-bold">walle.school</span>
+              <span className="text-base font-bold tracking-tight">walle.school</span>
             </a>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
               ქართული AI აკადემია. Walli ასწავლის ქართულად — ბავშვებს, ახალგაზრდებს, უფროსებს.
             </p>
-            <div className="mt-5 flex items-center gap-2">
-              <SocialIcon href="#" label="Facebook">f</SocialIcon>
-              <SocialIcon href="#" label="Instagram">ig</SocialIcon>
-              <SocialIcon href="#" label="YouTube">yt</SocialIcon>
+            <div className="mt-4 sm:mt-5 flex items-center gap-2">
+              <SocialIcon href="#" label="Facebook">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M13.5 21v-8h2.5l.5-3h-3V8c0-1 .3-1.5 1.5-1.5H16.5V4h-2.2c-2.4 0-3.3 1.3-3.3 3.3V10H9v3h2v8h2.5z" />
+                </svg>
+              </SocialIcon>
+              <SocialIcon href="#" label="Instagram">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="3.5" />
+                  <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
+                </svg>
+              </SocialIcon>
+              <SocialIcon href="#" label="YouTube">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M21.6 7.2c-.2-.9-.9-1.6-1.8-1.8C18.1 5 12 5 12 5s-6.1 0-7.8.4c-.9.2-1.6.9-1.8 1.8C2 8.9 2 12 2 12s0 3.1.4 4.8c.2.9.9 1.6 1.8 1.8C5.9 19 12 19 12 19s6.1 0 7.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.7.4-4.8.4-4.8s0-3.1-.4-4.8zM10 15V9l5 3-5 3z" />
+                </svg>
+              </SocialIcon>
             </div>
           </div>
 
@@ -1345,10 +1540,12 @@ function Footer({ categories }: { categories: Category[] }) {
           />
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
+        <div className="mt-8 sm:mt-10 pt-5 sm:pt-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
           <p>© 2026 walle.school · ყველა უფლება დაცულია</p>
           <div className="flex items-center gap-1.5">
-            <button className="font-bold text-foreground">ქართული</button>
+            <button className="font-bold text-foreground hover:text-pulse transition-colors">
+              ქართული
+            </button>
             <span className="opacity-50">/</span>
             <button className="hover:text-foreground transition-colors">English</button>
           </div>
@@ -1367,13 +1564,16 @@ function FooterColumn({
 }) {
   return (
     <div>
-      <h4 className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-4">
+      <h4 className="text-[11px] uppercase tracking-[0.18em] text-foreground font-bold mb-3 sm:mb-4">
         {title}
       </h4>
-      <ul className="space-y-2.5 text-sm">
+      <ul className="space-y-2 sm:space-y-2.5 text-sm">
         {links.map((l) => (
           <li key={l.label}>
-            <a href={l.href} className="text-foreground/80 hover:text-pulse transition-colors">
+            <a
+              href={l.href}
+              className="text-foreground/70 hover:text-pulse transition-colors leading-snug"
+            >
               {l.label}
             </a>
           </li>
@@ -1396,7 +1596,7 @@ function SocialIcon({
     <a
       href={href}
       aria-label={label}
-      className="w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center text-xs font-bold text-muted-foreground hover:border-pulse/40 hover:text-pulse transition-colors"
+      className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:border-pulse hover:text-pulse hover:bg-pulse/5 transition-all"
     >
       {children}
     </a>
@@ -1425,9 +1625,16 @@ function SectionHeader({
         align === 'center' && 'mx-auto text-center',
       )}
     >
-      <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold">{eyebrow}</p>
+      <p
+        className={cn(
+          'text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2',
+          align === 'left' && 'before:content-[""] before:block before:h-1 before:w-6 before:rounded-full before:bg-pulse',
+        )}
+      >
+        {eyebrow}
+      </p>
       <h2
-        className="text-3xl sm:text-4xl font-bold tracking-tight leading-[1.1]"
+        className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
