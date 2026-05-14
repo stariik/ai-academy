@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Walli } from '@/components/walli/Walli';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
@@ -9,6 +10,8 @@ import {
   type Category,
   type Course,
 } from '@/lib/v2/data';
+import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
+import type { Dict, Locale } from '@/lib/v2/i18n';
 
 /* ============================================================
    Top-level shell
@@ -17,23 +20,29 @@ import {
 export default function LandingClient({
   categories,
   courses,
+  dict,
+  locale,
 }: {
   categories: Category[];
   courses: Course[];
+  dict: Dict;
+  locale: Locale;
 }) {
   return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-      <Navbar />
-      <main>
-        <Hero />
-        <CatalogSection categories={categories} courses={courses} />
-        <HowItWorks />
-        <AudienceSection />
-        <PricingTeaser />
-        <CtaBanner />
-      </main>
-      <Footer categories={categories} />
-    </div>
+    <V2LocaleProvider locale={locale} dict={dict}>
+      <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
+        <Navbar />
+        <main>
+          <Hero />
+          <CatalogSection categories={categories} courses={courses} />
+          <HowItWorks />
+          <AudienceSection />
+          <PricingTeaser />
+          <CtaBanner />
+        </main>
+        <Footer categories={categories} />
+      </div>
+    </V2LocaleProvider>
   );
 }
 
@@ -42,6 +51,7 @@ export default function LandingClient({
    ============================================================ */
 
 function Navbar() {
+  const { dict, href } = useV2Locale();
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -53,10 +63,10 @@ function Navbar() {
   }, []);
 
   const NAV_LINKS = [
-    { label: 'კატეგორიები', href: '#categories' },
-    { label: 'კურსები', href: '#courses' },
-    { label: 'როგორ მუშაობს', href: '#how' },
-    { label: 'ფასები', href: '#pricing' },
+    { label: dict.navbar.categories, href: '#categories' },
+    { label: dict.navbar.courses, href: '#courses' },
+    { label: dict.navbar.howItWorks, href: '#how' },
+    { label: dict.navbar.pricing, href: '#pricing' },
   ];
 
   return (
@@ -70,11 +80,15 @@ function Navbar() {
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between gap-3 h-14 sm:h-16">
-          <a href="/v2" className="flex items-center gap-2 shrink-0 min-w-0">
+          <a href={href()} className="flex items-center gap-2 shrink-0 min-w-0">
             <Walli size={32} state="idle" noShadow />
             <div className="leading-tight min-w-0">
-              <p className="text-sm sm:text-base font-bold tracking-tight truncate">walle.school</p>
-              <p className="hidden sm:block text-[10px] text-muted-foreground -mt-0.5">AI ქართულად</p>
+              <p className="text-sm sm:text-base font-bold tracking-tight truncate">
+                {dict.meta.brandName}
+              </p>
+              <p className="hidden sm:block text-[10px] text-muted-foreground -mt-0.5">
+                {dict.meta.siteTagline}
+              </p>
             </div>
           </a>
 
@@ -98,13 +112,13 @@ function Navbar() {
                 href="#"
                 className="text-sm font-semibold px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
               >
-                შესვლა
+                {dict.navbar.signIn}
               </a>
               <a
                 href="#"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
               >
-                რეგისტრაცია
+                {dict.navbar.signUp}
                 <span aria-hidden>→</span>
               </a>
             </div>
@@ -113,7 +127,7 @@ function Navbar() {
               <ThemeToggle />
               <button
                 onClick={() => setMobileOpen(true)}
-                aria-label="Menu"
+                aria-label={dict.navbar.menu}
                 className="p-2 rounded-lg hover:bg-muted text-foreground"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -131,7 +145,16 @@ function Navbar() {
 }
 
 function LanguageSwitcher({ full = false }: { full?: boolean }) {
-  const [lang, setLang] = React.useState<'KA' | 'EN'>('KA');
+  const { locale } = useV2Locale();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const switchTo = (target: Locale) => {
+    if (target === locale) return;
+    const newPath = pathname.replace(/^\/v2\/(ka|en)(?=\/|$)/, `/v2/${target}`);
+    router.push(newPath);
+  };
+
   return (
     <div
       className={cn(
@@ -139,19 +162,21 @@ function LanguageSwitcher({ full = false }: { full?: boolean }) {
         full ? 'text-sm' : 'text-[11px]',
       )}
     >
-      {(['KA', 'EN'] as const).map((l) => (
+      {(['ka', 'en'] as const).map((l) => (
         <button
           key={l}
-          onClick={() => setLang(l)}
+          type="button"
+          onClick={() => switchTo(l)}
+          aria-pressed={locale === l}
           className={cn(
             'transition-colors',
             full ? 'px-3.5 py-1.5' : 'px-2 py-1',
-            lang === l
+            locale === l
               ? 'bg-pulse text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground',
           )}
         >
-          {l}
+          {l.toUpperCase()}
         </button>
       ))}
     </div>
@@ -165,6 +190,7 @@ function MobileMenu({
   links: { label: string; href: string }[];
   onClose: () => void;
 }) {
+  const { dict, href } = useV2Locale();
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -175,13 +201,15 @@ function MobileMenu({
   return (
     <div className="fixed inset-0 z-50 bg-background/98 backdrop-blur-md md:hidden flex flex-col">
       <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border">
-        <a href="/v2" className="flex items-center gap-2" onClick={onClose}>
+        <a href={href()} className="flex items-center gap-2" onClick={onClose}>
           <Walli size={32} state="idle" noShadow />
-          <span className="text-sm sm:text-base font-bold tracking-tight">walle.school</span>
+          <span className="text-sm sm:text-base font-bold tracking-tight">
+            {dict.meta.brandName}
+          </span>
         </a>
         <button
           onClick={onClose}
-          aria-label="Close menu"
+          aria-label={dict.navbar.closeMenu}
           className="p-2 rounded-lg hover:bg-muted text-foreground"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -215,19 +243,19 @@ function MobileMenu({
             href="#"
             className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
           >
-            რეგისტრაცია
+            {dict.navbar.signUp}
           </a>
           <a
             href="#"
             className="block text-center text-base font-semibold text-foreground hover:text-pulse transition-colors py-2"
           >
-            შესვლა
+            {dict.navbar.signIn}
           </a>
         </div>
 
         <div className="mt-auto pt-6 flex items-center justify-between border-t border-border">
           <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
-            ენა
+            {dict.navbar.language}
           </span>
           <LanguageSwitcher full />
         </div>
@@ -259,6 +287,7 @@ function useHeroWalliSize() {
 }
 
 function Hero() {
+  const { dict } = useV2Locale();
   const walliSize = useHeroWalliSize();
 
   return (
@@ -276,7 +305,6 @@ function Hero() {
       <div className="mx-auto max-w-7xl grid gap-8 sm:gap-10 lg:gap-16 lg:grid-cols-[1.15fr_1fr] lg:items-center">
         <div className="order-1 lg:order-2 flex items-center justify-center">
           <div className="relative">
-            {/* Soft radial glow grounding the mascot */}
             <div
               className="absolute inset-0 rounded-full bg-gradient-to-br from-pulse/25 via-pulse/5 to-transparent blur-2xl scale-[1.15] -z-10"
               aria-hidden
@@ -285,15 +313,15 @@ function Hero() {
 
             <FloatingChip className="-top-1 -left-2 sm:-left-10 lg:-left-14" delay="0s" tone="pulse">
               <span>🧭</span>
-              <span>AI საფუძვლები</span>
+              <span>{dict.hero.chipFoundations}</span>
             </FloatingChip>
             <FloatingChip className="top-14 -right-1 sm:-right-10 lg:-right-14" delay="0.6s" tone="heart">
               <span>🎨</span>
-              <span>შემოქმედება</span>
+              <span>{dict.hero.chipCreative}</span>
             </FloatingChip>
             <FloatingChip className="-bottom-1 left-4 sm:left-0 lg:-left-4" delay="1.2s" tone="amber">
               <span>🎈</span>
-              <span>ბავშვებისთვის</span>
+              <span>{dict.hero.chipForKids}</span>
             </FloatingChip>
           </div>
         </div>
@@ -301,22 +329,21 @@ function Hero() {
         <div className="order-2 lg:order-1 text-center lg:text-left">
           <div className="inline-flex items-center gap-2 rounded-full border border-pulse/30 bg-pulse/10 text-pulse px-3 py-1.5 text-xs font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" />
-            ქართული AI აკადემია
+            {dict.hero.eyebrow}
           </div>
 
           <h1
             className="mt-5 sm:mt-6 text-[42px] sm:text-[56px] lg:text-7xl xl:text-[80px] font-bold leading-[1.08] tracking-tight"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            შენი პირადი{' '}
+            {dict.hero.titleBefore}{' '}
             <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
-              AI მასწავლებელი
+              {dict.hero.titleHighlight}
             </span>
           </h1>
 
           <p className="mt-5 sm:mt-6 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
-            Walli ასწავლის ქართულად — შენი ტემპით, არასოდეს იღლება. ბავშვებიდან პროფესიონალებამდე,
-            კურსი ყველასთვის მოიძებნება.
+            {dict.hero.description}
           </p>
 
           <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center lg:justify-start gap-3">
@@ -324,7 +351,7 @@ function Hero() {
               href="#categories"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 text-sm sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
-              კატეგორიების ნახვა
+              {dict.hero.ctaPrimary}
               <span aria-hidden>→</span>
             </a>
             <a
@@ -337,7 +364,7 @@ function Hero() {
               >
                 ▶
               </span>
-              უფასო გაკვეთილი
+              {dict.hero.ctaSecondary}
             </a>
           </div>
 
@@ -350,7 +377,7 @@ function Hero() {
                 2.4K+
               </p>
               <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-                მოსწავლე
+                {dict.hero.statStudents}
               </p>
             </div>
             <div className="text-center lg:px-4">
@@ -361,7 +388,7 @@ function Hero() {
                 9
               </p>
               <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-                კატეგორია
+                {dict.hero.statCategories}
               </p>
             </div>
             <div className="text-center lg:text-left lg:px-4">
@@ -373,19 +400,19 @@ function Hero() {
                 <span className="text-amber-500 text-base">★</span>
               </p>
               <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium uppercase tracking-wider">
-                შეფასება
+                {dict.hero.statRating}
               </p>
             </div>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center justify-center lg:justify-start gap-x-3 gap-y-2">
             <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">
-              აგებული ყველასთვის:
+              {dict.hero.audienceFor}
             </span>
             <div className="flex flex-wrap gap-1.5">
-              <AudiencePill>ბავშვები 6-12</AudiencePill>
-              <AudiencePill>ახალგაზრდები</AudiencePill>
-              <AudiencePill>უფროსები</AudiencePill>
+              <AudiencePill>{dict.hero.audienceKids}</AudiencePill>
+              <AudiencePill>{dict.hero.audienceTeens}</AudiencePill>
+              <AudiencePill>{dict.hero.audienceAdults}</AudiencePill>
             </div>
           </div>
         </div>
@@ -436,19 +463,9 @@ function AudiencePill({ children }: { children: React.ReactNode }) {
   );
 }
 
-
-
-
-
 /* ============================================================
    Catalog — magazine-style category tiles + course sliders
    ============================================================ */
-
-const LEVEL_LABEL_INLINE = {
-  beginner: 'საწყისი',
-  intermediate: 'საშუალო',
-  advanced: 'მაღალი',
-} as const;
 
 function CatalogSection({
   categories,
@@ -457,6 +474,7 @@ function CatalogSection({
   categories: Category[];
   courses: Course[];
 }) {
+  const { dict } = useV2Locale();
   const withCourses = categories.filter((c) => c.courses > 0);
 
   return (
@@ -465,35 +483,31 @@ function CatalogSection({
         <div className="space-y-3 max-w-2xl">
           <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2">
             <span className="h-1 w-6 rounded-full bg-pulse" />
-            კატალოგი
+            {dict.catalog.eyebrow}
           </p>
           <h2
             className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            ცხრა გზა,{' '}
+            {dict.catalog.titleBefore}{' '}
             <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
-              ერთი მასწავლებელი
+              {dict.catalog.titleHighlight}
             </span>
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-            დაიწყე ნებისმიერი წერტილიდან. ჩამოატარე კატეგორიები, აღმოაჩინე კურსები — ყველა ერთ ნაკადში.
+            {dict.catalog.description}
           </p>
         </div>
       </div>
 
-      {/* Category slider */}
       <div className="mt-10 sm:mt-14">
         <CategorySlider categories={categories} />
       </div>
 
-      {/* Per-category course sliders */}
       {withCourses.length === 0 ? (
         <div className="mx-auto max-w-3xl mt-12 sm:mt-16 px-4 sm:px-6">
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 sm:p-14 text-center">
-            <p className="text-sm sm:text-base font-bold">
-              ჯერ კურსები არ არის — მალე გამოჩნდება.
-            </p>
+            <p className="text-sm sm:text-base font-bold">{dict.catalog.emptyState}</p>
           </div>
         </div>
       ) : (
@@ -514,8 +528,9 @@ function CatalogSection({
 }
 
 function CategorySlider({ categories }: { categories: Category[] }) {
+  const { dict } = useV2Locale();
   return (
-    <HorizontalSlider ariaLabel="კატეგორიების სლაიდერი">
+    <HorizontalSlider ariaLabel={dict.slider.ariaCategory}>
       {categories.map((c, i) => (
         <CategoryMiniCard key={c.id} category={c} index={i} total={categories.length} />
       ))}
@@ -534,6 +549,7 @@ function HorizontalSlider({
   children: React.ReactNode;
   ariaLabel?: string;
 }) {
+  const { dict } = useV2Locale();
   const scrollerRef = React.useRef<HTMLDivElement>(null);
   const pointerIdRef = React.useRef<number | null>(null);
   const movedRef = React.useRef(false);
@@ -574,8 +590,6 @@ function HorizontalSlider({
     el.scrollBy({ left: step * dir, behavior: 'smooth' });
   };
 
-  /* ─── click-and-drag scrolling (mouse only — touch uses native scroll) ─── */
-
   const rafId = React.useRef(0);
   const pendingScroll = React.useRef(0);
   const hasPending = React.useRef(false);
@@ -586,24 +600,17 @@ function HorizontalSlider({
     if (el) el.scrollLeft = pendingScroll.current;
   }, []);
 
-  // Threshold (px) before we consider a pointer-down → drag. Below this it's a click.
   const DRAG_THRESHOLD = 6;
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const el = scrollerRef.current;
     if (!el) return;
-    // Stop the browser's native HTML5 drag on <a> children from stealing the
-    // pointer before we can decide click-vs-drag. preventDefault on pointerdown
-    // suppresses both text selection and the implicit native drag image.
     e.preventDefault();
     pointerIdRef.current = e.pointerId;
     movedRef.current = false;
     startXRef.current = e.clientX;
     startScrollRef.current = el.scrollLeft;
-    // Capture immediately so subsequent moves always reach us, even if the
-    // mouse leaves the card or scroller bounds. Clicks still fire on the
-    // original target (the <a>), so non-drag clicks navigate normally.
     try {
       el.setPointerCapture(e.pointerId);
     } catch {
@@ -619,7 +626,6 @@ function HorizontalSlider({
       movedRef.current = true;
       setIsGrabbing(true);
     }
-    // Coalesce scroll writes to one per animation frame for buttery drag.
     pendingScroll.current = startScrollRef.current - dx;
     if (!hasPending.current) {
       hasPending.current = true;
@@ -648,7 +654,6 @@ function HorizontalSlider({
         cancelAnimationFrame(rafId.current);
         flush();
       }
-      // Mark next click for suppression so a card link doesn't fire after drag.
       suppressClickRef.current = true;
     }
   };
@@ -676,19 +681,8 @@ function HorizontalSlider({
         onClickCapture={onClickCapture}
         onDragStart={(e) => e.preventDefault()}
         className={cn(
-          // touch-manipulation lets the browser handle native touch scrolling
-          // (both axes), while our JS only takes over for mouse click-drag.
-          // touch-pan-y alone blocks horizontal touch swipes — slider becomes
-          // un-swipeable on mobile.
           'overflow-x-auto scrollbar-hide select-none touch-manipulation overscroll-x-contain',
-          // `overflow-x: auto` silently clips overflow-y too (CSS spec), which
-          // crops the top of cards that lift on hover. Padding + matching
-          // negative margin reserves vertical room for hover transforms + glow
-          // shadows without shifting layout — buttons and section margins are
-          // unaffected because the scroller's outer box stays the same size.
           'py-10 -my-10',
-          // Snap is disabled while dragging so movement is pixel-perfect;
-          // it re-engages on release so the slider settles on the nearest card.
           isGrabbing ? 'cursor-grabbing' : 'snap-x snap-mandatory md:cursor-grab',
         )}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -696,8 +690,8 @@ function HorizontalSlider({
         <div className="flex gap-4 sm:gap-5">{children}</div>
       </div>
 
-      <SliderButton direction="prev" visible={canL} onClick={() => slide(-1)} />
-      <SliderButton direction="next" visible={canR} onClick={() => slide(1)} />
+      <SliderButton direction="prev" visible={canL} onClick={() => slide(-1)} label={dict.slider.prev} />
+      <SliderButton direction="next" visible={canR} onClick={() => slide(1)} label={dict.slider.next} />
     </div>
   );
 }
@@ -706,19 +700,20 @@ function SliderButton({
   direction,
   visible,
   onClick,
+  label,
 }: {
   direction: 'prev' | 'next';
   visible: boolean;
   onClick: () => void;
+  label: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={direction === 'prev' ? 'წინა' : 'შემდეგი'}
+      aria-label={label}
       tabIndex={visible ? 0 : -1}
       className={cn(
-        // hidden on touch, shown from md+
         'hidden md:flex absolute top-[42%] -translate-y-1/2 z-20',
         'items-center justify-center w-12 h-12 rounded-full',
         'bg-card/90 backdrop-blur-md border border-border',
@@ -760,6 +755,7 @@ function CategoryMiniCard({
   index: number;
   total: number;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
   const num = (index + 1).toString().padStart(2, '0');
   const disabled = c.courses === 0;
@@ -779,10 +775,8 @@ function CategoryMiniCard({
           : 'border-border hover:-translate-y-2 hover:border-transparent hover:shadow-[0_24px_60px_-20px_var(--pulse-glow)]',
       )}
     >
-      {/* Color-tinted base layer */}
       <div className={cn('absolute inset-0 -z-10 opacity-60', t.iconBg)} aria-hidden />
 
-      {/* Soft color blob — drifts on hover */}
       <div
         className={cn(
           'absolute -top-20 -right-20 w-56 h-56 rounded-full blur-3xl transition-all duration-700 ease-out',
@@ -792,7 +786,6 @@ function CategoryMiniCard({
         aria-hidden
       />
 
-      {/* Subtle inner ring on hover */}
       <div
         className={cn(
           'absolute inset-0 rounded-[28px] ring-2 ring-inset transition-opacity duration-300',
@@ -802,7 +795,6 @@ function CategoryMiniCard({
         aria-hidden
       />
 
-      {/* TOP: floating icon medallion + oversized numeral */}
       <div className="relative h-1/2 p-4 sm:p-5 lg:p-6 flex items-start justify-between">
         <div
           className={cn(
@@ -825,28 +817,29 @@ function CategoryMiniCard({
         </span>
       </div>
 
-      {/* BOTTOM: title block (always anchored) */}
       <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6 space-y-1.5 sm:space-y-2">
         <h3
           className="text-[15px] sm:text-lg lg:text-xl font-bold leading-tight tracking-tight line-clamp-2"
           style={{ fontFamily: 'var(--font-display)' }}
         >
-          {c.nameKa}
+          {c.name}
         </h3>
         <p className="text-[10px] sm:text-[11px] lg:text-xs text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.4em]">
-          {c.taglineKa}
+          {c.tagline}
         </p>
 
         <div className="pt-2 sm:pt-3 flex items-center justify-between border-t border-border/70">
           <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">
             {c.courses > 0 ? (
               <>
-                <span className="font-bold text-foreground tabular-nums">{c.courses}</span> კურსი
+                <span className="font-bold text-foreground tabular-nums">{c.courses}</span>{' '}
+                {dict.catalog.coursesUnit}
                 <span className="opacity-50"> · </span>
-                <span className="font-bold text-foreground tabular-nums">{c.lessons}</span> გაკ.
+                <span className="font-bold text-foreground tabular-nums">{c.lessons}</span>{' '}
+                {dict.catalog.lessonsUnitShort}
               </>
             ) : (
-              <span className="italic opacity-70">მალე</span>
+              <span className="italic opacity-70">{dict.catalog.soon}</span>
             )}
           </span>
           {c.courses > 0 && (
@@ -877,6 +870,7 @@ function CourseSliderRow({
   rowIndex: number;
   totalRows: number;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
   if (courses.length === 0) return null;
   const num = (rowIndex + 1).toString().padStart(2, '0');
@@ -884,7 +878,6 @@ function CourseSliderRow({
 
   return (
     <div id={`cat-${c.id}`} className="scroll-mt-20">
-      {/* Row header with editorial numeral */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-5 sm:mb-7 flex items-end justify-between gap-3 sm:gap-4">
         <div className="flex items-end gap-3 sm:gap-5 min-w-0">
           <span
@@ -903,12 +896,14 @@ function CourseSliderRow({
               style={{ fontFamily: 'var(--font-display)' }}
             >
               <span className={cn('mr-1.5 sm:mr-2', t.text)}>{c.icon}</span>
-              {c.nameKa}
+              {c.name}
             </h3>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium">
-              <span className="font-bold text-foreground tabular-nums">{c.courses}</span> კურსი
+              <span className="font-bold text-foreground tabular-nums">{c.courses}</span>{' '}
+              {dict.catalog.coursesUnit}
               <span className="opacity-50"> · </span>
-              <span className="font-bold text-foreground tabular-nums">{c.lessons}</span> გაკვეთილი
+              <span className="font-bold text-foreground tabular-nums">{c.lessons}</span>{' '}
+              {dict.catalog.lessonsUnit}
             </p>
           </div>
         </div>
@@ -917,8 +912,7 @@ function CourseSliderRow({
         </span>
       </div>
 
-      {/* Course slider */}
-      <HorizontalSlider ariaLabel={`${c.nameKa} — კურსების სლაიდერი`}>
+      <HorizontalSlider ariaLabel={`${c.name} — ${dict.slider.ariaCourses}`}>
         {courses.map((co) => (
           <div
             key={co.id}
@@ -934,15 +928,15 @@ function CourseSliderRow({
 }
 
 function CourseCard({ course: co, category: c }: { course: Course; category: Category }) {
+  const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
 
   return (
     <a
-      href={`/v2/courses/${co.id}`}
+      href={href(`courses/${co.id}`)}
       draggable={false}
       className="group relative block h-full flex flex-col rounded-3xl border border-border bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-transparent hover:shadow-[0_24px_60px_-20px_var(--pulse-glow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
-      {/* Hover ring */}
       <div
         className={cn(
           'pointer-events-none absolute inset-0 rounded-3xl ring-2 ring-inset transition-opacity duration-300',
@@ -952,7 +946,6 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
         aria-hidden
       />
 
-      {/* Cover: tone-tinted with floating icon medallion */}
       <div className={cn('relative aspect-[4/3] overflow-hidden', t.iconBg)}>
         <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
         <div
@@ -964,7 +957,6 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
           aria-hidden
         />
 
-        {/* Floating medallion */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className={cn(
@@ -977,36 +969,36 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
           </div>
         </div>
 
-        {/* Level signal bars + label */}
         <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 inline-flex items-center gap-1.5 rounded-full bg-card/85 backdrop-blur-sm border border-border/60 px-2 py-1 sm:px-2.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
           <LevelSignal level={co.level} tone={c.tone} />
-          <span className="text-foreground/85">{LEVEL_LABEL_INLINE[co.level]}</span>
+          <span className="text-foreground/85">{dict.level[co.level]}</span>
         </div>
       </div>
 
-      {/* Body */}
       <div className="flex-1 p-4 sm:p-5 flex flex-col">
         <h4
           className="text-sm sm:text-base lg:text-lg font-bold leading-snug line-clamp-2 min-h-[2.6em]"
           style={{ fontFamily: 'var(--font-display)' }}
         >
-          {co.titleKa}
+          {co.title}
         </h4>
 
-        {/* Meta pills */}
         <div className="mt-2.5 sm:mt-3 flex items-center gap-1.5 flex-wrap">
-          <MetaPill>{co.lessons} გაკვ.</MetaPill>
-          <MetaPill>~{co.hours} სთ</MetaPill>
+          <MetaPill>
+            {co.lessons} {dict.courseCard.lessonsShort}
+          </MetaPill>
+          <MetaPill>
+            ~{co.hours} {dict.courseCard.hoursShort}
+          </MetaPill>
         </div>
       </div>
 
-      {/* Footer */}
       <div className="px-4 pb-4 sm:px-5 sm:pb-5 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
         {typeof co.price === 'number' && co.price > 0 ? (
           <span className="text-sm sm:text-base font-bold tabular-nums">₾{co.price}</span>
         ) : (
           <span className={cn('text-[10px] font-bold uppercase tracking-widest', t.text)}>
-            უფასოდ
+            {dict.courseCard.free}
           </span>
         )}
         <span
@@ -1042,12 +1034,7 @@ function LevelSignal({
   const active = (need: Course['level'][]) => need.includes(level);
   return (
     <span className="inline-flex items-end gap-[2px] h-3" aria-hidden>
-      <span
-        className={cn(
-          'w-[3px] rounded-sm transition-colors h-[40%]',
-          t.bg,
-        )}
-      />
+      <span className={cn('w-[3px] rounded-sm transition-colors h-[40%]', t.bg)} />
       <span
         className={cn(
           'w-[3px] rounded-sm transition-colors h-[65%]',
@@ -1064,22 +1051,18 @@ function LevelSignal({
   );
 }
 
-
 /* ============================================================
    How It Works
    ============================================================ */
 
 function HowItWorks() {
+  const { dict } = useV2Locale();
   return (
     <section id="how" className="py-16 sm:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        <SectionHeader
-          eyebrow="როგორ მუშაობს"
-          title="სამი ნაბიჯი — მერე უკვე შენ ხარ მგზავრობაში"
-        />
+        <SectionHeader eyebrow={dict.howItWorks.eyebrow} title={dict.howItWorks.title} />
 
         <div className="relative mt-10 sm:mt-14 grid gap-4 sm:gap-5 md:grid-cols-3">
-          {/* Subtle connector behind cards on md+ */}
           <div
             className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-px -z-10 bg-gradient-to-r from-transparent via-border to-transparent"
             aria-hidden
@@ -1088,22 +1071,22 @@ function HowItWorks() {
             number="01"
             tone="pulse"
             walliState="idle"
-            title="აირჩიე გზა"
-            description="ცხრა კატეგორია, AI საფუძვლებიდან აგენტებამდე — შენთვის საჭირო კურსი მოიძებნება."
+            title={dict.howItWorks.step1Title}
+            description={dict.howItWorks.step1Description}
           />
           <Step
             number="02"
             tone="heart"
             walliState="wave"
-            title="Walli ასწავლის"
-            description="სასაუბრო გაკვეთილები ქართულად. შეცდომაზე — ნაზად ხსნის. სწორ პასუხზე — აღნიშნავს."
+            title={dict.howItWorks.step2Title}
+            description={dict.howItWorks.step2Description}
           />
           <Step
             number="03"
             tone="amber"
             walliState="dance"
-            title="შეაგროვე ბარათები"
-            description="ყოველ დასრულებულ გაკვეთილზე — ულამაზესი ბარათი ბიბლიოთეკაში. გაუზიარე ოჯახს."
+            title={dict.howItWorks.step3Title}
+            description={dict.howItWorks.step3Description}
           />
         </div>
       </div>
@@ -1133,7 +1116,6 @@ function Step({
         'hover:border-transparent',
       )}
     >
-      {/* Tone-tinted soft halo behind Walli */}
       <div
         className={cn(
           'absolute -top-6 -left-6 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500',
@@ -1141,7 +1123,6 @@ function Step({
         )}
         aria-hidden
       />
-      {/* Tone-tinted hover ring */}
       <div
         className={cn(
           'absolute inset-0 rounded-3xl ring-2 ring-inset opacity-0 group-hover:opacity-100 transition-opacity duration-300',
@@ -1179,36 +1160,37 @@ function Step({
    ============================================================ */
 
 function AudienceSection() {
+  const { dict } = useV2Locale();
   return (
     <section id="audiences" className="py-16 sm:py-24 px-4 sm:px-6 bg-muted/30">
       <div className="mx-auto max-w-7xl">
         <SectionHeader
-          eyebrow="ვისთვის ვაგებთ"
-          title="ერთი ხელსაწყო, სამი ცხოვრება"
-          description="walle.school ერგება ყველას — მაგრამ მოარგებს თავის თავს იმის მიხედვით, ვინ ხარ."
+          eyebrow={dict.audience.eyebrow}
+          title={dict.audience.title}
+          description={dict.audience.description}
         />
 
         <div className="mt-10 sm:mt-14 grid gap-5 md:grid-cols-3">
           <AudienceCard
             ageBand="6-12"
-            title="ბავშვები"
-            tagline="თამაშით ვისწავლოთ AI"
-            features={['სასიამოვნო, თამაშის ფორმა', 'მშობელი ხედავს პროგრესს', 'უსაფრთხო, რეკლამის გარეშე']}
+            title={dict.audience.kids.title}
+            tagline={dict.audience.kids.tagline}
+            features={dict.audience.kids.features as unknown as string[]}
             tone="amber"
           />
           <AudienceCard
             ageBand="13-17"
-            title="ახალგაზრდები"
-            tagline="AI სკოლისთვის და მეტი"
-            features={['AI სკოლის დავალებებისთვის', 'კოდირება AI-სთან ერთად', 'ლიდერბორდი თანატოლებთან']}
+            title={dict.audience.teens.title}
+            tagline={dict.audience.teens.tagline}
+            features={dict.audience.teens.features as unknown as string[]}
             tone="violet"
             highlighted
           />
           <AudienceCard
             ageBand="18+"
-            title="უფროსები"
-            tagline="AI სამსახურისთვის"
-            features={['AI მარკეტინგი და ბიზნესი', 'პრაქტიკული პროექტები', 'სერთიფიკატები']}
+            title={dict.audience.adults.title}
+            tagline={dict.audience.adults.tagline}
+            features={dict.audience.adults.features as unknown as string[]}
             tone="pulse"
           />
         </div>
@@ -1232,6 +1214,7 @@ function AudienceCard({
   tone: keyof typeof TONE_CLASSES;
   highlighted?: boolean;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[tone];
   return (
     <a
@@ -1247,7 +1230,7 @@ function AudienceCard({
       {highlighted && (
         <div className="absolute -top-px left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-b-full bg-pulse text-primary-foreground px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] whitespace-nowrap shadow-[0_4px_16px_var(--pulse-glow)]">
           <span>★</span>
-          ყველაზე პოპულარული
+          {dict.audience.mostPopular}
         </div>
       )}
 
@@ -1268,7 +1251,7 @@ function AudienceCard({
           highlighted && 'mt-3 sm:mt-4',
         )}
       >
-        {ageBand} წელი
+        {ageBand} {dict.audience.ageBandSuffix}
       </div>
 
       <h3
@@ -1302,7 +1285,7 @@ function AudienceCard({
           t.text,
         )}
       >
-        გაიგე მეტი
+        {dict.audience.learnMore}
         <span aria-hidden>→</span>
       </div>
     </a>
@@ -1314,49 +1297,47 @@ function AudienceCard({
    ============================================================ */
 
 function PricingTeaser() {
+  const { dict } = useV2Locale();
   return (
     <section id="pricing" className="py-16 sm:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <SectionHeader
-          eyebrow="ფასები"
-          title="იყიდე ცალკე ან მთელი კატეგორია"
-          description="არცერთი გამოწერა. ერთხელ ყიდულობ — სამუდამოდ შენია. კატეგორიის ბანდლი ავტომატურად მოიცავს მომავალ კურსებს."
+          eyebrow={dict.pricing.eyebrow}
+          title={dict.pricing.title}
+          description={dict.pricing.description}
           align="center"
         />
 
         <div className="mt-10 sm:mt-14 grid gap-5 md:grid-cols-2">
-          {/* Bundle card — first on mobile (conversion priority), right on desktop */}
           <div className="order-1 md:order-2 relative rounded-3xl border-2 border-pulse bg-card p-6 pt-8 sm:p-8 sm:pt-10 shadow-[0_18px_50px_-12px_var(--pulse-glow)]">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] whitespace-nowrap shadow-[0_4px_16px_var(--pulse-glow)]">
               <span>💎</span>
-              საუკეთესო ფასი
+              {dict.pricing.bundleBadge}
             </div>
 
             <p className="text-[10px] uppercase tracking-widest text-pulse font-bold">
-              კატეგორიის ბანდლი
+              {dict.pricing.bundleLabel}
             </p>
             <div className="mt-2 sm:mt-3 flex items-baseline gap-2 flex-wrap">
               <p
                 className="text-[44px] sm:text-5xl font-bold tabular-nums leading-none bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                ₾79
+                {dict.pricing.bundlePrice}
               </p>
-              <span className="text-sm font-medium text-muted-foreground">-დან</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {dict.pricing.fromSuffix}
+              </span>
               <span className="inline-flex items-center rounded-full bg-pulse/15 text-pulse border border-pulse/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest">
-                −40%
+                {dict.pricing.bundleDiscount}
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              <span className="line-through">₾145</span> — დაზოგე ₾66
+              <span className="line-through">{dict.pricing.bundleOldPrice}</span> —{' '}
+              {dict.pricing.bundleSave}
             </p>
             <ul className="mt-5 sm:mt-6 space-y-2.5 text-sm">
-              {[
-                'მთელი კატეგორიის კურსები',
-                'მომავალი კურსები ჩართულია',
-                'ერთი გადახდა — სამუდამო წვდომა',
-                'AI მასწავლებელი 24/7',
-              ].map((f) => (
+              {(dict.pricing.bundleFeatures as unknown as string[]).map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
                   <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-full bg-pulse text-primary-foreground flex items-center justify-center text-[10px] font-bold">
                     ✓
@@ -1369,28 +1350,29 @@ function PricingTeaser() {
               href="#"
               className="mt-6 sm:mt-7 inline-flex items-center justify-center gap-2 w-full rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-sm font-bold shadow-[0_8px_24px_var(--pulse-glow)] hover:shadow-[0_12px_36px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
-              ბანდლების ნახვა
+              {dict.pricing.bundleCta}
               <span aria-hidden>→</span>
             </a>
           </div>
 
-          {/* Solo course card */}
           <div className="order-2 md:order-1 rounded-3xl border border-border bg-card p-6 sm:p-8 hover:border-pulse/40 transition-colors">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-              ცალკე კურსი
+              {dict.pricing.soloLabel}
             </p>
             <div className="mt-2 sm:mt-3 flex items-baseline gap-2">
               <p
                 className="text-[44px] sm:text-5xl font-bold tabular-nums leading-none"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                ₾19
+                {dict.pricing.soloPrice}
               </p>
-              <span className="text-sm font-medium text-muted-foreground">-დან</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {dict.pricing.fromSuffix}
+              </span>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">თითო კურსი — სამუდამო წვდომა</p>
+            <p className="mt-1 text-sm text-muted-foreground">{dict.pricing.soloSubtitle}</p>
             <ul className="mt-5 sm:mt-6 space-y-2.5 text-sm">
-              {['სრული წვდომა კურსზე', 'ყოველდღიური განმეორება', 'AI მასწავლებელი 24/7'].map((f) => (
+              {(dict.pricing.soloFeatures as unknown as string[]).map((f) => (
                 <li key={f} className="flex items-start gap-2.5">
                   <span className="flex-shrink-0 mt-0.5 w-4 h-4 rounded-full bg-pulse/15 text-pulse flex items-center justify-center text-[10px] font-bold">
                     ✓
@@ -1403,7 +1385,7 @@ function PricingTeaser() {
               href="#"
               className="mt-6 sm:mt-7 inline-flex items-center justify-center gap-2 w-full rounded-full bg-card border border-border px-5 py-3.5 text-sm font-bold hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
             >
-              კურსების ნახვა
+              {dict.pricing.soloCta}
               <span aria-hidden>→</span>
             </a>
           </div>
@@ -1418,6 +1400,7 @@ function PricingTeaser() {
    ============================================================ */
 
 function CtaBanner() {
+  const { dict } = useV2Locale();
   return (
     <section className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-5xl">
@@ -1438,32 +1421,32 @@ function CtaBanner() {
                 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                მზად ხარ{' '}
+                {dict.ctaBanner.titleBefore}{' '}
                 <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
-                  AI-ს სამყაროსთვის?
+                  {dict.ctaBanner.titleHighlight}
                 </span>
               </h2>
               <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0 leading-relaxed">
-                დაიწყე უფასოდ. პირველი გაკვეთილი ჩემგან — შემდეგ შენი არჩევანია.
+                {dict.ctaBanner.description}
               </p>
               <div className="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
                 <a
                   href="#"
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 text-sm sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                 >
-                  უფასოდ დაწყება
+                  {dict.ctaBanner.ctaPrimary}
                   <span aria-hidden>→</span>
                 </a>
                 <a
                   href="#categories"
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-6 py-3.5 text-sm sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
                 >
-                  კურსების ნახვა
+                  {dict.ctaBanner.ctaSecondary}
                 </a>
               </div>
               <p className="mt-3 text-[11px] text-muted-foreground inline-flex items-center gap-1.5 md:justify-start justify-center w-full">
                 <span className="text-pulse">✓</span>
-                გადახდის გარეშე · გაუქმდება ნებისმიერ დროს
+                {dict.ctaBanner.trustMicro}
               </p>
             </div>
             <div className="flex justify-center md:justify-end">
@@ -1483,17 +1466,18 @@ function CtaBanner() {
    ============================================================ */
 
 function Footer({ categories }: { categories: Category[] }) {
+  const { dict, href } = useV2Locale();
   return (
     <footer className="border-t border-border bg-muted/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14 lg:py-16">
         <div className="grid gap-8 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
-            <a href="/v2" className="inline-flex items-center gap-2 mb-3 sm:mb-4">
+            <a href={href()} className="inline-flex items-center gap-2 mb-3 sm:mb-4">
               <Walli size={32} state="idle" noShadow />
-              <span className="text-base font-bold tracking-tight">walle.school</span>
+              <span className="text-base font-bold tracking-tight">{dict.meta.brandName}</span>
             </a>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-              ქართული AI აკადემია. Walli ასწავლის ქართულად — ბავშვებს, ახალგაზრდებს, უფროსებს.
+              {dict.footer.about}
             </p>
             <div className="mt-4 sm:mt-5 flex items-center gap-2">
               <SocialIcon href="#" label="Facebook">
@@ -1517,41 +1501,75 @@ function Footer({ categories }: { categories: Category[] }) {
           </div>
 
           <FooterColumn
-            title="კატეგორიები"
-            links={categories.map((c) => ({ label: c.nameKa, href: `/v2#cat-${c.id}` }))}
+            title={dict.footer.columnCategories}
+            links={categories.map((c) => ({ label: c.name, href: `${href()}#cat-${c.id}` }))}
           />
           <FooterColumn
-            title="პროდუქტი"
+            title={dict.footer.columnProduct}
             links={[
-              { label: 'კურსები', href: '#courses' },
-              { label: 'ფასები', href: '#pricing' },
-              { label: 'მშობლებისთვის', href: '#audiences' },
-              { label: 'უფასო გასინჯვა', href: '#' },
+              { label: dict.footer.productCourses, href: '#courses' },
+              { label: dict.footer.productPricing, href: '#pricing' },
+              { label: dict.footer.productParents, href: '#audiences' },
+              { label: dict.footer.productFreeSample, href: '#' },
             ]}
           />
           <FooterColumn
-            title="კომპანია"
+            title={dict.footer.columnCompany}
             links={[
-              { label: 'ჩვენ შესახებ', href: '#' },
-              { label: 'კონტაქტი', href: '#' },
-              { label: 'პრივატულობა', href: '#' },
-              { label: 'წესები', href: '#' },
+              { label: dict.footer.companyAbout, href: '#' },
+              { label: dict.footer.companyContact, href: '#' },
+              { label: dict.footer.companyPrivacy, href: '#' },
+              { label: dict.footer.companyTerms, href: '#' },
             ]}
           />
         </div>
 
         <div className="mt-8 sm:mt-10 pt-5 sm:pt-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
-          <p>© 2026 walle.school · ყველა უფლება დაცულია</p>
-          <div className="flex items-center gap-1.5">
-            <button className="font-bold text-foreground hover:text-pulse transition-colors">
-              ქართული
-            </button>
-            <span className="opacity-50">/</span>
-            <button className="hover:text-foreground transition-colors">English</button>
-          </div>
+          <p>{dict.footer.copyright}</p>
+          <FooterLocaleSwitch />
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterLocaleSwitch() {
+  const { locale, dict } = useV2Locale();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const go = (target: Locale) => {
+    if (target === locale) return;
+    const newPath = pathname.replace(/^\/v2\/(ka|en)(?=\/|$)/, `/v2/${target}`);
+    router.push(newPath);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={() => go('ka')}
+        className={cn(
+          'transition-colors',
+          locale === 'ka'
+            ? 'font-bold text-foreground'
+            : 'hover:text-foreground text-muted-foreground',
+        )}
+      >
+        {dict.footer.languageKa}
+      </button>
+      <span className="opacity-50">/</span>
+      <button
+        onClick={() => go('en')}
+        className={cn(
+          'transition-colors',
+          locale === 'en'
+            ? 'font-bold text-foreground'
+            : 'hover:text-foreground text-muted-foreground',
+        )}
+      >
+        {dict.footer.languageEn}
+      </button>
+    </div>
   );
 }
 

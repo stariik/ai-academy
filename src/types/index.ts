@@ -68,8 +68,11 @@ export type LessonPage = {
 export type Lesson = {
   id: string;
   title: string;
+  titleEn?: string | null;
   description: string;
+  descriptionEn?: string | null;
   learningObjectives: string[];
+  learningObjectivesEn?: string[] | null;
   contentBlocks: ContentBlock[];
   keyConcepts: { term: string; definition: string }[];
   summary: string;
@@ -190,7 +193,9 @@ export type GeminiPagedLessonResponse = {
 export type Course = {
   id: string;
   title: string;
+  titleEn?: string | null;
   description: string;
+  descriptionEn?: string | null;
   tags: string[];
   userId?: string | null;
   createdAt: string;

@@ -29,10 +29,28 @@ import { FinalQuizV2 } from './FinalQuizV2';
 import { CompletionView } from './CompletionView';
 import type { WrongAnswer } from './CheckQuestionsV2';
 import { cn } from '@/lib/utils';
+import { V2LocaleProvider } from '@/lib/v2/i18n/context';
+import type { Dict, Locale } from '@/lib/v2/i18n';
 
 const CONTENT_PREF_KEY = 'walle:v2-lesson-content-visible';
 
-export default function LessonClient({ lessonId }: { lessonId: string }) {
+export default function LessonClient({
+  lessonId,
+  dict,
+  locale,
+}: {
+  lessonId: string;
+  dict: Dict;
+  locale: Locale;
+}) {
+  return (
+    <V2LocaleProvider locale={locale} dict={dict}>
+      <LessonClientInner lessonId={lessonId} />
+    </V2LocaleProvider>
+  );
+}
+
+function LessonClientInner({ lessonId }: { lessonId: string }) {
   const { sessionId } = useSession();
   const [lesson, setLesson] = React.useState<Lesson | null>(null);
   const [loading, setLoading] = React.useState(true);

@@ -1,9 +1,6 @@
-import LandingClient from './_components/LandingClient';
-import { getCategories, getCourses } from '@/lib/v2/db';
+import { redirect } from 'next/navigation';
+import { DEFAULT_LOCALE } from '@/lib/v2/i18n';
 
-export const dynamic = 'force-dynamic';
-
-export default async function LandingPage() {
-  const [categories, courses] = await Promise.all([getCategories(), getCourses()]);
-  return <LandingClient categories={categories} courses={courses} />;
+export default function V2RootPage() {
+  redirect(`/v2/${DEFAULT_LOCALE}`);
 }

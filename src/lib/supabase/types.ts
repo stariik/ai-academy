@@ -5,8 +5,11 @@
 export type LessonRow = {
   id: string;
   title: string;
+  title_en: string | null;
   description: string;
+  description_en: string | null;
   learning_objectives: string[];
+  learning_objectives_en: string[] | null;
   key_concepts: { term: string; definition: string }[];
   summary: string;
   source_document: string;
@@ -64,7 +67,9 @@ export type LessonPageRow = {
 export type CourseRow = {
   id: string;
   title: string;
+  title_en: string | null;
   description: string;
+  description_en: string | null;
   tags: string[];
   user_id: string | null;
   created_at: string;

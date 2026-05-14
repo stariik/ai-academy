@@ -31,9 +31,11 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  AUDIENCE_LABEL, LEVEL_LABEL, LEVEL_DOTS, TONE_CLASSES,
+  LEVEL_DOTS, TONE_CLASSES,
   type Course, type Category, type CourseDetail, type Module, type Lesson,
 } from '@/lib/v2/data';
+import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
+import type { Dict, Locale } from '@/lib/v2/i18n';
 
 /* ============================================================
    Mock enrollment (until real auth + DB lands)
@@ -70,13 +72,21 @@ export default function CourseDetailClient({
   category,
   detail,
   related,
+  dict,
+  locale,
 }: {
   course: Course;
   category: Category;
   detail: CourseDetail;
   related: Course[];
+  dict: Dict;
+  locale: Locale;
 }) {
-  return <CoursePage course={course} category={category} detail={detail} related={related} />;
+  return (
+    <V2LocaleProvider locale={locale} dict={dict}>
+      <CoursePage course={course} category={category} detail={detail} related={related} />
+    </V2LocaleProvider>
+  );
 }
 
 /* ============================================================
@@ -96,6 +106,7 @@ function CoursePage({
   detail: CourseDetail;
   related: Course[];
 }) {
+  const { dict, href: localeHref } = useV2Locale();
   // --- view state -----------------------------------------------------------
   const { user } = useAuth();
   const [viewAs, setViewAs] = React.useState<ViewAs | null>(null);
@@ -334,6 +345,7 @@ function Hero({
   totalLessons: number;
   previewHref: string;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const reduced = useReducedMotion();
   const [walliState, setWalliState] = React.useState<WalliState>('idle');
@@ -374,7 +386,7 @@ function Hero({
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span className={t.text}>{category.icon}</span>
-            <span>{category.nameKa}</span>
+            <span>{category.name}</span>
           </a>
         </motion.div>
 
@@ -389,10 +401,10 @@ function Hero({
             <div className="flex flex-wrap items-center gap-2">
               <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold', t.chip)}>
                 <Sparkles className="w-3.5 h-3.5" />
-                {LEVEL_LABEL[course.level]}
+                {dict.level[course.level]}
               </span>
               <span className="inline-flex items-center rounded-full border border-border bg-card/80 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                {AUDIENCE_LABEL[course.audience]}
+                {dict.audienceTag[course.audience]}
               </span>
               {isEnrolled && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-2.5 py-1 text-[11px] font-bold">
@@ -406,18 +418,18 @@ function Hero({
               className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              {course.titleKa}
+              {course.title}
             </h1>
 
             <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
-              {detail.longDescriptionKa}
+              {detail.longDescription}
             </p>
 
             {/* Stats strip */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-1">
               <Stat icon={<BookOpen className="w-4 h-4" />} label={`${course.lessons} გაკვეთილი`} />
               <Stat icon={<Clock className="w-4 h-4" />} label={`~${course.hours} საათი`} />
-              <Stat icon={<LevelDots level={course.level} tone={category.tone} />} label={LEVEL_LABEL[course.level]} />
+              <Stat icon={<LevelDots level={course.level} tone={category.tone} />} label={dict.level[course.level]} />
               <Stat icon={<Users className="w-4 h-4" />} label="2,400+ მოსწავლე" />
             </div>
 
@@ -577,7 +589,7 @@ function FloatingPill({
 
 function OutcomesSection({ detail, category }: { detail: CourseDetail; category: Category }) {
   const t = TONE_CLASSES[category.tone];
-  if (detail.outcomesKa.length === 0) return null;
+  if (detail.outcomes.length === 0) return null;
   return (
     <section>
       <div className="mb-4 sm:mb-5">
@@ -591,9 +603,9 @@ function OutcomesSection({ detail, category }: { detail: CourseDetail; category:
       </div>
 
       <div className="grid gap-2.5 sm:gap-3 grid-cols-2 lg:grid-cols-4 items-start">
-        {detail.outcomesKa.map((o, i) => (
+        {detail.outcomes.map((o, i) => (
           <motion.div
-            key={o.titleKa}
+            key={o.title}
             initial={{ opacity: 0, y: 8 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
@@ -609,11 +621,11 @@ function OutcomesSection({ detail, category }: { detail: CourseDetail; category:
                 className="text-xs sm:text-sm font-bold leading-snug line-clamp-2"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                {o.titleKa}
+                {o.title}
               </h3>
-              {o.descriptionKa && (
+              {o.description && (
                 <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                  {o.descriptionKa}
+                  {o.description}
                 </p>
               )}
             </div>
@@ -629,11 +641,11 @@ function OutcomesSection({ detail, category }: { detail: CourseDetail; category:
                 className="text-sm font-bold leading-snug"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                {o.titleKa}
+                {o.title}
               </h3>
-              {o.descriptionKa && (
+              {o.description && (
                 <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                  {o.descriptionKa}
+                  {o.description}
                 </p>
               )}
             </div>
@@ -705,12 +717,12 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
             >
               "
             </span>
-            <span className="relative">{detail.walliQuoteKa}</span>
+            <span className="relative">{detail.walliQuote}</span>
           </blockquote>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
             გაკვეთილში ნებისმიერ წერტილში მკითხე — ვუპასუხებ ისე, როგორც გესაჭიროება.{' '}
-            <span className="text-foreground font-semibold">{course.titleKa}</span> — ერთად დავიწყოთ.
+            <span className="text-foreground font-semibold">{course.title}</span> — ერთად დავიწყოთ.
           </p>
         </div>
       </div>
@@ -823,7 +835,7 @@ function ModuleCard({
 
         <div className="flex-1 min-w-0">
           <h3 className="text-base sm:text-lg font-bold leading-tight truncate" style={{ fontFamily: 'var(--font-display)' }}>
-            {module.titleKa}
+            {module.title}
           </h3>
           <div className="mt-1 flex items-center gap-2.5 text-xs text-muted-foreground flex-wrap">
             <span>{module.lessons.length} გაკვეთილი</span>
@@ -859,8 +871,8 @@ function ModuleCard({
             className="overflow-hidden"
           >
             <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-1 border-t border-border">
-              {module.taglineKa && (
-                <p className="text-xs text-muted-foreground italic mb-3 mt-3">{module.taglineKa}</p>
+              {module.tagline && (
+                <p className="text-xs text-muted-foreground italic mb-3 mt-3">{module.tagline}</p>
               )}
               <ul className="divide-y divide-border/60">
                 {module.lessons.map((l) => (
@@ -926,7 +938,7 @@ function LessonRow({
           'text-sm sm:text-[0.95rem] font-semibold leading-snug truncate',
           isCompleted && 'text-muted-foreground line-through decoration-1 decoration-pulse/40',
         )}>
-          {lesson.titleKa}
+          {lesson.title}
         </p>
         <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1">
@@ -998,7 +1010,7 @@ function RelatedCoursesSection({ related, category: cat }: { related: Course[]; 
               </div>
               <div className="p-4 sm:p-5">
                 <h4 className="text-base font-bold leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
-                  {co.titleKa}
+                  {co.title}
                 </h4>
                 <div className="mt-2.5 flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{co.lessons} გაკვეთილი · ~{co.hours} სთ</span>
@@ -1089,7 +1101,7 @@ function PurchaseCard({
           რა შედის
         </p>
         <ul className="space-y-2.5">
-          {detail.whatsIncludedKa.map((item, i) => {
+          {detail.whatsIncluded.map((item, i) => {
             const Icon = INCLUDED_ICONS[i % INCLUDED_ICONS.length];
             return (
               <li key={item} className="flex items-start gap-3 text-sm">
@@ -1110,13 +1122,13 @@ function PurchaseCard({
       </div>
 
       {/* Prerequisites */}
-      {detail.prerequisitesKa.length > 0 && (
+      {detail.prerequisites.length > 0 && (
         <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-border pt-5">
           <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold mb-2">
             წინაპირობები
           </p>
           <ul className="space-y-1.5">
-            {detail.prerequisitesKa.map((p) => (
+            {detail.prerequisites.map((p) => (
               <li key={p} className="flex items-start gap-2 text-xs text-foreground/80">
                 <CircleDot className="flex-shrink-0 w-3 h-3 mt-0.5 text-muted-foreground" />
                 <span>{p}</span>
@@ -1339,7 +1351,7 @@ function EnrolledRailContent({
             className="text-base font-bold mt-0.5 truncate"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            {course.titleKa}
+            {course.title}
           </p>
         </div>
       </div>

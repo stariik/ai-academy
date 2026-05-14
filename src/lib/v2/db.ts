@@ -3,13 +3,26 @@
 // from the real `courses` and `lessons` Supabase tables.
 // Visual fields (icon, tone, audience, English name, tagline) come from
 // the static CATEGORY_VISUALS map in `./data.ts`.
+// All returned strings are already-localized — components do not pick.
 // ============================================================
 
 import { createClient } from '@/lib/supabase/server';
 import { getAllCourses, getAllLessons } from '@/lib/supabase/db';
 import { CATEGORIES as CANONICAL_CATEGORIES } from '@/lib/constants/categories';
-import { CATEGORY_VISUALS } from './data';
-import type { Category, Course, CourseDetail, Level, Module, Lesson as V2Lesson } from './data';
+import {
+  CATEGORY_VISUALS,
+  pickLocale,
+  getCategoryDisplay,
+} from './data';
+import type {
+  Category,
+  Course,
+  CourseDetail,
+  Level,
+  Module,
+  Lesson as V2Lesson,
+} from './data';
+import { getDict, type Locale } from './i18n';
 import type { Course as RealCourse, Lesson as RealLesson } from '@/types';
 
 function firstCanonicalTag(tags: string[]): string | null {
@@ -40,19 +53,21 @@ function totalMinutes(lessons: RealLesson[]): number {
 
 function buildCategory(
   nameKa: string,
+  locale: Locale,
   coursesInCat: RealCourse[],
   lessonsByCourse: Map<string, RealLesson[]>,
 ): Category {
   const visual = CATEGORY_VISUALS[nameKa];
+  const display = getCategoryDisplay(nameKa, locale);
   const totalLessons = coursesInCat.reduce(
     (sum, co) => sum + (lessonsByCourse.get(co.id)?.length ?? 0),
     0,
   );
   return {
     id: visual.slug,
+    name: display.name,
+    tagline: display.tagline,
     nameKa,
-    nameEn: visual.nameEn,
-    taglineKa: visual.taglineKa,
     audience: visual.audience,
     courses: coursesInCat.length,
     lessons: totalLessons,
@@ -63,6 +78,7 @@ function buildCategory(
 
 function buildCourse(
   real: RealCourse,
+  locale: Locale,
   lessonsForCourse: RealLesson[],
 ): Course | null {
   const tag = firstCanonicalTag(real.tags ?? []);
@@ -70,8 +86,8 @@ function buildCourse(
   const visual = CATEGORY_VISUALS[tag];
   return {
     id: real.id,
-    titleKa: real.title,
-    description: real.description,
+    title: pickLocale(locale, real.title, real.titleEn ?? undefined),
+    description: pickLocale(locale, real.description, real.descriptionEn ?? undefined),
     categoryId: visual.slug,
     audience: visual.audience,
     lessons: lessonsForCourse.length,
@@ -97,7 +113,7 @@ async function loadAll() {
   return { courses, lessons, lessonsByCourse };
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(locale: Locale): Promise<Category[]> {
   const { courses, lessonsByCourse } = await loadAll();
 
   // Group real courses by their first canonical tag.
@@ -112,14 +128,14 @@ export async function getCategories(): Promise<Category[]> {
 
   // Emit one Category per canonical name, in the canonical order.
   return CANONICAL_CATEGORIES.map((nameKa) =>
-    buildCategory(nameKa, byTag.get(nameKa) ?? [], lessonsByCourse),
+    buildCategory(nameKa, locale, byTag.get(nameKa) ?? [], lessonsByCourse),
   );
 }
 
-export async function getCourses(): Promise<Course[]> {
+export async function getCourses(locale: Locale): Promise<Course[]> {
   const { courses, lessonsByCourse } = await loadAll();
   return courses
-    .map((co) => buildCourse(co, lessonsByCourse.get(co.id) ?? []))
+    .map((co) => buildCourse(co, locale, lessonsByCourse.get(co.id) ?? []))
     .filter((c): c is Course => c !== null);
 }
 
@@ -130,87 +146,114 @@ export type V2CoursePayload = {
   related: Course[];
 };
 
-function lessonsAsModule(courseSlug: string, lessons: RealLesson[]): Module[] {
+function lessonsAsModule(
+  courseSlug: string,
+  locale: Locale,
+  lessons: RealLesson[],
+): Module[] {
   if (lessons.length === 0) return [];
+  const dict = getDict(locale);
   const sorted = [...lessons].sort(
     (a, b) => (a.positionInCourse ?? 0) - (b.positionInCourse ?? 0),
   );
   const moduleLessons: V2Lesson[] = sorted.map((l, idx) => ({
     id: l.id,
     numberLabel: (idx + 1).toString().padStart(2, '0'),
-    titleKa: l.title,
+    title: pickLocale(locale, l.title, l.titleEn ?? undefined),
     durationMin: l.estimatedDurationMinutes ?? 15,
     isFree: idx === 0,
-    descriptionKa: l.description || '',
+    description: pickLocale(locale, l.description, l.descriptionEn ?? undefined),
   }));
   return [
     {
       id: `${courseSlug}-curriculum`,
-      titleKa: 'კურიკულუმი',
-      taglineKa: 'ყველა გაკვეთილი ამ კურსში — შენი ტემპით.',
+      title: dict.courseDetail.curriculumEyebrow,
+      tagline: dict.courseDetail.curriculumTitle,
       lessons: moduleLessons,
     },
   ];
 }
 
-function deriveOutcomes(lessons: RealLesson[]): { titleKa: string; descriptionKa: string }[] {
+function deriveOutcomes(
+  locale: Locale,
+  lessons: RealLesson[],
+): { title: string; description: string }[] {
   const objectives = lessons
-    .flatMap((l) => l.learningObjectives ?? [])
-    .filter((s) => typeof s === 'string' && s.trim().length > 0)
+    .flatMap((l) =>
+      pickLocale(locale, l.learningObjectives, l.learningObjectivesEn ?? undefined) ?? [],
+    )
+    .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
     .slice(0, 4);
-  return objectives.map((o) => ({
-    titleKa: o,
-    descriptionKa: '',
-  }));
+  return objectives.map((o) => ({ title: o, description: '' }));
 }
 
-export async function getCoursePayload(slug: string): Promise<V2CoursePayload | null> {
+export async function getCoursePayload(
+  slug: string,
+  locale: Locale,
+): Promise<V2CoursePayload | null> {
   const { courses, lessonsByCourse } = await loadAll();
   const real = courses.find((c) => c.id === slug);
   if (!real) return null;
 
   const tag = firstCanonicalTag(real.tags ?? []);
   if (!tag) return null;
-  const visual = CATEGORY_VISUALS[tag];
 
   const courseLessons = lessonsByCourse.get(real.id) ?? [];
-  const course = buildCourse(real, courseLessons);
+  const course = buildCourse(real, locale, courseLessons);
   if (!course) return null;
 
   const sameCatCourses = courses.filter(
     (c) => c.id !== real.id && firstCanonicalTag(c.tags ?? []) === tag,
   );
   const related = sameCatCourses
-    .map((c) => buildCourse(c, lessonsByCourse.get(c.id) ?? []))
+    .map((c) => buildCourse(c, locale, lessonsByCourse.get(c.id) ?? []))
     .filter((c): c is Course => c !== null)
     .slice(0, 4);
 
   const category = buildCategory(
     tag,
+    locale,
     courses.filter((c) => firstCanonicalTag(c.tags ?? []) === tag),
     lessonsByCourse,
   );
 
+  const dict = getDict(locale);
+  const isEn = locale === 'en';
+
   const detail: CourseDetail = {
-    taglineKa: visual.taglineKa,
-    longDescriptionKa: real.description || '',
-    walliQuoteKa:
-      'მე ვიქნები შენი მასწავლებელი ამ კურსში. არ ვჩქარობ — შენი ტემპი მართავს. თუ რამე გაუგებარია, ვაჭერთ "ახსენი უფრო მარტივად" და ვიწყებთ თავიდან, ახლებურად.',
-    outcomesKa: deriveOutcomes(courseLessons),
-    prerequisitesKa: [
+    tagline: category.tagline,
+    longDescription: course.description ?? '',
+    walliQuote: isEn
+      ? 'I am your tutor for this course. No rush — your pace runs the show. If something is unclear, tap "Explain more simply" and we start over, a different way.'
+      : 'მე ვიქნები შენი მასწავლებელი ამ კურსში. არ ვჩქარობ — შენი ტემპი მართავს. თუ რამე გაუგებარია, ვაჭერთ "ახსენი უფრო მარტივად" და ვიწყებთ თავიდან, ახლებურად.',
+    outcomes: deriveOutcomes(locale, courseLessons),
+    prerequisites: [
       course.level === 'advanced'
-        ? 'წინასწარი გამოცდილება AI-სთან'
+        ? isEn
+          ? 'Prior hands-on experience with AI'
+          : 'წინასწარი გამოცდილება AI-სთან'
         : course.level === 'intermediate'
-          ? 'AI-ხელსაწყოს ძირითადი გაცნობა'
-          : 'არანაირი — დავიწყებთ ნულიდან',
+          ? isEn
+            ? 'Familiarity with an AI tool'
+            : 'AI-ხელსაწყოს ძირითადი გაცნობა'
+          : isEn
+            ? 'None — we start from zero'
+            : 'არანაირი — დავიწყებთ ნულიდან',
     ],
-    whatsIncludedKa: [
-      `${course.lessons} გაკვეთილი — სამუდამო წვდომა`,
-      'AI მასწავლებელი 24/7 — Walli არ იღლება',
-      'პრაქტიკული სავარჯიშოები ყოველი გაკვეთილის ბოლოს',
-      'ციფრული სერთიფიკატი დასრულების შემდეგ',
-    ],
-    modules: lessonsAsModule(real.id, courseLessons),
+    whatsIncluded: isEn
+      ? [
+          `${course.lessons} lessons — lifetime access`,
+          'AI tutor 24/7 — Walli never tires',
+          'Practical exercises after every lesson',
+          'Digital certificate upon completion',
+        ]
+      : [
+          `${course.lessons} ${dict.courseDetail.lessonsLabel} — სამუდამო წვდომა`,
+          'AI მასწავლებელი 24/7 — Walli არ იღლება',
+          'პრაქტიკული სავარჯიშოები ყოველი გაკვეთილის ბოლოს',
+          'ციფრული სერთიფიკატი დასრულების შემდეგ',
+        ],
+    modules: lessonsAsModule(real.id, locale, courseLessons),
   };
 
   return { course, category, detail, related };

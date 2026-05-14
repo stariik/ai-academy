@@ -98,8 +98,11 @@ export function assembleLesson(
   const lesson: Lesson = {
     id: row.id,
     title: row.title,
+    titleEn: row.title_en ?? null,
     description: row.description,
+    descriptionEn: row.description_en ?? null,
     learningObjectives: row.learning_objectives,
+    learningObjectivesEn: row.learning_objectives_en ?? null,
     contentBlocks: contentBlocks
       .filter((cb) => !cb.page_id)
       .sort((a, b) => a.order - b.order)
@@ -349,7 +352,9 @@ export async function createCourse(
   return {
     id: row.id,
     title: row.title,
+    titleEn: row.title_en ?? null,
     description: row.description,
+    descriptionEn: row.description_en ?? null,
     tags: row.tags,
     userId: row.user_id,
     createdAt: row.created_at,
@@ -367,7 +372,9 @@ export async function getAllCourses(supabase: SupabaseClient): Promise<Course[]>
   return (data as CourseRow[]).map((row) => ({
     id: row.id,
     title: row.title,
+    titleEn: row.title_en ?? null,
     description: row.description,
+    descriptionEn: row.description_en ?? null,
     tags: row.tags,
     userId: row.user_id,
     createdAt: row.created_at,
@@ -382,7 +389,9 @@ export async function getCourse(supabase: SupabaseClient, id: string): Promise<C
   return {
     id: row.id,
     title: row.title,
+    titleEn: row.title_en ?? null,
     description: row.description,
+    descriptionEn: row.description_en ?? null,
     tags: row.tags,
     userId: row.user_id,
     createdAt: row.created_at,
