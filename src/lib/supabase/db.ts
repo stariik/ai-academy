@@ -1627,3 +1627,76 @@ export async function getCourseLeaderboard(
 
   return entries.slice(0, limit).map((e, i) => ({ ...e, rank: i + 1 }));
 }
+
+// ============================================================
+// Global leaderboard — ranked by canonical total_xp on student_profiles
+// ============================================================
+
+export type GlobalLeaderboardResult = {
+  top: LeaderboardEntry[];
+  total: number;
+  yourRank: number | null;
+  yourXp: number;
+};
+
+export async function getGlobalLeaderboard(
+  supabase: SupabaseClient,
+  sessionId: string | null,
+  limit = 50,
+): Promise<GlobalLeaderboardResult> {
+  // Pull every profile with non-zero XP, ranked. With realistic learner
+  // counts this is fine; if it gets huge we'd add a server-side window
+  // function. For now, ordering in the DB and slicing in JS is plenty.
+  const { data: profileRows } = await supabase
+    .from('student_profiles')
+    .select('session_id, total_xp')
+    .gt('total_xp', 0)
+    .order('total_xp', { ascending: false });
+
+  const profiles = (profileRows ?? []) as { session_id: string; total_xp: number }[];
+  const total = profiles.length;
+  if (total === 0) return { top: [], total: 0, yourRank: null, yourXp: 0 };
+
+  const topSlice = profiles.slice(0, limit);
+  const topSessionIds = topSlice.map((p) => p.session_id);
+
+  // Display names + lesson-completed counts for the visible top slice.
+  const { data: sessionRows } = await supabase
+    .from('student_sessions')
+    .select('id, display_name')
+    .in('id', topSessionIds);
+  const nameById = new Map(
+    (sessionRows ?? []).map((s: { id: string; display_name: string }) => [s.id, s.display_name]),
+  );
+
+  const { data: progressRows } = await supabase
+    .from('lesson_progress')
+    .select('session_id')
+    .in('session_id', topSessionIds)
+    .eq('status', 'completed');
+  const completedBySession = new Map<string, number>();
+  for (const p of (progressRows ?? []) as { session_id: string }[]) {
+    completedBySession.set(p.session_id, (completedBySession.get(p.session_id) ?? 0) + 1);
+  }
+
+  const top: LeaderboardEntry[] = topSlice.map((p, i) => ({
+    sessionId: p.session_id,
+    displayName: nameById.get(p.session_id) ?? 'Student',
+    xp: p.total_xp,
+    lessonsCompleted: completedBySession.get(p.session_id) ?? 0,
+    rank: i + 1,
+  }));
+
+  // Find caller's row in the full ranked list.
+  let yourRank: number | null = null;
+  let yourXp = 0;
+  if (sessionId) {
+    const idx = profiles.findIndex((p) => p.session_id === sessionId);
+    if (idx >= 0) {
+      yourRank = idx + 1;
+      yourXp = profiles[idx].total_xp;
+    }
+  }
+
+  return { top, total, yourRank, yourXp };
+}
