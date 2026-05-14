@@ -22,6 +22,8 @@ import {
 } from '@/lib/gamification/award';
 import type { StudentProfile, UserBadge, Course, Lesson } from '@/types';
 import type { GlobalLeaderboardResult } from '@/lib/supabase/db';
+import { CATEGORY_VISUALS, type Tone, type AudienceTag } from '@/lib/v2/data';
+import { CATEGORIES as CANONICAL_CATEGORIES } from '@/lib/constants/categories';
 
 export type ActivityDay = {
   /** ISO date yyyy-mm-dd in the user's local-equivalent UTC slice. */
@@ -39,7 +41,27 @@ export type CourseProgress = {
   completedLessons: number;
   pct: number;
   nextLessonId: string | null;
+  categorySlug: string | null;
 };
+
+export type CategoryProgress = {
+  categorySlug: string;
+  nameKa: string;
+  icon: string;
+  tone: Tone;
+  audience: AudienceTag;
+  totalLessons: number;
+  completedLessons: number;
+  pct: number;
+};
+
+export type RecommendedNext = {
+  lessonId: string;
+  courseId: string;
+  courseTitle: string;
+  categorySlug: string | null;
+  pct: number;
+} | null;
 
 export type ProfilePayload = {
   sessionId: string;
@@ -58,6 +80,8 @@ export type ProfilePayload = {
   completedToday: boolean;
   totalCompletedLessons: number;
   courseProgress: CourseProgress[];
+  categoryProgress: CategoryProgress[];
+  recommendedNext: RecommendedNext;
 };
 
 const HEATMAP_WEEKS = 14;
@@ -147,30 +171,84 @@ export async function getProfilePayload(): Promise<ProfilePayload> {
     lessonsByCourse.set(l.courseId, arr);
   }
 
-  const courseProgress: CourseProgress[] = courses
-    .map((c) => {
-      const lessons = (lessonsByCourse.get(c.id) ?? []).sort(
-        (a, b) => (a.positionInCourse ?? 0) - (b.positionInCourse ?? 0),
-      );
-      const completed = lessons.filter((l) => completedIds.has(l.id)).length;
-      if (completed === 0 && lessons.length > 0) {
-        // Not started — exclude from "your courses" so the list is just
-        // courses with measurable progress. The Catalog handles discovery.
-        return null;
-      }
-      const next = lessons.find((l) => !completedIds.has(l.id));
-      return {
-        courseId: c.id,
-        courseTitle: c.title,
-        totalLessons: lessons.length,
-        completedLessons: completed,
-        pct: lessons.length === 0 ? 0 : Math.round((completed / lessons.length) * 100),
-        nextLessonId: next?.id ?? null,
-      };
-    })
-    .filter((c): c is CourseProgress => c !== null)
-    // Most-progressed first; ties broken by remaining lessons (small fav first).
+  // First canonical-tag lookup so we can attach categorySlug to each course.
+  const firstCanonicalTag = (tags: string[]): string | null => {
+    for (const tag of tags) {
+      if (CATEGORY_VISUALS[tag]) return tag;
+    }
+    return null;
+  };
+
+  const allCourseProgress = courses.map((c) => {
+    const lessons = (lessonsByCourse.get(c.id) ?? []).sort(
+      (a, b) => (a.positionInCourse ?? 0) - (b.positionInCourse ?? 0),
+    );
+    const completed = lessons.filter((l) => completedIds.has(l.id)).length;
+    const next = lessons.find((l) => !completedIds.has(l.id));
+    const tag = firstCanonicalTag(c.tags ?? []);
+    const slug = tag ? CATEGORY_VISUALS[tag].slug : null;
+    return {
+      courseId: c.id,
+      courseTitle: c.title,
+      totalLessons: lessons.length,
+      completedLessons: completed,
+      pct: lessons.length === 0 ? 0 : Math.round((completed / lessons.length) * 100),
+      nextLessonId: next?.id ?? null,
+      categorySlug: slug,
+      tag,
+    };
+  });
+
+  const courseProgress: CourseProgress[] = allCourseProgress
+    .filter((c) => c.completedLessons > 0)
+    .map(({ tag: _tag, ...c }) => c)
     .sort((a, b) => b.pct - a.pct || a.totalLessons - b.totalLessons);
+
+  // Per-canonical-category aggregation (always emit all 9 so the UI is stable).
+  const categoryProgress: CategoryProgress[] = CANONICAL_CATEGORIES.map((nameKa) => {
+    const visual = CATEGORY_VISUALS[nameKa];
+    const inCat = allCourseProgress.filter((c) => c.tag === nameKa);
+    const totalLessons = inCat.reduce((sum, c) => sum + c.totalLessons, 0);
+    const completedLessons = inCat.reduce((sum, c) => sum + c.completedLessons, 0);
+    return {
+      categorySlug: visual.slug,
+      nameKa,
+      icon: visual.icon,
+      tone: visual.tone,
+      audience: visual.audience,
+      totalLessons,
+      completedLessons,
+      pct: totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100),
+    };
+  });
+
+  // Recommended next: the in-progress course closest to completion (highest pct
+  // under 100), or the lowest-progress untouched category's first course.
+  let recommendedNext: RecommendedNext = null;
+  const partial = courseProgress.find((c) => c.pct < 100 && c.nextLessonId !== null);
+  if (partial) {
+    recommendedNext = {
+      lessonId: partial.nextLessonId!,
+      courseId: partial.courseId,
+      courseTitle: partial.courseTitle,
+      categorySlug: partial.categorySlug,
+      pct: partial.pct,
+    };
+  } else {
+    // No partials → suggest a category the user hasn't touched yet.
+    const untouched = allCourseProgress.find(
+      (c) => c.completedLessons === 0 && c.nextLessonId !== null,
+    );
+    if (untouched) {
+      recommendedNext = {
+        lessonId: untouched.nextLessonId!,
+        courseId: untouched.courseId,
+        courseTitle: untouched.courseTitle,
+        categorySlug: untouched.categorySlug,
+        pct: 0,
+      };
+    }
+  }
 
   return {
     sessionId,
@@ -184,13 +262,20 @@ export async function getProfilePayload(): Promise<ProfilePayload> {
     completedToday,
     totalCompletedLessons,
     courseProgress,
+    categoryProgress,
+    recommendedNext,
   };
 }
+
+export type PublicProfilePayload = Omit<
+  ProfilePayload,
+  'sessionId' | 'shareToken' | 'courseProgress' | 'categoryProgress' | 'recommendedNext'
+>;
 
 /** Public read-only view via share token — no session cookie required. */
 export async function getPublicProfileByToken(
   token: string,
-): Promise<Omit<ProfilePayload, 'sessionId' | 'shareToken' | 'courseProgress'> | null> {
+): Promise<PublicProfilePayload | null> {
   const supabase = await createClient();
   const session = await getSessionByShareToken(supabase, token);
   if (!session) return null;

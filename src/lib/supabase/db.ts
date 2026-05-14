@@ -1340,6 +1340,20 @@ export async function revokeShareToken(
   if (error) throw new Error(`Failed to revoke share token: ${error.message}`);
 }
 
+export async function setSessionDisplayName(
+  supabase: SupabaseClient,
+  sessionId: string,
+  displayName: string,
+): Promise<void> {
+  const trimmed = displayName.trim().slice(0, 60);
+  if (trimmed.length === 0) throw new Error('Display name cannot be empty');
+  const { error } = await supabase
+    .from('student_sessions')
+    .update({ display_name: trimmed })
+    .eq('id', sessionId);
+  if (error) throw new Error(`Failed to update display name: ${error.message}`);
+}
+
 export async function getSessionByShareToken(
   supabase: SupabaseClient,
   token: string
