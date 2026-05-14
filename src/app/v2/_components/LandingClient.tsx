@@ -449,10 +449,11 @@ function HorizontalSlider({
   ariaLabel?: string;
 }) {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
-  const dragging = React.useRef(false);
-  const moved = React.useRef(false);
-  const startX = React.useRef(0);
-  const startScroll = React.useRef(0);
+  const pointerIdRef = React.useRef<number | null>(null);
+  const movedRef = React.useRef(false);
+  const startXRef = React.useRef(0);
+  const startScrollRef = React.useRef(0);
+  const suppressClickRef = React.useRef(false);
   const [isGrabbing, setIsGrabbing] = React.useState(false);
   const [canL, setCanL] = React.useState(false);
   const [canR, setCanR] = React.useState(true);
@@ -493,48 +494,47 @@ function HorizontalSlider({
   const pendingScroll = React.useRef(0);
   const hasPending = React.useRef(false);
 
-  const flush = () => {
-    if (!hasPending.current) return;
+  const flush = React.useCallback(() => {
+    hasPending.current = false;
     const el = scrollerRef.current;
     if (el) el.scrollLeft = pendingScroll.current;
-    hasPending.current = false;
-  };
+  }, []);
 
   // Threshold (px) before we consider a pointer-down → drag. Below this it's a click.
-  const DRAG_THRESHOLD = 8;
+  const DRAG_THRESHOLD = 6;
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const el = scrollerRef.current;
     if (!el) return;
-    // Arm the drag — but don't capture pointer or change state yet.
-    // Both happen only once movement crosses the threshold, so a plain click
-    // is never intercepted.
-    dragging.current = true;
-    moved.current = false;
-    startX.current = e.clientX;
-    startScroll.current = el.scrollLeft;
+    // Stop the browser's native HTML5 drag on <a> children from stealing the
+    // pointer before we can decide click-vs-drag. preventDefault on pointerdown
+    // suppresses both text selection and the implicit native drag image.
+    e.preventDefault();
+    pointerIdRef.current = e.pointerId;
+    movedRef.current = false;
+    startXRef.current = e.clientX;
+    startScrollRef.current = el.scrollLeft;
+    // Capture immediately so subsequent moves always reach us, even if the
+    // mouse leaves the card or scroller bounds. Clicks still fire on the
+    // original target (the <a>), so non-drag clicks navigate normally.
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - startX.current;
-    if (!moved.current) {
+    if (pointerIdRef.current !== e.pointerId) return;
+    const dx = e.clientX - startXRef.current;
+    if (!movedRef.current) {
       if (Math.abs(dx) < DRAG_THRESHOLD) return;
-      // Threshold crossed — promote to a real drag.
-      moved.current = true;
+      movedRef.current = true;
       setIsGrabbing(true);
-      const el = scrollerRef.current;
-      if (el) {
-        try {
-          el.setPointerCapture(e.pointerId);
-        } catch {
-          /* ignore */
-        }
-      }
     }
     // Coalesce scroll writes to one per animation frame for buttery drag.
-    pendingScroll.current = startScroll.current - dx;
+    pendingScroll.current = startScrollRef.current - dx;
     if (!hasPending.current) {
       hasPending.current = true;
       rafId.current = requestAnimationFrame(flush);
@@ -542,31 +542,36 @@ function HorizontalSlider({
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return;
+    if (pointerIdRef.current !== e.pointerId) return;
     const el = scrollerRef.current;
-    const wasDrag = moved.current;
-    dragging.current = false;
+    const wasDrag = movedRef.current;
+    pointerIdRef.current = null;
+    movedRef.current = false;
+
+    if (el) {
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {
+        /* pointer already released */
+      }
+    }
 
     if (wasDrag) {
       setIsGrabbing(false);
-      // Flush any pending position before re-engaging snap.
       if (hasPending.current) {
         cancelAnimationFrame(rafId.current);
         flush();
       }
-      if (el) {
-        try {
-          el.releasePointerCapture(e.pointerId);
-        } catch {
-          /* pointer already released */
-        }
-        // Suppress the click that follows a real drag so nested links don't fire.
-        const swallow = (ev: Event) => {
-          ev.stopPropagation();
-          ev.preventDefault();
-        };
-        el.addEventListener('click', swallow, { capture: true, once: true });
-      }
+      // Mark next click for suppression so a card link doesn't fire after drag.
+      suppressClickRef.current = true;
+    }
+  };
+
+  const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (suppressClickRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressClickRef.current = false;
     }
   };
 
@@ -582,6 +587,7 @@ function HorizontalSlider({
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onClickCapture={onClickCapture}
         onDragStart={(e) => e.preventDefault()}
         className={cn(
           'overflow-x-auto scrollbar-hide select-none touch-pan-y',
@@ -674,6 +680,7 @@ function CategoryMiniCard({
       href={href}
       aria-disabled={disabled}
       data-slide-item
+      draggable={false}
       className={cn(
         'group snap-start shrink-0 relative overflow-hidden rounded-[28px] border transition-all duration-300 ease-out',
         'w-[220px] sm:w-[240px] aspect-[3/4] bg-card',
@@ -842,6 +849,7 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
   return (
     <a
       href={`/v2/courses/${co.id}`}
+      draggable={false}
       className="group relative block h-full flex flex-col rounded-3xl border border-border bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-transparent hover:shadow-[0_24px_60px_-20px_var(--pulse-glow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       {/* Hover ring */}
