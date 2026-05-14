@@ -229,6 +229,32 @@ export type Dict = {
     yes: string;
     no: string;
   };
+  auth: {
+    loginTitle: string;
+    loginSubtitle: string;
+    registerTitle: string;
+    registerSubtitle: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    passwordHint: string;
+    displayNameLabel: string;
+    displayNamePlaceholder: string;
+    submitLogin: string;
+    submitRegister: string;
+    submitLoading: string;
+    signOut: string;
+    switchToRegister: string;
+    switchToLogin: string;
+    haveAccount: string;
+    needAccount: string;
+    confirmEmailNotice: string;
+    errorEmptyFields: string;
+    errorInvalidCredentials: string;
+    errorPasswordTooShort: string;
+    errorGeneric: string;
+  };
   profile: {
     pageTitle: string;
     tabOverview: string;

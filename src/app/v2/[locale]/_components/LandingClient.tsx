@@ -9,9 +9,12 @@ import {
   TONE_CLASSES,
   type Category,
   type Course,
+  type Tone,
 } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
+import type { AuthUser } from '@/lib/auth';
+import { signOutAction } from '../(auth)/actions';
 
 /* ============================================================
    Top-level shell
@@ -22,16 +25,18 @@ export default function LandingClient({
   courses,
   dict,
   locale,
+  authUser,
 }: {
   categories: Category[];
   courses: Course[];
   dict: Dict;
   locale: Locale;
+  authUser: AuthUser | null;
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
       <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-        <Navbar />
+        <Navbar authUser={authUser} />
         <main>
           <Hero />
           <CatalogSection categories={categories} courses={courses} />
@@ -50,7 +55,7 @@ export default function LandingClient({
    Navbar
    ============================================================ */
 
-function Navbar() {
+function Navbar({ authUser }: { authUser: AuthUser | null }) {
   const { dict, href } = useV2Locale();
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -108,19 +113,25 @@ function Navbar() {
             <div className="hidden md:flex items-center gap-2">
               <LanguageSwitcher />
               <ThemeToggle />
-              <a
-                href={href('profile')}
-                className="text-sm font-semibold px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {dict.navbar.signIn}
-              </a>
-              <a
-                href="#"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
-              >
-                {dict.navbar.signUp}
-                <span aria-hidden>→</span>
-              </a>
+              {authUser ? (
+                <UserMenu authUser={authUser} />
+              ) : (
+                <>
+                  <a
+                    href={href('login')}
+                    className="text-sm font-semibold px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {dict.navbar.signIn}
+                  </a>
+                  <a
+                    href={href('register')}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+                  >
+                    {dict.navbar.signUp}
+                    <span aria-hidden>→</span>
+                  </a>
+                </>
+              )}
             </div>
 
             <div className="md:hidden flex items-center gap-1">
@@ -139,9 +150,99 @@ function Navbar() {
         </div>
       </header>
 
-      {mobileOpen && <MobileMenu links={NAV_LINKS} onClose={() => setMobileOpen(false)} />}
+      {mobileOpen && (
+        <MobileMenu
+          links={NAV_LINKS}
+          authUser={authUser}
+          onClose={() => setMobileOpen(false)}
+        />
+      )}
     </>
   );
+}
+
+function UserMenu({ authUser }: { authUser: AuthUser }) {
+  const { dict, locale, href } = useV2Locale();
+  const [open, setOpen] = React.useState(false);
+  const tone = toneFromString(authUser.id);
+  const t = TONE_CLASSES[tone];
+  const name = authUser.displayName ?? dict.profile.anonymousName;
+  const initials = userInitials(name);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener('click', onClick);
+    return () => window.removeEventListener('click', onClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-2 rounded-full border border-border bg-card pl-2 pr-3 py-1 hover:border-pulse/40 transition-colors"
+      >
+        <span
+          className={cn(
+            'flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-black text-primary-foreground',
+            t.bg,
+          )}
+          aria-hidden
+        >
+          {initials}
+        </span>
+        <span className="text-sm font-bold tracking-tight max-w-[8rem] truncate">{name}</span>
+        <span aria-hidden className={cn('text-xs transition-transform', open && 'rotate-180')}>
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-border bg-card shadow-[0_18px_50px_-20px_rgba(0,0,0,0.2)] py-1.5 z-50"
+        >
+          <a
+            href={href('profile')}
+            role="menuitem"
+            className="block px-4 py-2 text-sm font-semibold hover:bg-pulse/5 hover:text-pulse transition-colors"
+          >
+            {dict.profile.pageTitle}
+          </a>
+          <form action={signOutAction}>
+            <input type="hidden" name="locale" value={locale} />
+            <button
+              type="submit"
+              role="menuitem"
+              className="block w-full text-left px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-heart hover:bg-heart/5 transition-colors"
+            >
+              {dict.auth.signOut}
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function userInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '??';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function toneFromString(s: string): Tone {
+  const tones: Tone[] = ['pulse', 'heart', 'amber', 'violet', 'indigo'];
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return tones[Math.abs(h) % tones.length];
 }
 
 function LanguageSwitcher({ full = false }: { full?: boolean }) {
@@ -185,12 +286,14 @@ function LanguageSwitcher({ full = false }: { full?: boolean }) {
 
 function MobileMenu({
   links,
+  authUser,
   onClose,
 }: {
   links: { label: string; href: string }[];
+  authUser: AuthUser | null;
   onClose: () => void;
 }) {
-  const { dict, href } = useV2Locale();
+  const { dict, locale, href } = useV2Locale();
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -239,19 +342,43 @@ function MobileMenu({
         ))}
 
         <div className="mt-8 space-y-3">
-          <a
-            href="#"
-            className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
-          >
-            {dict.navbar.signUp}
-          </a>
-          <a
-            href={href('profile')}
-            onClick={onClose}
-            className="block text-center text-base font-semibold text-foreground hover:text-pulse transition-colors py-2"
-          >
-            {dict.navbar.signIn}
-          </a>
+          {authUser ? (
+            <>
+              <a
+                href={href('profile')}
+                onClick={onClose}
+                className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
+              >
+                {dict.profile.pageTitle}
+              </a>
+              <form action={signOutAction}>
+                <input type="hidden" name="locale" value={locale} />
+                <button
+                  type="submit"
+                  className="block w-full text-center text-base font-semibold text-muted-foreground hover:text-heart transition-colors py-2"
+                >
+                  {dict.auth.signOut}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <a
+                href={href('register')}
+                onClick={onClose}
+                className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
+              >
+                {dict.navbar.signUp}
+              </a>
+              <a
+                href={href('login')}
+                onClick={onClose}
+                className="block text-center text-base font-semibold text-foreground hover:text-pulse transition-colors py-2"
+              >
+                {dict.navbar.signIn}
+              </a>
+            </>
+          )}
         </div>
 
         <div className="mt-auto pt-6 flex items-center justify-between border-t border-border">

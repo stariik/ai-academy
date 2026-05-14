@@ -8,6 +8,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import { BADGES, type BadgeCode } from '@/lib/gamification/badges';
 import type { ProfilePayload } from '@/lib/v2/profile';
+import { signOutAction } from '../../(auth)/actions';
 
 type Tab = 'overview' | 'achievements' | 'progress' | 'settings';
 
@@ -1100,6 +1101,23 @@ function SettingsTab({ payload }: { payload: ProfilePayload }) {
             {savingName ? '...' : nameSaved ? dict.profile.settingsSaved : dict.profile.settingsSave}
           </button>
         </div>
+      </div>
+
+      {/* Sign out */}
+      <div className="rounded-2xl border border-border bg-card p-5 sm:p-7">
+        <p className="text-[10px] uppercase tracking-widest text-pulse font-bold mb-3">
+          {dict.auth.signOut}
+        </p>
+        <form action={signOutAction}>
+          <input type="hidden" name="locale" value={locale} />
+          <button
+            type="submit"
+            className="inline-flex items-center gap-1.5 rounded-full border border-heart/40 bg-heart/5 px-5 py-2.5 text-sm font-bold text-heart hover:bg-heart/10 transition-colors"
+          >
+            {dict.auth.signOut}
+            <span aria-hidden>→</span>
+          </button>
+        </form>
       </div>
 
       {/* Share link */}

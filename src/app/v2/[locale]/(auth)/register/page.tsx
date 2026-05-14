@@ -1,12 +1,11 @@
 import { notFound, redirect } from 'next/navigation';
-import ProfileClient from './_components/ProfileClient';
-import { getProfilePayload } from '@/lib/v2/profile';
+import RegisterForm from '../_components/RegisterForm';
 import { getDict, isLocale, type Locale } from '@/lib/v2/i18n';
 import { getAuthUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ProfilePage({
+export default async function RegisterPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -15,13 +14,9 @@ export default async function ProfilePage({
   if (!isLocale(localeParam)) notFound();
   const locale: Locale = localeParam;
 
-  // Profile is gated. Anonymous users get bounced to /login. The login form
-  // links to /register from there.
   const authed = await getAuthUser();
-  if (!authed) redirect(`/v2/${locale}/login`);
+  if (authed) redirect(`/v2/${locale}/profile`);
 
   const dict = getDict(locale);
-  const payload = await getProfilePayload();
-
-  return <ProfileClient payload={payload} dict={dict} locale={locale} />;
+  return <RegisterForm dict={dict} locale={locale} />;
 }

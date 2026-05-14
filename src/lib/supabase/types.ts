@@ -81,6 +81,7 @@ export type StudentSessionRow = {
   display_name: string;
   preferences: Record<string, unknown>;
   share_token: string | null;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 };
