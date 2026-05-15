@@ -2,9 +2,9 @@ import type { Dict } from './schema';
 
 export const en: Dict = {
   meta: {
-    siteName: 'walle.school',
+    siteName: 'walle.academy',
     siteTagline: 'AI in Georgian',
-    brandName: 'walle.school',
+    brandName: 'walle.academy',
   },
 
   navbar: {
@@ -76,7 +76,7 @@ export const en: Dict = {
     eyebrow: 'Who we build for',
     title: 'One tool, three lives',
     description:
-      'walle.school fits everyone — but adapts itself to who you are.',
+      'walle.academy fits everyone — but adapts itself to who you are.',
     mostPopular: 'Most popular',
     ageBandSuffix: 'years',
     learnMore: 'Learn more',
@@ -154,7 +154,7 @@ export const en: Dict = {
     companyContact: 'Contact',
     companyPrivacy: 'Privacy',
     companyTerms: 'Terms',
-    copyright: '© 2026 walle.school · All rights reserved',
+    copyright: '© 2026 walle.academy · All rights reserved',
     languageKa: 'ქართული',
     languageEn: 'English',
   },
@@ -297,6 +297,8 @@ export const en: Dict = {
     errorEmptyFields: 'Fill in all fields',
     errorInvalidCredentials: 'Wrong email or password',
     errorPasswordTooShort: 'Password must be at least 8 characters',
+    errorEmailTaken: 'That email is already registered',
+    errorRateLimited: 'Too many attempts. Try again in a bit.',
     errorGeneric: 'Something went wrong, please try again',
   },
   profile: {
@@ -356,7 +358,7 @@ export const en: Dict = {
     leaderboardYouHere: 'You',
     publicViewTitle: 'Student profile',
     publicViewSubtitle: 'Public profile',
-    publicViewMember: 'walle.school student',
+    publicViewMember: 'walle.academy student',
     publicViewNotFound: 'Profile not found',
   },
 };

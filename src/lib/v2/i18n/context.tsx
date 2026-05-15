@@ -7,7 +7,7 @@ import type { Locale } from './types';
 type V2LocaleValue = {
   locale: Locale;
   dict: Dict;
-  /** Returns a path prefixed with the current locale, e.g. localePath('courses/abc') → '/v2/en/courses/abc'. */
+  /** Returns a path prefixed with the current locale, e.g. href('courses/abc') → '/en/courses/abc'. */
   href: (path?: string) => string;
 };
 
@@ -25,7 +25,7 @@ export function V2LocaleProvider({
   const value = React.useMemo<V2LocaleValue>(() => {
     const href = (path = '') => {
       const trimmed = path.replace(/^\/+/, '');
-      return trimmed ? `/v2/${locale}/${trimmed}` : `/v2/${locale}`;
+      return trimmed ? `/${locale}/${trimmed}` : `/${locale}`;
     };
     return { locale, dict, href };
   }, [locale, dict]);

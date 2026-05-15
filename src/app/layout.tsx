@@ -28,11 +28,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "walle.school — AI lessons that meet you where you are",
+  title: "walle.academy — AI lessons that meet you where you are",
   description:
     "Learn AI tools, build AI agents, and create apps with vibe coding. Personalized lessons for every age, taught by Walli.",
   openGraph: {
-    title: "walle.school — AI lessons that meet you where you are",
+    title: "walle.academy — AI lessons that meet you where you are",
     description:
       "Learn AI tools, build AI agents, and create apps with vibe coding. Personalized lessons for every age, taught by Walli.",
     type: "website",

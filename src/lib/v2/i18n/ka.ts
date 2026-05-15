@@ -2,9 +2,9 @@ import type { Dict } from './schema';
 
 export const ka: Dict = {
   meta: {
-    siteName: 'walle.school',
+    siteName: 'walle.academy',
     siteTagline: 'AI ქართულად',
-    brandName: 'walle.school',
+    brandName: 'walle.academy',
   },
 
   navbar: {
@@ -74,7 +74,7 @@ export const ka: Dict = {
   audience: {
     eyebrow: 'ვისთვის ვაგებთ',
     title: 'ერთი ხელსაწყო, სამი ცხოვრება',
-    description: 'walle.school ერგება ყველას — მაგრამ მოარგებს თავის თავს იმის მიხედვით, ვინ ხარ.',
+    description: 'walle.academy ერგება ყველას — მაგრამ მოარგებს თავის თავს იმის მიხედვით, ვინ ხარ.',
     mostPopular: 'ყველაზე პოპულარული',
     ageBandSuffix: 'წელი',
     learnMore: 'გაიგე მეტი',
@@ -152,7 +152,7 @@ export const ka: Dict = {
     companyContact: 'კონტაქტი',
     companyPrivacy: 'პრივატულობა',
     companyTerms: 'წესები',
-    copyright: '© 2026 walle.school · ყველა უფლება დაცულია',
+    copyright: '© 2026 walle.academy · ყველა უფლება დაცულია',
     languageKa: 'ქართული',
     languageEn: 'English',
   },
@@ -295,6 +295,8 @@ export const ka: Dict = {
     errorEmptyFields: 'შეავსე ყველა ველი',
     errorInvalidCredentials: 'ელფოსტა ან პაროლი არასწორია',
     errorPasswordTooShort: 'პაროლი მინიმუმ 8 სიმბოლო უნდა იყოს',
+    errorEmailTaken: 'ეს ელფოსტა უკვე გამოყენებულია',
+    errorRateLimited: 'ძალიან ბევრი მცდელობა. სცადე ცოტა ხანში.',
     errorGeneric: 'შეცდომა მოხდა, სცადე თავიდან',
   },
   profile: {
@@ -354,7 +356,7 @@ export const ka: Dict = {
     leaderboardYouHere: 'შენ აქა ხარ',
     publicViewTitle: 'მოსწავლის პროფილი',
     publicViewSubtitle: 'საჯარო პროფილი',
-    publicViewMember: 'walle.school-ის მოსწავლე',
+    publicViewMember: 'walle.academy-ის მოსწავლე',
     publicViewNotFound: 'პროფილი ვერ მოიძებნა',
   },
 };

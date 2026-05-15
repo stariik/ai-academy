@@ -1,5 +1,5 @@
 /**
- * walle.school — v2 shared types & display helpers
+ * walle.academy — v2 shared types & display helpers
  *
  * Data comes from the existing `courses` + `lessons` Supabase tables (see
  * `./db.ts`). Categories are the 9 canonical strings in

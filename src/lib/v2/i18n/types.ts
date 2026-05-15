@@ -9,5 +9,5 @@ export function isLocale(value: string): value is Locale {
 
 export function localePath(locale: Locale, path = ''): string {
   const trimmed = path.replace(/^\/+/, '');
-  return trimmed ? `/v2/${locale}/${trimmed}` : `/v2/${locale}`;
+  return trimmed ? `/${locale}/${trimmed}` : `/${locale}`;
 }

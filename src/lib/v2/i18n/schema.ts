@@ -253,6 +253,8 @@ export type Dict = {
     errorEmptyFields: string;
     errorInvalidCredentials: string;
     errorPasswordTooShort: string;
+    errorEmailTaken: string;
+    errorRateLimited: string;
     errorGeneric: string;
   };
   profile: {
