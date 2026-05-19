@@ -10,18 +10,20 @@ import { AuthShell, AuthInput, AuthSubmit, AuthError } from './AuthShell';
 export default function RegisterForm({
   dict,
   locale,
+  redeemCode,
 }: {
   dict: Dict;
   locale: Locale;
+  redeemCode?: string;
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
-      <Inner />
+      <Inner redeemCode={redeemCode} />
     </V2LocaleProvider>
   );
 }
 
-function Inner() {
+function Inner({ redeemCode }: { redeemCode?: string }) {
   const { dict, locale, href } = useV2Locale();
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     signUpAction,
@@ -48,14 +50,31 @@ function Inner() {
       footer={
         <>
           <span>{dict.auth.switchToLogin}</span>{' '}
-          <a href={href('login')} className="font-bold text-pulse hover:underline">
+          <a
+            href={
+              redeemCode
+                ? `${href('login')}?redeem=${encodeURIComponent(redeemCode)}`
+                : href('login')
+            }
+            className="font-bold text-pulse hover:underline"
+          >
             {dict.auth.haveAccount}
           </a>
         </>
       }
     >
+      {redeemCode && (
+        <div className="mb-4 rounded-xl border border-green-300 bg-green-50 px-3.5 py-3">
+          <p className="text-xs font-semibold text-green-800">{dict.promo.redeemPageSigningIn}</p>
+          <p className="mt-1 font-mono text-sm font-bold tracking-wider text-green-900 break-all">
+            {redeemCode}
+          </p>
+        </div>
+      )}
+
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="locale" value={locale} />
+        {redeemCode && <input type="hidden" name="redeem" value={redeemCode} />}
 
         <AuthInput
           label={dict.auth.displayNameLabel}

@@ -12,19 +12,21 @@ export default function LoginForm({
   dict,
   locale,
   confirmNotice,
+  redeemCode,
 }: {
   dict: Dict;
   locale: Locale;
   confirmNotice?: boolean;
+  redeemCode?: string;
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
-      <Inner confirmNotice={confirmNotice} />
+      <Inner confirmNotice={confirmNotice} redeemCode={redeemCode} />
     </V2LocaleProvider>
   );
 }
 
-function Inner({ confirmNotice }: { confirmNotice?: boolean }) {
+function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemCode?: string }) {
   const { dict, locale, href } = useV2Locale();
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     signInAction,
@@ -47,7 +49,14 @@ function Inner({ confirmNotice }: { confirmNotice?: boolean }) {
       footer={
         <>
           <span>{dict.auth.switchToRegister}</span>{' '}
-          <a href={href('register')} className="font-bold text-pulse hover:underline">
+          <a
+            href={
+              redeemCode
+                ? `${href('register')}?redeem=${encodeURIComponent(redeemCode)}`
+                : href('register')
+            }
+            className="font-bold text-pulse hover:underline"
+          >
             {dict.auth.needAccount}
           </a>
         </>
@@ -59,8 +68,18 @@ function Inner({ confirmNotice }: { confirmNotice?: boolean }) {
         </div>
       )}
 
+      {redeemCode && (
+        <div className="mb-4 rounded-xl border border-green-300 bg-green-50 px-3.5 py-3">
+          <p className="text-xs font-semibold text-green-800">{dict.promo.redeemPageSigningIn}</p>
+          <p className="mt-1 font-mono text-sm font-bold tracking-wider text-green-900 break-all">
+            {redeemCode}
+          </p>
+        </div>
+      )}
+
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="locale" value={locale} />
+        {redeemCode && <input type="hidden" name="redeem" value={redeemCode} />}
 
         <AuthInput
           label={dict.auth.emailLabel}

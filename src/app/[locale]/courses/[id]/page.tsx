@@ -3,6 +3,7 @@ import CourseDetailClient from './_components/CourseDetailClient';
 import { getCoursePayload } from '@/lib/v2/db';
 import { getDict, isLocale, type Locale } from '@/lib/v2/i18n';
 import { getAuthUser } from '@/lib/auth';
+import { getCurrentUserEnrollments } from '@/lib/enrollments';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,9 @@ export default async function CourseDetailPage({
   const payload = await getCoursePayload(id, locale);
   if (!payload) return notFound();
   const dict = getDict(locale);
-  const authed = Boolean(await getAuthUser());
+  const user = await getAuthUser();
+  const authed = Boolean(user);
+  const enrolledCourseIds = user ? await getCurrentUserEnrollments() : [];
 
   return (
     <CourseDetailClient
@@ -28,6 +31,7 @@ export default async function CourseDetailPage({
       dict={dict}
       locale={locale}
       authed={authed}
+      enrolledCourseIds={enrolledCourseIds}
     />
   );
 }

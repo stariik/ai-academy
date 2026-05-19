@@ -17,7 +17,7 @@ import {
   unlockBadges,
 } from '@/lib/supabase/db';
 import { getSession } from '@/lib/session';
-import { buildReviewExplanationPrompt } from '@/lib/ai/claude';
+import { buildReviewExplanationPrompt, type TutorLocale } from '@/lib/ai/claude';
 import { XP_REVIEW_CORRECT, XP_REVIEW_INCORRECT, updateStreak } from '@/lib/gamification/xp';
 import { evaluateBadges } from '@/lib/gamification/badges';
 
@@ -28,11 +28,13 @@ export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await getSession();
     const body = await request.json();
-    const { questionId, lessonId, answer } = body as {
+    const { questionId, lessonId, answer, locale: rawLocale } = body as {
       questionId: string;
       lessonId: string;
       answer: string;
+      locale?: string;
     };
+    const locale: TutorLocale = rawLocale === 'en' ? 'en' : 'ka';
 
     if (!questionId || !lessonId) {
       return NextResponse.json(
@@ -117,6 +119,7 @@ export async function POST(request: NextRequest) {
           explanation: question.explanation,
           studentAnswer: answer ?? '',
           preferredStyle: profile.preferredStyle,
+          locale,
         });
         const response = await anthropic.messages.create({
           model: MODEL,

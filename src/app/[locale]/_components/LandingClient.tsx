@@ -734,16 +734,14 @@ function HorizontalSlider({
     if (e.pointerType !== 'mouse' || e.button !== 0) return;
     const el = scrollerRef.current;
     if (!el) return;
-    e.preventDefault();
+    // Intentionally NOT calling preventDefault() or setPointerCapture() here:
+    // both suppress the subsequent click on the child <a>, which is what we
+    // hand the slider items. They're only applied once the user actually
+    // crosses the drag threshold in onPointerMove.
     pointerIdRef.current = e.pointerId;
     movedRef.current = false;
     startXRef.current = e.clientX;
     startScrollRef.current = el.scrollLeft;
-    try {
-      el.setPointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -753,6 +751,18 @@ function HorizontalSlider({
       if (Math.abs(dx) < DRAG_THRESHOLD) return;
       movedRef.current = true;
       setIsGrabbing(true);
+      // Now that we're committing to a drag, capture the pointer so we keep
+      // getting move/up events outside the scroller, and prevent text/image
+      // selection while the user drags.
+      const el = scrollerRef.current;
+      if (el) {
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+      e.preventDefault();
     }
     pendingScroll.current = startScrollRef.current - dx;
     if (!hasPending.current) {

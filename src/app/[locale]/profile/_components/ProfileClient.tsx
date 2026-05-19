@@ -9,6 +9,11 @@ import type { Dict, Locale } from '@/lib/v2/i18n';
 import { BADGES, type BadgeCode } from '@/lib/gamification/badges';
 import type { ProfilePayload } from '@/lib/v2/profile';
 import { signOutAction } from '../../(auth)/actions';
+import {
+  redeemPromoCode,
+  redeemStatusLabel,
+  type RedeemResult,
+} from '@/lib/promo-redeem-client';
 
 type Tab = 'overview' | 'achievements' | 'progress' | 'settings';
 
@@ -992,6 +997,88 @@ function ProgressTab({ payload }: { payload: ProfilePayload }) {
   );
 }
 
+/* ------------------------------------------------------------ Promo redeem card */
+
+function PromoRedeemCard() {
+  const { dict, locale } = useV2Locale();
+  const [code, setCode] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [result, setResult] = React.useState<RedeemResult | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = code.trim();
+    if (!trimmed || submitting) return;
+    setSubmitting(true);
+    setResult(null);
+    try {
+      const r = await redeemPromoCode(trimmed);
+      setResult(r);
+      if (r.status === 'ok' || r.status === 'already_enrolled') {
+        setCode('');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const success = result && (result.status === 'ok' || result.status === 'already_enrolled');
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-7">
+      <p className="text-[10px] uppercase tracking-widest text-pulse font-bold mb-2">
+        {dict.promo.cardTitle}
+      </p>
+      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+        {dict.promo.cardSubtitle}
+      </p>
+
+      <form onSubmit={onSubmit} className="flex flex-col sm:flex-row gap-2">
+        <input
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder={dict.promo.inputPlaceholder}
+          aria-label={dict.promo.inputLabel}
+          className="flex-1 rounded-full border border-border bg-background px-4 py-2.5 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-pulse/40 focus:border-pulse/40"
+        />
+        <button
+          type="submit"
+          disabled={submitting || !code.trim()}
+          className={cn(
+            'inline-flex items-center justify-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold shadow-[0_4px_16px_var(--pulse-glow)] transition-all',
+            'hover:shadow-[0_8px_24px_var(--pulse-glow)] hover:-translate-y-0.5',
+            'disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed',
+          )}
+        >
+          {submitting ? dict.promo.submitting : dict.promo.submit}
+        </button>
+      </form>
+
+      {result && (
+        <div
+          className={cn(
+            'mt-4 rounded-xl px-4 py-3 text-sm leading-relaxed',
+            success
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-700',
+          )}
+        >
+          <p className="font-semibold">{redeemStatusLabel(result.status, dict)}</p>
+          {success && result.courseId && (
+            <a
+              href={`/${locale}/courses/${result.courseId}`}
+              className="inline-block mt-2 text-green-700 font-bold hover:underline"
+            >
+              {result.status === 'ok' ? dict.promo.successCta : dict.promo.alreadyEnrolledCta}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------ Settings tab */
 
 function SettingsTab({ payload }: { payload: ProfilePayload }) {
@@ -1102,6 +1189,9 @@ function SettingsTab({ payload }: { payload: ProfilePayload }) {
           </button>
         </div>
       </div>
+
+      {/* Promo code */}
+      <PromoRedeemCard />
 
       {/* Sign out */}
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-7">

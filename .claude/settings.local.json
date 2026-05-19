@@ -46,7 +46,16 @@
       "Bash(mv \"src/app/v2/courses/[id]/page.tsx\" \"src/app/v2/courses/[id]/_components/CourseDetailClient.tsx\")",
       "Bash(awk *)",
       "Bash(sed -i '450,533d' src/app/v2/_components/LandingClient.tsx)",
-      "Bash(sed -i '355,440d' src/app/v2/_components/LandingClient.tsx)"
+      "Bash(sed -i '355,440d' src/app/v2/_components/LandingClient.tsx)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"TS_EXIT=$?\")",
+      "Bash(echo \"LINT_EXIT=$?\")",
+      "Bash(npm uninstall *)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist /FI \"PID eq 12116\" /FO csv)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(git mv *)",
+      "PowerShell(git rm *)"
     ]
   }
 }

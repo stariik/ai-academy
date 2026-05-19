@@ -23,6 +23,94 @@ import { cn } from '@/lib/utils';
 
 const QUIZ_UNLOCK_MARKER = '[READY_FOR_QUIZ]';
 
+type TutorLocale = 'ka' | 'en';
+
+/** All chrome strings the chat panel itself shows. Server-side strings (the
+ *  tutor's actual replies, quiz feedback) are localized on the backend by
+ *  passing `locale` through the API. */
+const STRINGS: Record<TutorLocale, {
+  teacher: string;
+  ready: string;
+  quickQuestions: string;
+  again: string;
+  explainAgain: string;
+  placeholder: string;
+  send: string;
+  chatHistoryLabel: string;
+  chatMessageLabel: string;
+  typing: string;
+  introUserMsg: (title: string) => string;
+  fallbackIntro: string;
+  errorPrefix: string;
+  genericError: string;
+  requestFailed: string;
+  emptyTeacher: string;
+  emptyTitle: string;
+  emptyHint: string;
+  suggestionsHeader: string;
+  suggestExplainSimple: (t: string) => string;
+  suggestWhatIs: (t: string) => string;
+  suggestExample: string;
+  suggestExampleShort: string;
+  suggestExplainDetail: (t: string) => string;
+  toggleLabel: string;
+}> = {
+  ka: {
+    teacher: 'AI მასწავლებელი',
+    ready: 'მზად',
+    quickQuestions: 'სწრაფი კითხვები',
+    again: 'ხელახლა',
+    explainAgain: 'გასაგებად ხელახლა ამიხსენი — სხვა მაგალითით.',
+    placeholder: 'დაუსვი კითხვა Walli-ს…',
+    send: 'გაგზავნა',
+    chatHistoryLabel: 'საუბრის ისტორია',
+    chatMessageLabel: 'საუბრის შეტყობინება',
+    typing: 'წერს...',
+    introUserMsg: (title) => `მზად ვარ ვისწავლო "${title}". გთხოვ, ამიხსენი!`,
+    fallbackIntro: 'მოგესალმები! მკითხე რამე ამ თემაზე.',
+    errorPrefix: 'ბოდიში, შეცდომა მოხდა:',
+    genericError: 'რაღაც არასწორად მოხდა',
+    requestFailed: 'მოთხოვნა ვერ შესრულდა',
+    emptyTeacher: 'შენი მასწავლებელი',
+    emptyTitle: 'მე ვარ Walli — ერთად ვისწავლოთ!',
+    emptyHint: 'დამისვი ნებისმიერი კითხვა — ან აარჩიე ერთ-ერთი წინადადება.',
+    suggestionsHeader: 'შემოთავაზებები',
+    suggestExplainSimple: (t) => `ამიხსენი "${t}" მარტივად`,
+    suggestWhatIs: (t) => `რა არის ${t}?`,
+    suggestExample: 'მომიყვანე ნამდვილი მაგალითი',
+    suggestExampleShort: 'მომიყვანე მაგალითი',
+    suggestExplainDetail: (t) => `ამიხსენი "${t}" დეტალურად`,
+    toggleLabel: 'მასწავლებლის ენა',
+  },
+  en: {
+    teacher: 'AI Teacher',
+    ready: 'ready',
+    quickQuestions: 'Quick questions',
+    again: 'Again',
+    explainAgain: 'Please explain again — with a different example.',
+    placeholder: 'Ask Walli a question…',
+    send: 'Send',
+    chatHistoryLabel: 'Chat history',
+    chatMessageLabel: 'Chat message',
+    typing: 'typing...',
+    introUserMsg: (title) => `I'm ready to learn "${title}". Please explain!`,
+    fallbackIntro: "Hi! Ask me anything about this topic.",
+    errorPrefix: 'Sorry, something went wrong:',
+    genericError: 'Something went wrong',
+    requestFailed: 'Request failed',
+    emptyTeacher: 'Your teacher',
+    emptyTitle: "I'm Walli — let's learn together!",
+    emptyHint: 'Ask me anything — or pick one of the suggestions.',
+    suggestionsHeader: 'Suggestions',
+    suggestExplainSimple: (t) => `Explain "${t}" simply`,
+    suggestWhatIs: (t) => `What is ${t}?`,
+    suggestExample: 'Give me a real-world example',
+    suggestExampleShort: 'Give me an example',
+    suggestExplainDetail: (t) => `Explain "${t}" in detail`,
+    toggleLabel: 'Teacher language',
+  },
+};
+
 /**
  * Picks Walli's reaction state from the user's message content.
  *   • 'dance' — gratitude, comprehension, enthusiasm
@@ -44,6 +132,7 @@ export function ChatPanelV2({
   lessonId,
   lesson,
   pageNumber,
+  siteLocale,
   onUnlockCheck,
   walliPulseKey,
   pendingPrompt,
@@ -51,10 +140,41 @@ export function ChatPanelV2({
   lessonId: string;
   lesson: Lesson;
   pageNumber: number;
+  siteLocale: TutorLocale;
   onUnlockCheck?: () => void;
   walliPulseKey?: number;
   pendingPrompt?: { id: number; text: string } | null;
 }) {
+  // Teacher language — defaults to the site locale, can be overridden per-lesson
+  // via the in-panel toggle. Persisted in localStorage keyed by lesson.
+  const [teacherLocale, setTeacherLocale] = React.useState<TutorLocale>(siteLocale);
+  // Ref mirrors the state so async closures (the auto-intro fetch chain) always
+  // pick up the freshest value, even before the next render commits.
+  const teacherLocaleRef = React.useRef<TutorLocale>(siteLocale);
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`walli_lang:${lessonId}`);
+      const next: TutorLocale = stored === 'ka' || stored === 'en' ? stored : siteLocale;
+      setTeacherLocale(next);
+      teacherLocaleRef.current = next;
+    } catch {
+      teacherLocaleRef.current = siteLocale;
+    }
+  }, [lessonId, siteLocale]);
+
+  const setAndPersistTeacherLocale = React.useCallback(
+    (next: TutorLocale) => {
+      setTeacherLocale(next);
+      teacherLocaleRef.current = next;
+      try {
+        localStorage.setItem(`walli_lang:${lessonId}`, next);
+      } catch { /* ignore */ }
+    },
+    [lessonId],
+  );
+
+  const T = STRINGS[teacherLocale];
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
   const [input, setInput] = React.useState('');
   const [isStreaming, setIsStreaming] = React.useState(false);
@@ -139,11 +259,13 @@ export function ChatPanelV2({
     }
 
     function sendAutoIntro() {
-      const pageTitle = currentPageData?.title ?? 'this topic';
+      const activeLocale = teacherLocaleRef.current;
+      const S = STRINGS[activeLocale];
+      const pageTitle = currentPageData?.title ?? (activeLocale === 'en' ? 'this topic' : 'ეს თემა');
       const userMsg: ChatMessage = {
         id: `user-${Date.now()}`,
         role: 'user',
-        content: `მზად ვარ ვისწავლო "${pageTitle}". გთხოვ, ამიხსენი!`,
+        content: S.introUserMsg(pageTitle),
         timestamp: new Date().toISOString(),
       };
       const assistantId = `assistant-${Date.now()}`;
@@ -159,7 +281,13 @@ export function ChatPanelV2({
       fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [userMsg], lessonId, pageNumber, isFirstVisit: true }),
+        body: JSON.stringify({
+          messages: [userMsg],
+          lessonId,
+          pageNumber,
+          isFirstVisit: true,
+          locale: activeLocale,
+        }),
       })
         .then(async (res) => {
           if (cancelled || !res.ok) throw new Error('failed');
@@ -190,7 +318,7 @@ export function ChatPanelV2({
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? { ...m, content: 'მოგესალმები! მკითხე რამე ამ თემაზე.' }
+                  ? { ...m, content: S.fallbackIntro }
                   : m,
               ),
             );
@@ -243,6 +371,8 @@ export function ChatPanelV2({
         { id: assistantId, role: 'assistant', content: '', timestamp: new Date().toISOString() },
       ]);
 
+      const activeLocale = teacherLocaleRef.current;
+      const S = STRINGS[activeLocale];
       try {
         const res = await fetch('/api/chat', {
           method: 'POST',
@@ -251,10 +381,11 @@ export function ChatPanelV2({
             messages: updated.filter((m) => m.role === 'user' || m.role === 'assistant'),
             lessonId,
             pageNumber,
+            locale: activeLocale,
           }),
         });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: 'მოთხოვნა ვერ შესრულდა' }));
+          const err = await res.json().catch(() => ({ error: S.requestFailed }));
           throw new Error(err.error ?? 'chat failed');
         }
         const reader = res.body?.getReader();
@@ -279,11 +410,11 @@ export function ChatPanelV2({
           );
         }
       } catch (err) {
-        const errorText = err instanceof Error ? err.message : 'რაღაც არასწორად მოხდა';
+        const errorText = err instanceof Error ? err.message : S.genericError;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: `ბოდიში, შეცდომა მოხდა: ${errorText}` }
+              ? { ...m, content: `${S.errorPrefix} ${errorText}` }
               : m,
           ),
         );
@@ -372,17 +503,17 @@ export function ChatPanelV2({
   const suggested = React.useMemo(() => {
     if (!currentPageData) {
       return [
-        `ამიხსენი "${lesson.title}" მარტივად`,
-        ...lesson.keyConcepts.slice(0, 2).map((c) => `რა არის ${c.term}?`),
-        'მომიყვანე ნამდვილი მაგალითი',
+        T.suggestExplainSimple(lesson.title),
+        ...lesson.keyConcepts.slice(0, 2).map((c) => T.suggestWhatIs(c.term)),
+        T.suggestExample,
       ];
     }
     return [
-      `ამიხსენი "${currentPageData.title}" უფრო მარტივად`,
-      ...currentPageData.keyConcepts.slice(0, 2).map((c) => `რა არის ${c.term}?`),
-      'მომიყვანე მაგალითი',
+      T.suggestExplainSimple(currentPageData.title),
+      ...currentPageData.keyConcepts.slice(0, 2).map((c) => T.suggestWhatIs(c.term)),
+      T.suggestExampleShort,
     ];
-  }, [currentPageData, lesson]);
+  }, [currentPageData, lesson, T]);
 
   const concepts = currentPageData?.keyConcepts ?? lesson.keyConcepts ?? [];
 
@@ -421,16 +552,21 @@ export function ChatPanelV2({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-[0.18em] text-pulse font-bold leading-none">
-            AI მასწავლებელი
+            {T.teacher}
           </p>
           <p className="text-sm font-bold mt-0.5 truncate" style={{ fontFamily: 'var(--font-display)' }}>
             {currentPageData ? currentPageData.title : 'Walli'}
           </p>
         </div>
+        <TeacherLocaleToggle
+          locale={teacherLocale}
+          onChange={setAndPersistTeacherLocale}
+          label={T.toggleLabel}
+        />
         {unlockFiredRef.current && (
           <span className="inline-flex items-center gap-1 rounded-full bg-pulse/15 text-pulse border border-pulse/30 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap">
             <CheckCircle2 className="w-3 h-3" />
-            მზად
+            {T.ready}
           </span>
         )}
       </div>
@@ -440,11 +576,11 @@ export function ChatPanelV2({
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4"
         role="log"
-        aria-label="საუბრის ისტორია"
+        aria-label={T.chatHistoryLabel}
         aria-live="polite"
       >
         {messages.length === 0 ? (
-          <EmptyChat suggested={suggested} onSelect={sendMessage} />
+          <EmptyChat suggested={suggested} onSelect={sendMessage} strings={T} />
         ) : (
           <AnimatePresence initial={false}>
             {messages.map((msg, idx) => (
@@ -465,7 +601,7 @@ export function ChatPanelV2({
       {messages.length > 0 && concepts.length > 0 && (
         <div className="shrink-0 px-3 sm:px-4 pt-2 pb-1 border-t border-border bg-card/40 backdrop-blur-sm">
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-bold mb-1.5">
-            სწრაფი კითხვები
+            {T.quickQuestions}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {concepts.slice(0, 4).map((c) => (
@@ -473,7 +609,7 @@ export function ChatPanelV2({
                 key={c.term}
                 type="button"
                 disabled={isStreaming}
-                onClick={() => sendMessage(`ამიხსენი "${c.term}" დეტალურად`)}
+                onClick={() => sendMessage(T.suggestExplainDetail(c.term))}
                 className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:border-pulse/40 hover:text-pulse transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-2.5 h-2.5" />
@@ -483,11 +619,11 @@ export function ChatPanelV2({
             <button
               type="button"
               disabled={isStreaming}
-              onClick={() => sendMessage('გასაგებად ხელახლა ამიხსენი — სხვა მაგალითით.')}
+              onClick={() => sendMessage(T.explainAgain)}
               className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:border-pulse/40 hover:text-pulse transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RotateCcw className="w-2.5 h-2.5" />
-              ხელახლა
+              {T.again}
             </button>
           </div>
         </div>
@@ -510,15 +646,15 @@ export function ChatPanelV2({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="დაუსვი კითხვა Walli-ს…"
+            placeholder={T.placeholder}
             disabled={isStreaming}
-            aria-label="საუბრის შეტყობინება"
+            aria-label={T.chatMessageLabel}
             className="flex-1 rounded-full border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-pulse focus:outline-none focus:ring-2 focus:ring-pulse/30 disabled:opacity-50 transition-colors"
           />
           <button
             type="submit"
             disabled={isStreaming || !input.trim()}
-            aria-label="გაგზავნა"
+            aria-label={T.send}
             className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-pulse text-primary-foreground shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none transition-all active:scale-[0.96]"
           >
             <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
@@ -533,12 +669,59 @@ export function ChatPanelV2({
    Sub-components
    ────────────────────────────────────────────────────────── */
 
+function TeacherLocaleToggle({
+  locale,
+  onChange,
+  label,
+}: {
+  locale: TutorLocale;
+  onChange: (next: TutorLocale) => void;
+  label: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted/40 p-0.5 text-[10px] font-bold uppercase tracking-wider"
+    >
+      <button
+        type="button"
+        onClick={() => onChange('ka')}
+        aria-pressed={locale === 'ka'}
+        className={cn(
+          'px-2 py-0.5 rounded-full transition-colors',
+          locale === 'ka'
+            ? 'bg-pulse text-primary-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        KA
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('en')}
+        aria-pressed={locale === 'en'}
+        className={cn(
+          'px-2 py-0.5 rounded-full transition-colors',
+          locale === 'en'
+            ? 'bg-pulse text-primary-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        EN
+      </button>
+    </div>
+  );
+}
+
 function EmptyChat({
   suggested,
   onSelect,
+  strings,
 }: {
   suggested: string[];
   onSelect: (q: string) => void;
+  strings: typeof STRINGS[TutorLocale];
 }) {
   return (
     <div className="space-y-3 max-w-xl mx-auto">
@@ -549,23 +732,23 @@ function EmptyChat({
           </div>
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-pulse font-bold">
-              შენი მასწავლებელი
+              {strings.emptyTeacher}
             </p>
             <p
               className="text-sm sm:text-base font-bold mt-0.5"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              მე ვარ Walli — ერთად ვისწავლოთ!
+              {strings.emptyTitle}
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-              დამისვი ნებისმიერი კითხვა — ან აარჩიე ერთ-ერთი წინადადება.
+              {strings.emptyHint}
             </p>
           </div>
         </div>
       </div>
       <div className="space-y-1.5">
         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-bold px-1">
-          შემოთავაზებები
+          {strings.suggestionsHeader}
         </p>
         {suggested.map((q, i) => (
           <button
@@ -623,7 +806,7 @@ function MessageBubble({
         {isAssistant ? (
           <div className="chat-prose">
             {showTyping ? (
-              <div className="flex gap-1 py-0.5" aria-label="წერს...">
+              <div className="flex gap-1 py-0.5" aria-label="...">
                 {[0, 1, 2].map((i) => (
                   <motion.span
                     key={i}

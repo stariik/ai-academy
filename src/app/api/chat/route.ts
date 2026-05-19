@@ -21,21 +21,28 @@ import {
   buildEnhancedPageTutorPrompt,
   streamChat,
   ThinkingConfig,
+  type TutorLocale,
 } from '@/lib/ai/claude';
 import { getSessionId } from '@/lib/session';
 import { ChatMessage } from '@/types';
 
 export const runtime = 'nodejs';
 
+function coerceLocale(raw: unknown): TutorLocale {
+  return raw === 'en' ? 'en' : 'ka';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages, lessonId, pageNumber, isFirstVisit } = body as {
+    const { messages, lessonId, pageNumber, isFirstVisit, locale: rawLocale } = body as {
       messages: ChatMessage[];
       lessonId: string;
       pageNumber?: number;
       isFirstVisit?: boolean;
+      locale?: string;
     };
+    const locale = coerceLocale(rawLocale);
 
     if (!messages || !lessonId) {
       return NextResponse.json(
@@ -106,6 +113,7 @@ export async function POST(request: NextRequest) {
             isFirstVisit: isFirstVisit ?? false,
             profile,
             previousMessageCount: chatHistory?.messages?.length ?? 0,
+            locale,
             ...pageExtras,
           });
         } catch {
@@ -119,6 +127,7 @@ export async function POST(request: NextRequest) {
             previousPageTitles,
             learningObjectives: lesson.learningObjectives,
             isFirstVisit: isFirstVisit ?? false,
+            locale,
             ...pageExtras,
           });
         }
@@ -133,6 +142,7 @@ export async function POST(request: NextRequest) {
           previousPageTitles,
           learningObjectives: lesson.learningObjectives,
           isFirstVisit: isFirstVisit ?? false,
+          locale,
           ...pageExtras,
         });
       }
@@ -162,6 +172,7 @@ export async function POST(request: NextRequest) {
             keyConcepts: lesson.keyConcepts,
             profile,
             previousMessageCount: chatHistory?.messages?.length ?? 0,
+            locale,
           });
         } catch {
           systemPrompt = buildTutorSystemPrompt({
@@ -169,6 +180,7 @@ export async function POST(request: NextRequest) {
             lessonContent,
             learningObjectives: lesson.learningObjectives,
             keyConcepts: lesson.keyConcepts,
+            locale,
           });
         }
       } else {
@@ -177,6 +189,7 @@ export async function POST(request: NextRequest) {
           lessonContent,
           learningObjectives: lesson.learningObjectives,
           keyConcepts: lesson.keyConcepts,
+          locale,
         });
       }
     }

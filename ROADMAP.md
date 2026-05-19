@@ -87,6 +87,43 @@ Tasks queued up for future work. Grouped by priority. Pick one when ready and we
 
 ---
 
+## In progress
+
+### Promo codes (started 2026-05-19)
+Unlock codes only. Discount-code schema stored but inert until a real checkout exists (no payment system in repo today).
+
+**Schema** — `migrations/2026-05-19-promo-codes.sql`:
+- `promo_codes` — code, type ('unlock'|'percent_off'|'amount_off'), course_id?, max_redemptions?, redemption_count, per_user_limit, expires_at, is_active, notes, created_by
+- `promo_redemptions` — promo_code_id, user_id, course_id, unique(promo_code_id, user_id)
+- `enrollments` — user_id, course_id, source ('promo'|'purchase'|'free'), promo_code_id?, unique(user_id, course_id). Fills the missing backing for `isEnrolled` in UI.
+
+**Code format:** `WALLI-XXXX-XXXX` Crockford base32 (no 0/O/1/I/L). Admin can override with custom slug (e.g. `SUMMER2026`).
+
+**Admin** — `/admin/promo-codes` (English-only, consistent with rest of admin):
+- List + filters (active / expired / used-up)
+- Single-code generator
+- Bulk single-use generator with CSV export
+- Per-code detail with redemption log + deactivate
+
+**User redemption** — all three surfaces hit `POST /api/promo/redeem`:
+1. Profile page card
+2. Course detail page expandable
+3. `/[locale]/redeem/[code]` (auto-applies; logged-out users land on `/login?redeem=CODE`)
+
+**Build order:**
+1. ☑ Migration + RLS policies — `migrations/2026-05-19-promo-codes.sql`
+2. ☑ `enrollments` write path — `src/lib/enrollments.ts`, `/api/enrollments`, server-fed `enrolledCourseIds`
+3. ☑ Admin pages + API — `/admin/promo-codes` list + create + bulk CSV + detail
+4. ☑ `/api/promo/redeem` + three surfaces — profile card, course detail expandable, `/[locale]/redeem/[code]`
+5. ☑ Polish — rate limit, ka+en i18n strings, login `?redeem=` handoff
+
+**To deploy (manual steps you need to do):**
+- Run `migrations/2026-05-19-promo-codes.sql` in the Supabase SQL Editor
+- Set `ADMIN_EMAILS=you@example.com` (comma-separated) in `.env.local` and prod env
+- Confirm `SUPABASE_SERVICE_ROLE_KEY` is set in prod env (the admin lib needs it)
+
+---
+
 ## P3 — Nice to have
 
 ### 14. Admin analytics  ✅ DONE

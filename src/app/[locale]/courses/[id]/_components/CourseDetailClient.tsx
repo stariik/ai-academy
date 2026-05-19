@@ -35,23 +35,33 @@ import {
 } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
+import {
+  redeemPromoCode,
+  redeemStatusLabel,
+  type RedeemResult,
+} from '@/lib/promo-redeem-client';
 
 /* ============================================================
-   Mock enrollment (until real auth + DB lands)
+   Enrollment state
+   • Authed users: server-provided `enrolledCourseIds` is the source of truth.
+     Clicking "Enroll" POSTs to /api/enrollments (source='free' for now;
+     promo flow uses /api/promo/redeem which creates its own enrollment).
+   • Guests: localStorage stub kept so the marketing demo flows still work.
+   • ViewAsToggle (dev tool) overrides client state only — never writes the DB.
    ============================================================ */
 
 const ENROLLMENT_KEY = 'ai_academy_enrollments';
 const VIEW_AS_KEY = 'ai_academy_view_as';
 type ViewAs = 'guest' | 'logged-in' | 'enrolled';
 
-function readEnrollments(): string[] {
+function readGuestEnrollments(): string[] {
   try {
     const raw = localStorage.getItem(ENROLLMENT_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
-function writeEnrollments(ids: string[]) {
+function writeGuestEnrollments(ids: string[]) {
   localStorage.setItem(ENROLLMENT_KEY, JSON.stringify(ids));
 }
 
@@ -74,6 +84,7 @@ export default function CourseDetailClient({
   dict,
   locale,
   authed,
+  enrolledCourseIds,
 }: {
   course: Course;
   category: Category;
@@ -82,10 +93,18 @@ export default function CourseDetailClient({
   dict: Dict;
   locale: Locale;
   authed: boolean;
+  enrolledCourseIds: string[];
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
-      <CoursePage course={course} category={category} detail={detail} related={related} authed={authed} />
+      <CoursePage
+        course={course}
+        category={category}
+        detail={detail}
+        related={related}
+        authed={authed}
+        enrolledCourseIds={enrolledCourseIds}
+      />
     </V2LocaleProvider>
   );
 }
@@ -102,21 +121,25 @@ function CoursePage({
   detail,
   related,
   authed,
+  enrolledCourseIds,
 }: {
   course: Course;
   category: Category;
   detail: CourseDetail;
   related: Course[];
   authed: boolean;
+  enrolledCourseIds: string[];
 }) {
   const { dict, href: localeHref } = useV2Locale();
   // --- view state -----------------------------------------------------------
   const [viewAs, setViewAs] = React.useState<ViewAs | null>(null);
-  const [enrollments, setEnrollments] = React.useState<string[]>([]);
+  const [enrollments, setEnrollments] = React.useState<string[]>(enrolledCourseIds);
   const [progress, setProgress] = React.useState<Set<string>>(new Set());
 
   React.useEffect(() => {
-    setEnrollments(readEnrollments());
+    if (!authed) {
+      setEnrollments(readGuestEnrollments());
+    }
     setProgress(readProgress(course.id));
     const stored = localStorage.getItem(VIEW_AS_KEY) as ViewAs | null;
     setViewAs(stored ?? (authed ? 'logged-in' : 'guest'));
@@ -128,15 +151,42 @@ function CoursePage({
   const isEnrolled = effectiveState === 'enrolled';
   const isLoggedIn = effectiveState !== 'guest';
 
-  const toggleEnrollment = React.useCallback(() => {
-    setEnrollments((prev) => {
-      const next = prev.includes(course.id)
-        ? prev.filter((x) => x !== course.id)
-        : [...prev, course.id];
-      writeEnrollments(next);
-      return next;
-    });
-  }, [course.id]);
+  // Used by the promo-code redeem flow: the API has already inserted the
+  // server-side enrollment row, so we just need to reflect it in client state.
+  const addEnrollmentLocally = React.useCallback((courseId: string) => {
+    setEnrollments((prev) => (prev.includes(courseId) ? prev : [...prev, courseId]));
+  }, []);
+
+  const toggleEnrollment = React.useCallback(async () => {
+    // Guests (no auth) — keep the localStorage demo behaviour.
+    if (!authed) {
+      setEnrollments((prev) => {
+        const already = prev.includes(course.id);
+        const next = already ? prev.filter((x) => x !== course.id) : [...prev, course.id];
+        writeGuestEnrollments(next);
+        return next;
+      });
+      return;
+    }
+
+    // Authed users: once enrolled, never silently un-enroll from a click.
+    // The UI rail only renders the enroll button when isEnrolled=false.
+    if (enrollments.includes(course.id)) return;
+
+    // Optimistic add, then call the API. Rollback on failure.
+    setEnrollments((prev) => (prev.includes(course.id) ? prev : [...prev, course.id]));
+    try {
+      const res = await fetch('/api/enrollments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId: course.id }),
+      });
+      if (!res.ok) throw new Error('enroll failed');
+    } catch (err) {
+      console.error('[enroll] failed:', err);
+      setEnrollments((prev) => prev.filter((x) => x !== course.id));
+    }
+  }, [authed, course.id, enrollments]);
 
   const toggleLessonComplete = React.useCallback(
     (lessonId: string) => {
@@ -217,6 +267,7 @@ function CoursePage({
                 completedCount={completedCount}
                 totalLessons={totalLessons}
                 onEnroll={toggleEnrollment}
+                onPromoRedeemed={addEnrollmentLocally}
                 previewHref={previewHref}
               />
               <WalliIntroSection course={course} detail={detail} />
@@ -247,15 +298,19 @@ function CoursePage({
         onChange={(v) => {
           setViewAs(v);
           localStorage.setItem(VIEW_AS_KEY, v);
-          if (v === 'enrolled' && !enrollments.includes(course.id)) {
-            const next = [...enrollments, course.id];
-            setEnrollments(next);
-            writeEnrollments(next);
-          }
-          if (v !== 'enrolled' && enrollments.includes(course.id)) {
-            const next = enrollments.filter((x) => x !== course.id);
-            setEnrollments(next);
-            writeEnrollments(next);
+          // Dev tool only fakes the visual state — it never writes the DB.
+          // Real enrollment goes through the Enroll button → /api/enrollments.
+          if (!authed) {
+            if (v === 'enrolled' && !enrollments.includes(course.id)) {
+              const next = [...enrollments, course.id];
+              setEnrollments(next);
+              writeGuestEnrollments(next);
+            }
+            if (v !== 'enrolled' && enrollments.includes(course.id)) {
+              const next = enrollments.filter((x) => x !== course.id);
+              setEnrollments(next);
+              writeGuestEnrollments(next);
+            }
           }
         }}
       />
@@ -1044,6 +1099,7 @@ function PurchaseCard({
   completedCount,
   totalLessons,
   onEnroll,
+  onPromoRedeemed,
   previewHref,
 }: {
   course: Course;
@@ -1055,6 +1111,7 @@ function PurchaseCard({
   completedCount: number;
   totalLessons: number;
   onEnroll: () => void;
+  onPromoRedeemed: (courseId: string) => void;
   previewHref: string;
 }) {
   const t = TONE_CLASSES[category.tone];
@@ -1096,6 +1153,7 @@ function PurchaseCard({
           tone={category.tone}
           isLoggedIn={isLoggedIn}
           onEnroll={onEnroll}
+          onPromoRedeemed={onPromoRedeemed}
           previewHref={previewHref}
         />
       )}
@@ -1213,6 +1271,96 @@ function BundleCrossSell({ category }: { category: Category }) {
   );
 }
 
+function CoursePromoExpandable({
+  courseId,
+  onSuccess,
+}: {
+  courseId: string;
+  onSuccess: (courseId: string) => void;
+}) {
+  const { dict } = useV2Locale();
+  const [open, setOpen] = React.useState(false);
+  const [code, setCode] = React.useState('');
+  const [submitting, setSubmitting] = React.useState(false);
+  const [result, setResult] = React.useState<RedeemResult | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = code.trim();
+    if (!trimmed || submitting) return;
+    setSubmitting(true);
+    setResult(null);
+    try {
+      const r = await redeemPromoCode(trimmed, courseId);
+      setResult(r);
+      if (r.status === 'ok' || r.status === 'already_enrolled') {
+        // Flip the page to enrolled state — the redeem RPC already
+        // inserted the server-side row.
+        onSuccess(r.courseId ?? courseId);
+        setCode('');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const success = result && (result.status === 'ok' || result.status === 'already_enrolled');
+
+  return (
+    <div className="mt-4 border-t border-border/60 pt-4">
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="text-xs font-semibold text-muted-foreground hover:text-pulse transition-colors"
+        >
+          {dict.promo.courseHasCodeCta} →
+        </button>
+      ) : (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-foreground">{dict.promo.courseHeading}</p>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setResult(null); }}
+              className="text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              {dict.promo.courseHasCodeHide}
+            </button>
+          </div>
+          <form onSubmit={submit} className="flex gap-2">
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder={dict.promo.inputPlaceholder}
+              aria-label={dict.promo.inputLabel}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-pulse/40 focus:border-pulse/40"
+            />
+            <button
+              type="submit"
+              disabled={submitting || !code.trim()}
+              className="px-3 py-2 text-sm font-bold rounded-lg bg-pulse text-primary-foreground disabled:opacity-50 transition-all"
+            >
+              {submitting ? '…' : dict.promo.submit}
+            </button>
+          </form>
+          {result && (
+            <p
+              className={cn(
+                'mt-2 text-xs font-medium',
+                success ? 'text-green-700' : 'text-red-600',
+              )}
+            >
+              {redeemStatusLabel(result.status, dict)}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BuyRailContent({
   course,
   detail,
@@ -1221,6 +1369,7 @@ function BuyRailContent({
   tone,
   isLoggedIn,
   onEnroll,
+  onPromoRedeemed,
   previewHref,
 }: {
   course: Course;
@@ -1230,6 +1379,7 @@ function BuyRailContent({
   tone: keyof typeof TONE_CLASSES;
   isLoggedIn: boolean;
   onEnroll: () => void;
+  onPromoRedeemed: (courseId: string) => void;
   previewHref: string;
 }) {
   const t = TONE_CLASSES[tone];
@@ -1313,6 +1463,11 @@ function BuyRailContent({
           ან <span className="underline underline-offset-2">გასინჯე 1-ლი გაკვეთილი</span>
         </span>
       </a>
+
+      {/* Promo code expandable — only for users who haven't enrolled yet */}
+      {isLoggedIn && (
+        <CoursePromoExpandable courseId={course.id} onSuccess={onPromoRedeemed} />
+      )}
 
       {/* Trust pills */}
       <div className="mt-5 rounded-2xl bg-muted/40 p-3 space-y-2.5">

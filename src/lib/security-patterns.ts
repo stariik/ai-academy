@@ -45,6 +45,16 @@ export const RateLimiters = {
   }),
 
   /**
+   * Promo redemption: 10 attempts per 5 minutes
+   * Tight enough to make brute-force scanning impractical, loose enough
+   * that a confused user retyping a code does not get locked out.
+   */
+  promoRedeem: createRateLimiter({
+    windowMs: 5 * 60 * 1000,
+    maxRequests: 10,
+  }),
+
+  /**
    * Generous limiter for public endpoints: 100 requests per minute
    * Use for: Public lesson lists, search, etc.
    */

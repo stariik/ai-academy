@@ -20,6 +20,24 @@ function resolveLocale(localeFromForm: string | null): Locale {
   return DEFAULT_LOCALE;
 }
 
+/**
+ * Where to send the user after a successful sign-in/up.
+ *
+ * If they arrived from `/redeem/CODE`, the form carries the code through
+ * as a hidden field. We send them back to the redeem page so the auto-
+ * apply client fires. The code is normalised + length-capped to avoid
+ * abusing the redirect with arbitrary payloads.
+ */
+function postAuthDestination(locale: Locale, rawRedeem: string | null): string {
+  if (rawRedeem) {
+    const code = rawRedeem.trim().toUpperCase();
+    if (/^[A-Z0-9-]{4,32}$/.test(code)) {
+      return `/${locale}/redeem/${encodeURIComponent(code)}`;
+    }
+  }
+  return `/${locale}`;
+}
+
 /** Best-effort merge of the cookie-anchored anonymous session into a user. */
 async function attachCookieSessionToUser(userId: string) {
   const cookieStore = await cookies();
@@ -53,6 +71,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   const email = String(formData.get('email') ?? '').trim();
   const password = String(formData.get('password') ?? '');
   const locale = resolveLocale(formData.get('locale') as string | null);
+  const redeem = (formData.get('redeem') as string | null) ?? null;
 
   if (!email || !password) {
     return { error: 'EMPTY_FIELDS' };
@@ -73,7 +92,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   await attachCookieSessionToUser(data.user.id);
   await ensureCookieMatchesLinkedSession(data.user.id);
 
-  redirect(`/${locale}/profile`);
+  redirect(postAuthDestination(locale, redeem));
 }
 
 export async function signUpAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -81,6 +100,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   const password = String(formData.get('password') ?? '');
   const displayName = String(formData.get('displayName') ?? '').trim();
   const locale = resolveLocale(formData.get('locale') as string | null);
+  const redeem = (formData.get('redeem') as string | null) ?? null;
 
   if (!email || !password || !displayName) {
     return { error: 'EMPTY_FIELDS' };
@@ -131,12 +151,17 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     }
   }
 
-  // If session is present (no email confirmation required), go to profile.
-  // Otherwise, route to login with a "check your email" hint.
+  // If session is present (no email confirmation required), go to profile
+  // (or auto-apply redeem if they arrived from /redeem/CODE).
+  // Otherwise, route to login with a "check your email" hint — preserving
+  // the redeem code so they can pick up where they left off after confirming.
   if (data.session) {
-    redirect(`/${locale}/profile`);
+    redirect(postAuthDestination(locale, redeem));
   }
-  redirect(`/${locale}/login?confirm=1`);
+  const confirmDest = redeem
+    ? `/${locale}/login?confirm=1&redeem=${encodeURIComponent(redeem)}`
+    : `/${locale}/login?confirm=1`;
+  redirect(confirmDest);
 }
 
 export async function signOutAction(formData: FormData): Promise<void> {

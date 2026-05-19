@@ -45,12 +45,12 @@ export default function LessonClient({
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
-      <LessonClientInner lessonId={lessonId} />
+      <LessonClientInner lessonId={lessonId} locale={locale} />
     </V2LocaleProvider>
   );
 }
 
-function LessonClientInner({ lessonId }: { lessonId: string }) {
+function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Locale }) {
   const { sessionId } = useSession();
   const [lesson, setLesson] = React.useState<Lesson | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -317,6 +317,7 @@ function LessonClientInner({ lessonId }: { lessonId: string }) {
               lessonId={lessonId}
               lessonTitle={lesson.title}
               questions={finalQuizQuestions}
+              siteLocale={locale}
               onBack={() => navigateToPage(contentPages)}
               onComplete={fetchRecommendation}
             />
@@ -326,6 +327,7 @@ function LessonClientInner({ lessonId }: { lessonId: string }) {
               lessonId={lessonId}
               lesson={lesson}
               pageNumber={currentPage}
+              siteLocale={locale}
               onUnlockCheck={() => handleCheckUnlocked(currentPage)}
               walliPulseKey={walliPulse}
               pendingPrompt={chatPrompt}

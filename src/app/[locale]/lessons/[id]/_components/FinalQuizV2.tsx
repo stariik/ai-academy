@@ -16,12 +16,14 @@ export function FinalQuizV2({
   lessonId,
   lessonTitle,
   questions,
+  siteLocale,
   onBack,
   onComplete,
 }: {
   lessonId: string;
   lessonTitle: string;
   questions: QuizQuestion[];
+  siteLocale: 'ka' | 'en';
   onBack: () => void;
   onComplete?: () => void;
 }) {
@@ -42,6 +44,17 @@ export function FinalQuizV2({
     setAnswers((prev) => ({ ...prev, [id]: v }));
   };
 
+  // Teacher language is set per-lesson in ChatPanelV2 (via the toggle) and
+  // stored in localStorage. Quiz feedback should match that choice — fall
+  // back to the site locale when no override has been set.
+  const readTeacherLocale = (): 'ka' | 'en' => {
+    try {
+      const stored = localStorage.getItem(`walli_lang:${lessonId}`);
+      if (stored === 'ka' || stored === 'en') return stored;
+    } catch { /* ignore */ }
+    return siteLocale;
+  };
+
   const submit = async () => {
     setGrading(true);
     try {
@@ -50,6 +63,7 @@ export function FinalQuizV2({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonId,
+          locale: readTeacherLocale(),
           answers: Object.entries(answers).map(([questionId, answer]) => ({
             questionId,
             answer,

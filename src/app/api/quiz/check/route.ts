@@ -18,7 +18,7 @@ import {
   getProgressForSession,
   getAllLessons,
 } from '@/lib/supabase/db';
-import { gradeQuizWithAI } from '@/lib/ai/claude';
+import { gradeQuizWithAI, type TutorLocale } from '@/lib/ai/claude';
 import { getSessionId } from '@/lib/session';
 import { analyzeQuizWeaknesses, mergeTopicAnalysis, determineTeachingStyle } from '@/lib/ai/learning-analytics';
 import { calculateLessonXp, updateStreak } from '@/lib/gamification/xp';
@@ -28,10 +28,12 @@ import { QuizResult } from '@/types';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { lessonId, answers } = body as {
+    const { lessonId, answers, locale: rawLocale } = body as {
       lessonId: string;
       answers: { questionId: string; answer: string }[];
+      locale?: string;
     };
+    const locale: TutorLocale = rawLocale === 'en' ? 'en' : 'ka';
 
     if (!lessonId || !answers || !Array.isArray(answers)) {
       return NextResponse.json(
@@ -63,7 +65,8 @@ export async function POST(request: NextRequest) {
     const gradingResults = await gradeQuizWithAI(
       questions,
       answers,
-      { title: lesson.title, summary: lesson.summary }
+      { title: lesson.title, summary: lesson.summary },
+      locale
     );
 
     // Calculate totals

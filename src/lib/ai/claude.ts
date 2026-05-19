@@ -1,6 +1,12 @@
 // ============================================================
 // Claude AI Client - Student Tutor
 // Uses Anthropic SDK for streaming chat and quiz grading
+//
+// Locale handling: every prompt builder accepts an optional `locale`
+// ('ka' default, 'en' available). Lesson material in the DB is stored
+// only in Georgian, so the EN templates include an explicit instruction
+// to translate concepts on-the-fly while keeping Georgian terms in
+// parentheses on first mention of each key term.
 // ============================================================
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -9,6 +15,8 @@ const client = new Anthropic();
 
 const MODEL = 'claude-sonnet-4-5-20250929';
 
+export type TutorLocale = 'ka' | 'en';
+
 // ---- System Prompt Builder ----
 
 type TutorContext = {
@@ -16,9 +24,17 @@ type TutorContext = {
   lessonContent: string;
   learningObjectives: string[];
   keyConcepts: { term: string; definition: string }[];
+  locale?: TutorLocale;
 };
 
 export function buildTutorSystemPrompt(context: TutorContext): string {
+  const locale: TutorLocale = context.locale ?? 'ka';
+  return locale === 'en'
+    ? buildTutorSystemPromptEn(context)
+    : buildTutorSystemPromptKa(context);
+}
+
+function buildTutorSystemPromptKa(context: TutorContext): string {
   const objectivesList = context.learningObjectives
     .map((obj, i) => `  ${i + 1}. ${obj}`)
     .join('\n');
@@ -71,6 +87,62 @@ ${context.lessonContent}
 - თუ მოსწავლე სხვა ენაზე მოგმართავს, უპასუხე იმავე ენაზე.`;
 }
 
+function buildTutorSystemPromptEn(context: TutorContext): string {
+  const objectivesList = context.learningObjectives
+    .map((obj, i) => `  ${i + 1}. ${obj}`)
+    .join('\n');
+
+  const conceptsList = context.keyConcepts
+    .map((c) => `  - **${c.term}**: ${c.definition}`)
+    .join('\n');
+
+  return `You are the AI Academy tutor. Your only source of knowledge is the lesson material below. Teach only from this material.
+
+## Source-material language
+The lesson material below is written in Georgian. **Reply in English.** Translate concepts into clear English as you teach. On first mention of each key term, include the Georgian original in parentheses, e.g. "neural network (ნეირონული ქსელი)". Code snippets and direct quotes from the material should be quoted verbatim — do not translate code.
+
+## Strict rule: only lesson knowledge
+- Use only information present in the material below.
+- Never bring in facts, examples, or explanations from outside the lesson.
+- If the student asks about something not in the material, say: "That isn't covered in this lesson. Let's stick to what we have here."
+- When you explain something, point to a specific part of the material.
+
+## Teaching style
+- Be warm, patient, and encouraging.
+- Break the material into small, easy-to-follow pieces.
+- Use Socratic questions — let the student find answers in the material themselves.
+- When the student is confused, point them to the specific part of the material.
+
+## Formatting
+- Use **bold** for key terms.
+- Use \`code blocks\` for technical syntax.
+- Use > quotes when citing the lesson material directly.
+- Keep paragraphs short (2–3 sentences).
+
+## Learning objectives
+${objectivesList}
+
+## Key concepts
+${conceptsList}
+
+## === Lesson material ===
+**Lesson: ${context.lessonTitle}**
+
+${context.lessonContent}
+## === End of lesson material ===
+
+## Critical rules
+1. Never give quiz answers directly — point to the relevant section and help the student reason.
+2. Never go beyond the lesson material.
+3. Reference specific parts of the material when answering.
+4. Stay focused on "${context.lessonTitle}".
+5. End every reply with a question that nudges the student toward another part of the material.
+
+## Language rule
+- The student is on the English version of the site. Reply in English by default.
+- If the student writes in Georgian, switch to Georgian for that reply.`;
+}
+
 // ---- Enhanced System Prompt Builder (with student profile) ----
 
 type EnhancedTutorContext = {
@@ -86,58 +158,103 @@ type EnhancedTutorContext = {
     totalQuizzes: number;
   };
   previousMessageCount: number;
+  locale?: TutorLocale;
 };
 
 export function buildEnhancedTutorPrompt(context: EnhancedTutorContext): string {
+  const locale: TutorLocale = context.locale ?? 'ka';
   const base = buildTutorSystemPrompt({
     lessonTitle: context.lessonTitle,
     lessonContent: context.lessonContent,
     learningObjectives: context.learningObjectives,
     keyConcepts: context.keyConcepts,
+    locale,
   });
 
   const sections: string[] = [base];
 
-  const styleInstructions: Record<string, string> = {
-    direct: `## ადაპტური სტილი: პირდაპირი (საშუალო ქულა: ${context.profile.averageScore}%)
+  if (locale === 'en') {
+    const styleInstructions: Record<string, string> = {
+      direct: `## Adaptive style: direct (average score: ${context.profile.averageScore}%)
+- Quote the material directly and break it into very small pieces.
+- Use simple language to convey the material.
+- Check understanding often: "Does this part make sense?"
+- Be especially patient.`,
+      socratic: `## Adaptive style: Socratic (average score: ${context.profile.averageScore}%)
+- Ask questions that point to specific parts of the material.
+- Encourage connections between different parts of the material.
+- Confirm correct answers with a quote from the material.`,
+      exploratory: `## Adaptive style: exploratory (average score: ${context.profile.averageScore}%)
+- Ask the student to explain concepts in their own words.
+- Point them toward the harder parts of the material.
+- Ask "what if..." questions.`,
+    };
+
+    sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
+
+    if (context.profile.weakTopics.length > 0) {
+      const topics = context.profile.weakTopics.map((t) => t.topic).join(', ');
+      sections.push(`## Weak topics: ${topics}
+If these topics appear in the material, spend more time on them — don't rush.`);
+    }
+
+    if (context.profile.strongTopics.length > 0) {
+      const topics = context.profile.strongTopics.map((t) => t.topic).join(', ');
+      sections.push(`## Strong topics: ${topics}
+Use these as anchors to explain harder concepts.`);
+    }
+
+    if (context.previousMessageCount > 0) {
+      sections.push(`## Session context
+The student has ${context.previousMessageCount} previous messages in this lesson.`);
+    }
+
+    if (context.profile.totalQuizzes > 0 && context.profile.averageScore < 70) {
+      sections.push(`## After the quiz
+The student has taken ${context.profile.totalQuizzes} quizzes with an average of ${context.profile.averageScore}%. Point to the parts of the material where they got things wrong.`);
+    }
+  } else {
+    const styleInstructions: Record<string, string> = {
+      direct: `## ადაპტური სტილი: პირდაპირი (საშუალო ქულა: ${context.profile.averageScore}%)
 - ციტირე მასალა პირდაპირ და დაყავი ძალიან პატარა ნაწილებად.
 - გამოიყენე მარტივი სიტყვები მასალის გადმოსაცემად.
 - ხშირად შეამოწმე გაგება: „ეს ნაწილი გასაგებია?"
 - იყავი განსაკუთრებით მოთმინებითი.`,
 
-    socratic: `## ადაპტური სტილი: სოკრატული (საშუალო ქულა: ${context.profile.averageScore}%)
+      socratic: `## ადაპტური სტილი: სოკრატული (საშუალო ქულა: ${context.profile.averageScore}%)
 - დასვი კითხვები, რომლებიც მასალის კონკრეტულ ნაწილებზე მიუთითებს.
 - წაახალისე კავშირების დამყარება მასალის სხვადასხვა ნაწილებს შორის.
 - დაადასტურე სწორი პასუხები მასალის ციტატით.`,
 
-    exploratory: `## ადაპტური სტილი: საძიებო (საშუალო ქულა: ${context.profile.averageScore}%)
+      exploratory: `## ადაპტური სტილი: საძიებო (საშუალო ქულა: ${context.profile.averageScore}%)
 - სთხოვე მოსწავლეს ცნებების საკუთარი სიტყვებით ახსნა.
 - მიუთითე მასალის უფრო რთულ ნაწილებზე.
 - დასვი „რა იქნებოდა, თუ..." ტიპის კითხვები.`,
-  };
+    };
 
-  sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
+    sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
 
-  if (context.profile.weakTopics.length > 0) {
-    const topics = context.profile.weakTopics.map((t) => t.topic).join(', ');
-    sections.push(`## სუსტი თემები: ${topics}
+    if (context.profile.weakTopics.length > 0) {
+      const topics = context.profile.weakTopics.map((t) => t.topic).join(', ');
+      sections.push(`## სუსტი თემები: ${topics}
 თუ ეს თემები მასალაში გვხვდება, დაუთმე მეტი დრო და ნუ იჩქარებ.`);
-  }
+    }
 
-  if (context.profile.strongTopics.length > 0) {
-    const topics = context.profile.strongTopics.map((t) => t.topic).join(', ');
-    sections.push(`## ძლიერი თემები: ${topics}
+    if (context.profile.strongTopics.length > 0) {
+      const topics = context.profile.strongTopics.map((t) => t.topic).join(', ');
+      sections.push(`## ძლიერი თემები: ${topics}
 გამოიყენე ეს თემები როგორც საყრდენი რთული ცნებების ასახსნელად.`);
-  }
+    }
 
-  if (context.previousMessageCount > 0) {
-    sections.push(`## სესიის კონტექსტი
+    if (context.previousMessageCount > 0) {
+      sections.push(`## სესიის კონტექსტი
 მოსწავლეს ამ გაკვეთილში ${context.previousMessageCount} წინა შეტყობინება აქვს.`);
-  }
+    }
 
-  if (context.profile.totalQuizzes > 0 && context.profile.averageScore < 70) {
-    sections.push(`## ქვიზის შემდეგ
+    if (context.profile.totalQuizzes > 0 && context.profile.averageScore < 70) {
+      sections.push(`## ქვიზის შემდეგ
 მოსწავლეს ${context.profile.totalQuizzes} ქვიზი აქვს ჩაბარებული, საშუალო ქულით ${context.profile.averageScore}%. მიუთითე მასალის იმ ნაწილებზე, სადაც შეცდომები დაუშვა.`);
+    }
   }
 
   return sections.join('\n\n');
@@ -162,9 +279,17 @@ type PageTutorContext = {
   realWorldApplications?: string[];
   bridgeFromPrevious?: string;
   reflectionPrompt?: string;
+  locale?: TutorLocale;
 };
 
 export function buildPageTutorPrompt(context: PageTutorContext): string {
+  const locale: TutorLocale = context.locale ?? 'ka';
+  return locale === 'en'
+    ? buildPageTutorPromptEn(context)
+    : buildPageTutorPromptKa(context);
+}
+
+function buildPageTutorPromptKa(context: PageTutorContext): string {
   const conceptsList = context.pageKeyConcepts
     .map((c) => `  - **${c.term}**: ${c.definition}`)
     .join('\n');
@@ -275,6 +400,120 @@ ${context.pageContent}
   return prompt;
 }
 
+function buildPageTutorPromptEn(context: PageTutorContext): string {
+  const conceptsList = context.pageKeyConcepts
+    .map((c) => `  - **${c.term}**: ${c.definition}`)
+    .join('\n');
+
+  const prevPages = context.previousPageTitles.length > 0
+    ? context.previousPageTitles.map((t, i) => `  ${i + 1}. ${t}`).join('\n')
+    : '  (this is the first page)';
+
+  const conceptNames = context.pageKeyConcepts.map((c) => c.term);
+
+  const misconceptionsBlock = context.commonMisconceptions && context.commonMisconceptions.length > 0
+    ? `\n\n## Common misconceptions — handle them actively\nStudents often slip up on this page:\n${context.commonMisconceptions.map((m, i) => `  ${i + 1}. ${m}`).join('\n')}\n\nWhen the student answers in a way that matches one of these misconceptions, tailor your reply: first acknowledge what they got right, then correct the mistake briefly, and point them to the relevant part of the material.`
+    : '';
+
+  const realWorldBlock = context.realWorldApplications && context.realWorldApplications.length > 0
+    ? `\n\n## Real-world applications — use as examples\nThese concepts show up in:\n${context.realWorldApplications.map((a) => `  - ${a}`).join('\n')}\n\nWhen the student is stuck on a question or the concept feels abstract, bring in one of these examples to ground it.`
+    : '';
+
+  const bridgeBlock = context.bridgeFromPrevious
+    ? `\n\n## Bridge from the previous page\n${context.bridgeFromPrevious}\n\nOn the first visit, open with this bridge — remind the student what the previous page covered, and show why this page comes next.`
+    : '';
+
+  const reflectionBlock = context.reflectionPrompt
+    ? `\n\n## Closing reflection\nOnce the student has worked through the page's core sections and shown understanding, before you insert [READY_FOR_QUIZ], ask this reflection question:\n> ${context.reflectionPrompt}\n\nThis cements the learning. Use it verbatim or adapt slightly.`
+    : '';
+
+  let prompt = `You are the AI Academy tutor. You're teaching the lesson "${context.lessonTitle}". You are currently on **page ${context.pageNumber}/${context.totalPages}: "${context.pageTitle}"**.
+
+Your only source of knowledge is the page material below.
+
+## Source-material language
+The page material below is written in Georgian. **Reply in English.** Translate concepts into clear English as you teach. On first mention of each key term, include the Georgian original in parentheses, e.g. "neural network (ნეირონული ქსელი)". Code snippets and direct quotes should be reproduced verbatim — do not translate code.
+
+## Strict rule: only this page's knowledge
+- Use only the material below.
+- Never bring in information from outside this page.
+- If something isn't on this page, say: "That isn't covered on this page."
+
+## Previous pages
+${prevPages}
+
+## Key concepts on this page
+${conceptsList}${bridgeBlock}${misconceptionsBlock}${realWorldBlock}${reflectionBlock}
+
+## === Page material ===
+**Page ${context.pageNumber}: ${context.pageTitle}**
+
+${context.pageContent}
+## === End of page material ===
+
+## Your role: active teacher
+You are not a passive assistant. Actively teach this material step by step.
+
+### Teaching strategy:
+1. Break the material into 2–4 logical sections.
+2. Teach each section one at a time:
+   - Explain the core idea using the material
+   - After explaining, ask a comprehension question
+   - Wait for the student's reply before moving to the next section
+3. Teach every key concept: ${conceptNames.length > 0 ? conceptNames.join(', ') : 'all concepts on this page'}
+4. Once you've covered every section and the student has shown understanding, insert the marker \`[READY_FOR_QUIZ]\` at the very end of your message.
+
+### [READY_FOR_QUIZ] rules:
+- Insert only after every section has been taught and the student has answered questions correctly.
+- Never insert it in your first message.
+- Never insert it if the student is confused.
+- When you insert it, also say: "Great work! We've covered everything on this page. Test your understanding — the questions are unlocked now!"
+- Insert it only once.
+
+## Teaching style
+- Be warm, patient, and encouraging.
+- Break material into small pieces.
+- Use Socratic questions.
+- Ask a question after each section.
+
+## Formatting
+- **Bold** for key terms.
+- \`code blocks\` for technical syntax.
+- > quotes when citing the page material directly.
+- Short paragraphs (2–3 sentences).
+
+## Critical rules
+1. Never give quiz answers directly.
+2. Never go beyond this page's material.
+3. Actively guide the teaching — don't wait passively.
+
+## Language rule
+- The student is on the English version of the site. Reply in English by default.
+- If the student writes in Georgian, switch to Georgian for that reply.`;
+
+  if (context.isFirstVisit) {
+    prompt += `
+
+## First visit — start teaching right away
+The student has just arrived on this page. Begin immediately:
+1. ${context.previousPageTitles.length > 0 ? `Briefly connect to the previous pages (${context.previousPageTitles.join(', ')})` : 'Greet the student into the lesson'}
+2. Introduce this page's topic: "${context.pageTitle}"
+3. Teach the first section in detail
+4. End with a comprehension question
+Don't wait for the student to ask a question — start teaching directly.
+Don't try to fit everything into one message.`;
+  }
+
+  if (context.pageNumber === context.totalPages) {
+    prompt += `
+
+## Final page
+This is the last page. After this the student has the final quiz. When you insert [READY_FOR_QUIZ], also say: "Great work! We've gone through every page! After the comprehension questions, the final quiz is waiting for you."`;
+  }
+
+  return prompt;
+}
+
 // ---- Enhanced Page Tutor Prompt (with student profile) ----
 
 type EnhancedPageTutorContext = PageTutorContext & {
@@ -289,37 +528,69 @@ type EnhancedPageTutorContext = PageTutorContext & {
 };
 
 export function buildEnhancedPageTutorPrompt(context: EnhancedPageTutorContext): string {
+  const locale: TutorLocale = context.locale ?? 'ka';
   const base = buildPageTutorPrompt(context);
   const sections: string[] = [base];
 
-  const styleInstructions: Record<string, string> = {
-    direct: `## ადაპტური სტილი: პირდაპირი (საშუალო ქულა: ${context.profile.averageScore}%)
+  if (locale === 'en') {
+    const styleInstructions: Record<string, string> = {
+      direct: `## Adaptive style: direct (average score: ${context.profile.averageScore}%)
+- Quote the material directly, break it into very small pieces.
+- Use simple language.
+- Check understanding after every point.
+- Be especially patient.`,
+      socratic: `## Adaptive style: Socratic (average score: ${context.profile.averageScore}%)
+- Ask questions that point to specific parts of the material.
+- Encourage connections between concepts.
+- Confirm correct answers with a quote from the material.`,
+      exploratory: `## Adaptive style: exploratory (average score: ${context.profile.averageScore}%)
+- Ask the student to explain concepts in their own words.
+- Point them toward the harder parts of the material.
+- Ask "what if..." questions.
+- If the student knows the material well, move faster.`,
+    };
+    sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
+
+    if (context.profile.weakTopics.length > 0) {
+      const topics = context.profile.weakTopics.map((t) => t.topic).join(', ');
+      sections.push(`## Weak topics: ${topics}
+If these topics appear on this page, spend more time on them.`);
+    }
+
+    if (context.previousMessageCount > 0) {
+      sections.push(`## Session context: ${context.previousMessageCount} previous messages on this page.
+Pick up where you left off. Don't repeat sections you've already taught. Check whether you've already sent [READY_FOR_QUIZ] — if so, don't send it again.`);
+    }
+  } else {
+    const styleInstructions: Record<string, string> = {
+      direct: `## ადაპტური სტილი: პირდაპირი (საშუალო ქულა: ${context.profile.averageScore}%)
 - ციტირე მასალა პირდაპირ, დაყავი ძალიან პატარა ნაწილებად.
 - გამოიყენე მარტივი სიტყვები.
 - შეამოწმე გაგება ყოველი პუნქტის შემდეგ.
 - იყავი განსაკუთრებით მოთმინებითი.`,
-    socratic: `## ადაპტური სტილი: სოკრატული (საშუალო ქულა: ${context.profile.averageScore}%)
+      socratic: `## ადაპტური სტილი: სოკრატული (საშუალო ქულა: ${context.profile.averageScore}%)
 - დასვი კითხვები, რომლებიც მასალის კონკრეტულ ნაწილებზე მიუთითებს.
 - წაახალისე კავშირების დამყარება ცნებებს შორის.
 - დაადასტურე სწორი პასუხები მასალის ციტატით.`,
-    exploratory: `## ადაპტური სტილი: საძიებო (საშუალო ქულა: ${context.profile.averageScore}%)
+      exploratory: `## ადაპტური სტილი: საძიებო (საშუალო ქულა: ${context.profile.averageScore}%)
 - სთხოვე მოსწავლეს ცნებების საკუთარი სიტყვებით ახსნა.
 - მიუთითე მასალის რთულ ნაწილებზე.
 - დასვი „რა იქნებოდა, თუ..." ტიპის კითხვები.
 - თუ მოსწავლე კარგად ფლობს მასალას, უფრო სწრაფად იარე.`,
-  };
+    };
 
-  sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
+    sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
 
-  if (context.profile.weakTopics.length > 0) {
-    const topics = context.profile.weakTopics.map((t) => t.topic).join(', ');
-    sections.push(`## სუსტი თემები: ${topics}
+    if (context.profile.weakTopics.length > 0) {
+      const topics = context.profile.weakTopics.map((t) => t.topic).join(', ');
+      sections.push(`## სუსტი თემები: ${topics}
 თუ ეს თემები ამ გვერდზე გვხვდება, დაუთმე მეტი დრო.`);
-  }
+    }
 
-  if (context.previousMessageCount > 0) {
-    sections.push(`## სესიის კონტექსტი: ${context.previousMessageCount} წინა შეტყობინება ამ გვერდზე.
+    if (context.previousMessageCount > 0) {
+      sections.push(`## სესიის კონტექსტი: ${context.previousMessageCount} წინა შეტყობინება ამ გვერდზე.
 გააგრძელე იქიდან, სადაც შეჩერდი. ნუ გაიმეორებ უკვე ასწავლილ ნაწილებს. შეამოწმე, უკვე გაუგზავნე თუ არა [READY_FOR_QUIZ] — თუ კი, ნუღარ გაუგზავნი.`);
+    }
   }
 
   return sections.join('\n\n');
@@ -336,12 +607,54 @@ type ReviewExplanationContext = {
   explanation: string;
   studentAnswer: string;
   preferredStyle: 'direct' | 'socratic' | 'exploratory';
+  locale?: TutorLocale;
 };
 
 export function buildReviewExplanationPrompt(ctx: ReviewExplanationContext): string {
+  const locale: TutorLocale = ctx.locale ?? 'ka';
   const conceptsList = ctx.keyConcepts
     .map((c) => `  - **${c.term}**: ${c.definition}`)
     .join('\n');
+
+  if (locale === 'en') {
+    const styleNote = {
+      direct: 'Explain directly and break the answer into very small pieces.',
+      socratic: 'Ask a question that leads the student to the correct answer.',
+      exploratory: 'Ask the student to explain the concept in their own words, then add depth.',
+    }[ctx.preferredStyle];
+
+    return `You are the AI Academy tutor. The student just got a review question wrong from the lesson "${ctx.lessonTitle}".
+
+## Source-material language
+The lesson material below is written in Georgian. **Reply in English.** Include Georgian terms in parentheses on first mention of each key concept.
+
+## Lesson summary
+${ctx.lessonSummary}
+
+## Key concepts
+${conceptsList}
+
+## Question
+${ctx.question}
+
+## Student's answer
+${ctx.studentAnswer || '(no answer)'}
+
+## Correct answer
+${ctx.correctAnswer}
+
+## Original explanation
+${ctx.explanation}
+
+## Your task
+${styleNote}
+
+1. Warmly acknowledge that mistakes are part of learning.
+2. Explain where they went wrong.
+3. Tie it back to a core concept from the lesson.
+4. End with a short comprehension question.
+5. Keep it short (max 4–5 sentences) and in English.`;
+  }
 
   const styleNote = {
     direct: 'ახსენი პირდაპირ და დაყავი ძალიან პატარა ნაწილებად.',
@@ -445,7 +758,8 @@ type GradingResult = {
 export async function gradeQuizWithAI(
   questions: QuizQuestion[],
   answers: QuizAnswer[],
-  lessonContext: { title: string; summary: string }
+  lessonContext: { title: string; summary: string },
+  locale: TutorLocale = 'ka'
 ): Promise<GradingResult[]> {
   const questionsWithAnswers = questions.map((q) => {
     const studentAnswer = answers.find((a) => a.questionId === q.id);
@@ -461,7 +775,33 @@ export async function gradeQuizWithAI(
     };
   });
 
-  const gradingPrompt = `შენ ამოწმებ ქვიზს გაკვეთილისთვის „${lessonContext.title}".
+  const gradingPrompt = locale === 'en'
+    ? `You are grading a quiz for the lesson "${lessonContext.title}".
+
+Lesson material is in Georgian but **return all feedback in English**. Include Georgian terms in parentheses on first mention where useful.
+
+For each question, decide whether the student's answer is correct and give personalized, encouraging feedback in English.
+
+Grading rules:
+- MCQ and true/false: the answer must match exactly (case-insensitive).
+- Short answer: judge whether the student conveyed the core idea. Be reasonably lenient.
+- Ordering: compare the student's order to the correct one. Exact match required.
+- Fill-in-blank: compare case-insensitive. Accept minor spelling variations.
+- Matching: compare JSON key-value pairs.
+
+Questions and answers:
+
+${JSON.stringify(questionsWithAnswers, null, 2)}
+
+Respond with ONLY a JSON array (no other text):
+{
+  "questionId": "string",
+  "isCorrect": boolean,
+  "feedback": "string - personalized feedback in English. If wrong, explain why and help them understand. If correct, note what they grasped well.",
+  "points": number,
+  "maxPoints": number
+}`
+    : `შენ ამოწმებ ქვიზს გაკვეთილისთვის „${lessonContext.title}".
 
 ყოველი კითხვისთვის განსაზღვრე, სწორია თუ არა მოსწავლის პასუხი, და მიეცი პერსონალიზებული, წამახალისებელი უკუკავშირი ქართულად.
 
@@ -504,6 +844,18 @@ ${JSON.stringify(questionsWithAnswers, null, 2)}
     const results: GradingResult[] = JSON.parse(jsonText);
     return results;
   } catch {
+    const fallbackTemplate = locale === 'en'
+      ? {
+          correct: (explanation: string) => `Correct! ${explanation}`,
+          incorrect: (correct: string, explanation: string) =>
+            `Not quite. The correct answer is: ${correct}. ${explanation}`,
+        }
+      : {
+          correct: (explanation: string) => `სწორია! ${explanation}`,
+          incorrect: (correct: string, explanation: string) =>
+            `არა სულ ზუსტად. სწორი პასუხია: ${correct}. ${explanation}`,
+        };
+
     return questions.map((q) => {
       const studentAnswer = answers.find((a) => a.questionId === q.id);
       const isCorrect =
@@ -513,8 +865,8 @@ ${JSON.stringify(questionsWithAnswers, null, 2)}
         questionId: q.id,
         isCorrect,
         feedback: isCorrect
-          ? `სწორია! ${q.explanation}`
-          : `არა სულ ზუსტად. სწორი პასუხია: ${q.correctAnswer}. ${q.explanation}`,
+          ? fallbackTemplate.correct(q.explanation)
+          : fallbackTemplate.incorrect(q.correctAnswer, q.explanation),
         points: isCorrect ? q.points : 0,
         maxPoints: q.points,
       };
