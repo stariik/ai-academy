@@ -18,8 +18,13 @@ export default function AdminCourseDetailPage({
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState('');
+  const [titleEn, setTitleEn] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionEn, setDescriptionEn] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const fetchCourse = useCallback(async () => {
     try {
@@ -27,13 +32,62 @@ export default function AdminCourseDetailPage({
       if (!res.ok) throw new Error('Not found');
       const data = await res.json();
       setCourse(data);
-      setTitle(data.title);
-      setDescription(data.description);
+      setTitle(data.title ?? '');
+      setTitleEn(data.titleEn ?? '');
+      setDescription(data.description ?? '');
+      setDescriptionEn(data.descriptionEn ?? '');
       setTags(Array.isArray(data.tags) ? data.tags : []);
     } catch {
       setCourse(null);
     }
   }, [courseId]);
+
+  const fetchImagePrompt = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/courses/${courseId}/generate-image`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (typeof data.prompt === 'string') setImagePrompt(data.prompt);
+    } catch {
+      // non-fatal
+    }
+  }, [courseId]);
+
+  const generateImage = async () => {
+    setGeneratingImage(true);
+    setImageError(null);
+    try {
+      const res = await fetch(`/api/admin/courses/${courseId}/generate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: imagePrompt.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setImageError(data?.error ?? 'generation_failed');
+        return;
+      }
+      if (typeof data.prompt === 'string') setImagePrompt(data.prompt);
+      await fetchCourse();
+    } catch {
+      setImageError('network_error');
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
+  const clearImage = async () => {
+    try {
+      await fetch(`/api/courses/${courseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: null }),
+      });
+      fetchCourse();
+    } catch (err) {
+      console.error('Failed to clear image:', err);
+    }
+  };
 
   const fetchAllLessons = useCallback(async () => {
     try {
@@ -46,17 +100,23 @@ export default function AdminCourseDetailPage({
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchCourse(), fetchAllLessons()]).finally(() =>
+    Promise.all([fetchCourse(), fetchAllLessons(), fetchImagePrompt()]).finally(() =>
       setLoading(false)
     );
-  }, [courseId, fetchCourse, fetchAllLessons]);
+  }, [courseId, fetchCourse, fetchAllLessons, fetchImagePrompt]);
 
   const handleSave = async () => {
     try {
       const res = await fetch(`/api/courses/${courseId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, tags }),
+        body: JSON.stringify({
+          title,
+          titleEn: titleEn.trim() || null,
+          description,
+          descriptionEn: descriptionEn.trim() || null,
+          tags,
+        }),
       });
       if (res.ok) {
         setEditing(false);
@@ -194,17 +254,42 @@ export default function AdminCourseDetailPage({
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
           {editing ? (
             <div className="space-y-3">
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-lg font-bold"
-              />
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-              />
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Title — ქართული</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-lg font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Title — English</label>
+                <input
+                  value={titleEn}
+                  onChange={(e) => setTitleEn(e.target.value)}
+                  placeholder="Optional translation"
+                  className="w-full border rounded-lg px-3 py-2 text-lg text-gray-700"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Description — ქართული</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Description — English</label>
+                <textarea
+                  value={descriptionEn}
+                  onChange={(e) => setDescriptionEn(e.target.value)}
+                  rows={2}
+                  placeholder="Optional translation"
+                  className="w-full border rounded-lg px-3 py-2 text-sm text-gray-700"
+                />
+              </div>
               <CategoryPicker selected={tags} onChange={setTags} />
               <div className="grid grid-cols-2 gap-2 sm:flex">
                 <button onClick={handleSave} className="px-4 py-2 sm:py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light">
@@ -247,6 +332,90 @@ export default function AdminCourseDetailPage({
           )}
         </div>
 
+        {/* Cover Image */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Cover Image</h2>
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">
+              3:2 · Replicate · low
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[280px_1fr] md:items-start">
+            <div className="relative aspect-[4/3] w-full rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+              {course.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={course.imageUrl}
+                  alt={`Cover for ${course.title}`}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">
+                  No cover yet
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
+                  Image prompt
+                </label>
+                <textarea
+                  value={imagePrompt}
+                  onChange={(e) => setImagePrompt(e.target.value)}
+                  rows={6}
+                  className="w-full border rounded-lg px-3 py-2 text-sm font-mono leading-snug"
+                  placeholder="Describe the cover image…"
+                />
+                <p className="mt-1 text-[11px] text-gray-400">
+                  Auto-built from course title, description, and tags. Edit freely before generating.
+                </p>
+              </div>
+
+              {imageError && (
+                <p className="text-xs text-red-600">
+                  Failed to generate ({imageError}). Check REPLICATE_API_KEY and try again.
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={generateImage}
+                  disabled={generatingImage}
+                  className="px-4 py-2 text-sm bg-navy text-white rounded-lg hover:bg-navy-light disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                >
+                  {generatingImage && (
+                    <span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  )}
+                  {generatingImage
+                    ? 'Generating…'
+                    : course.imageUrl
+                    ? 'Regenerate'
+                    : 'Generate Image'}
+                </button>
+                {course.imageUrl && (
+                  <button
+                    onClick={clearImage}
+                    disabled={generatingImage}
+                    className="px-4 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  onClick={fetchImagePrompt}
+                  disabled={generatingImage}
+                  className="px-4 py-2 text-sm border text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Reset prompt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Course Lessons */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -283,7 +452,13 @@ export default function AdminCourseDetailPage({
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 sm:flex sm:shrink-0">
+                  <div className="grid grid-cols-3 gap-1 sm:flex sm:shrink-0">
+                    <Link
+                      href={`/admin/lessons/${lesson.id}/edit`}
+                      className="text-center px-2 py-1 text-xs bg-navy text-white rounded hover:bg-navy-light font-medium"
+                    >
+                      Edit
+                    </Link>
                     <button
                       onClick={() => togglePublish(lesson.id, lesson.status)}
                       className={`px-2 py-1 text-xs rounded ${

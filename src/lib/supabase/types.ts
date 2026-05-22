@@ -30,6 +30,7 @@ export type ContentBlockRow = {
   page_id: string | null;
   type: string;
   content: string;
+  content_en: string | null;
   metadata: Record<string, unknown> | null;
   order: number;
 };
@@ -55,6 +56,7 @@ export type LessonPageRow = {
   lesson_id: string;
   page_number: number;
   title: string;
+  title_en: string | null;
   key_concepts: { term: string; definition: string }[];
   teaching_flow: Record<string, string> | null;
   difficulty_level: string | null;
@@ -71,6 +73,7 @@ export type CourseRow = {
   description: string;
   description_en: string | null;
   tags: string[];
+  image_url: string | null;
   user_id: string | null;
   created_at: string;
   updated_at: string;

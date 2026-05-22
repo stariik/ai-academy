@@ -43,6 +43,7 @@ export type Course = {
   price?: number;        // not in real data
   level: Level;          // most common difficulty across lessons
   icon: string;          // inherited from category
+  imageUrl?: string | null; // AI-generated cover from Replicate; falls back to icon-on-gradient
 };
 
 export type Lesson = {

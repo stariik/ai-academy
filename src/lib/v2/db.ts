@@ -94,6 +94,7 @@ function buildCourse(
     hours: Math.max(1, Math.round(totalMinutes(lessonsForCourse) / 60)),
     level: inferLevel(lessonsForCourse),
     icon: visual.icon,
+    imageUrl: real.imageUrl ?? null,
   };
 }
 

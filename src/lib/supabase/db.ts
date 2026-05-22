@@ -66,6 +66,7 @@ function mapContentBlock(cb: ContentBlockRow): ContentBlock {
     id: cb.id,
     type: cb.type as ContentBlock['type'],
     content: cb.content,
+    contentEn: cb.content_en ?? null,
     metadata: cb.metadata ?? undefined,
     order: cb.order,
     pageId: cb.page_id ?? undefined,
@@ -130,6 +131,7 @@ export function assembleLesson(
         lessonId: pr.lesson_id,
         pageNumber: pr.page_number,
         title: pr.title,
+        titleEn: pr.title_en ?? null,
         keyConcepts: pr.key_concepts,
         contentBlocks: contentBlocks
           .filter((cb) => cb.page_id === pr.id)
@@ -303,8 +305,11 @@ export async function updateLesson(
   // Map camelCase to snake_case for the lesson row
   const rowUpdates: Record<string, unknown> = {};
   if (updates.title !== undefined) rowUpdates.title = updates.title;
+  if (updates.titleEn !== undefined) rowUpdates.title_en = updates.titleEn;
   if (updates.description !== undefined) rowUpdates.description = updates.description;
+  if (updates.descriptionEn !== undefined) rowUpdates.description_en = updates.descriptionEn;
   if (updates.learningObjectives !== undefined) rowUpdates.learning_objectives = updates.learningObjectives;
+  if (updates.learningObjectivesEn !== undefined) rowUpdates.learning_objectives_en = updates.learningObjectivesEn;
   if (updates.keyConcepts !== undefined) rowUpdates.key_concepts = updates.keyConcepts;
   if (updates.summary !== undefined) rowUpdates.summary = updates.summary;
   if (updates.sourceDocument !== undefined) rowUpdates.source_document = updates.sourceDocument;
@@ -327,6 +332,147 @@ export async function deleteLesson(supabase: SupabaseClient, id: string): Promis
   // content_blocks and quiz_questions cascade delete via FK
   const { error } = await supabase.from('lessons').delete().eq('id', id);
   return !error;
+}
+
+// ============================================================
+// Lesson Pages CRUD (added 2026-05-20 for full-edit admin)
+// ============================================================
+
+export async function updateLessonPage(
+  supabase: SupabaseClient,
+  id: string,
+  updates: Partial<{
+    title: string;
+    titleEn: string | null;
+    pageNumber: number;
+    keyConcepts: { term: string; definition: string }[];
+  }>
+): Promise<boolean> {
+  const rowUpdates: Record<string, unknown> = {};
+  if (updates.title !== undefined) rowUpdates.title = updates.title;
+  if (updates.titleEn !== undefined) rowUpdates.title_en = updates.titleEn;
+  if (updates.pageNumber !== undefined) rowUpdates.page_number = updates.pageNumber;
+  if (updates.keyConcepts !== undefined) rowUpdates.key_concepts = updates.keyConcepts;
+  if (Object.keys(rowUpdates).length === 0) return true;
+
+  const { error } = await supabase.from('lesson_pages').update(rowUpdates).eq('id', id);
+  if (error) throw new Error(`Failed to update lesson page: ${error.message}`);
+  return true;
+}
+
+/**
+ * Batch-reorder pages within a lesson. Caller sends the desired final
+ * (id, pageNumber) pairs. We write them in two passes (negative temp
+ * numbers first, then the real numbers) so the unique(lesson_id,
+ * page_number) constraint never trips mid-update.
+ */
+export async function reorderLessonPages(
+  supabase: SupabaseClient,
+  lessonId: string,
+  order: { id: string; pageNumber: number }[],
+): Promise<void> {
+  for (let i = 0; i < order.length; i++) {
+    const { error } = await supabase
+      .from('lesson_pages')
+      .update({ page_number: -(i + 1) })
+      .eq('id', order[i].id)
+      .eq('lesson_id', lessonId);
+    if (error) throw new Error(`Failed to stage reorder: ${error.message}`);
+  }
+  for (const { id, pageNumber } of order) {
+    const { error } = await supabase
+      .from('lesson_pages')
+      .update({ page_number: pageNumber })
+      .eq('id', id)
+      .eq('lesson_id', lessonId);
+    if (error) throw new Error(`Failed to commit reorder: ${error.message}`);
+  }
+}
+
+// ============================================================
+// Content Blocks CRUD (added 2026-05-20)
+// ============================================================
+
+export async function createContentBlock(
+  supabase: SupabaseClient,
+  block: {
+    lessonId: string;
+    pageId: string | null;
+    type: ContentBlock['type'];
+    content: string;
+    contentEn?: string | null;
+    order: number;
+    metadata?: Record<string, unknown> | null;
+  },
+): Promise<ContentBlock> {
+  const id = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const row = {
+    id,
+    lesson_id: block.lessonId,
+    page_id: block.pageId,
+    type: block.type,
+    content: block.content,
+    content_en: block.contentEn ?? null,
+    metadata: block.metadata ?? null,
+    order: block.order,
+  };
+  const { data, error } = await supabase
+    .from('content_blocks')
+    .insert(row)
+    .select('*')
+    .single();
+  if (error || !data) throw new Error(`Failed to create content block: ${error?.message}`);
+  return mapContentBlock(data as ContentBlockRow);
+}
+
+export async function updateContentBlock(
+  supabase: SupabaseClient,
+  id: string,
+  updates: Partial<{
+    type: ContentBlock['type'];
+    content: string;
+    contentEn: string | null;
+    order: number;
+    metadata: Record<string, unknown> | null;
+  }>,
+): Promise<boolean> {
+  const rowUpdates: Record<string, unknown> = {};
+  if (updates.type !== undefined) rowUpdates.type = updates.type;
+  if (updates.content !== undefined) rowUpdates.content = updates.content;
+  if (updates.contentEn !== undefined) rowUpdates.content_en = updates.contentEn;
+  if (updates.order !== undefined) rowUpdates.order = updates.order;
+  if (updates.metadata !== undefined) rowUpdates.metadata = updates.metadata;
+  if (Object.keys(rowUpdates).length === 0) return true;
+
+  const { error } = await supabase.from('content_blocks').update(rowUpdates).eq('id', id);
+  if (error) throw new Error(`Failed to update content block: ${error.message}`);
+  return true;
+}
+
+export async function deleteContentBlock(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<boolean> {
+  const { error } = await supabase.from('content_blocks').delete().eq('id', id);
+  return !error;
+}
+
+/**
+ * Batch-reorder content blocks within a single page (or top-level when
+ * pageId is null). content_blocks.order has no uniqueness constraint
+ * today, so a one-pass update is safe.
+ */
+export async function reorderContentBlocks(
+  supabase: SupabaseClient,
+  order: { id: string; order: number }[],
+): Promise<void> {
+  for (const { id, order: position } of order) {
+    const { error } = await supabase
+      .from('content_blocks')
+      .update({ order: position })
+      .eq('id', id);
+    if (error) throw new Error(`Failed to reorder content blocks: ${error.message}`);
+  }
 }
 
 // ============================================================
@@ -356,6 +502,7 @@ export async function createCourse(
     description: row.description,
     descriptionEn: row.description_en ?? null,
     tags: row.tags,
+    imageUrl: row.image_url ?? null,
     userId: row.user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -376,6 +523,7 @@ export async function getAllCourses(supabase: SupabaseClient): Promise<Course[]>
     description: row.description,
     descriptionEn: row.description_en ?? null,
     tags: row.tags,
+    imageUrl: row.image_url ?? null,
     userId: row.user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -393,6 +541,7 @@ export async function getCourse(supabase: SupabaseClient, id: string): Promise<C
     description: row.description,
     descriptionEn: row.description_en ?? null,
     tags: row.tags,
+    imageUrl: row.image_url ?? null,
     userId: row.user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -402,10 +551,27 @@ export async function getCourse(supabase: SupabaseClient, id: string): Promise<C
 export async function updateCourse(
   supabase: SupabaseClient,
   id: string,
-  updates: Partial<{ title: string; description: string; tags: string[] }>
+  updates: Partial<{
+    title: string;
+    titleEn: string | null;
+    description: string;
+    descriptionEn: string | null;
+    tags: string[];
+    imageUrl: string | null;
+  }>
 ): Promise<Course | null> {
-  const { error } = await supabase.from('courses').update(updates).eq('id', id);
-  if (error) throw new Error(`Failed to update course: ${error.message}`);
+  const rowUpdates: Record<string, unknown> = {};
+  if (updates.title !== undefined) rowUpdates.title = updates.title;
+  if (updates.titleEn !== undefined) rowUpdates.title_en = updates.titleEn;
+  if (updates.description !== undefined) rowUpdates.description = updates.description;
+  if (updates.descriptionEn !== undefined) rowUpdates.description_en = updates.descriptionEn;
+  if (updates.tags !== undefined) rowUpdates.tags = updates.tags;
+  if (updates.imageUrl !== undefined) rowUpdates.image_url = updates.imageUrl;
+
+  if (Object.keys(rowUpdates).length > 0) {
+    const { error } = await supabase.from('courses').update(rowUpdates).eq('id', id);
+    if (error) throw new Error(`Failed to update course: ${error.message}`);
+  }
   return getCourse(supabase, id);
 }
 

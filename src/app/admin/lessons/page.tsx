@@ -220,6 +220,19 @@ export default function AdminLessonsPage() {
                   <td style={{ padding: '0.6rem 0.75rem' }}>
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                       <Link
+                        href={`/admin/lessons/${lesson.id}/edit`}
+                        style={{
+                          ...btnStyle('default'),
+                          textDecoration: 'none',
+                          display: 'inline-block',
+                          fontWeight: 600,
+                          color: 'var(--accent)',
+                          borderColor: 'var(--accent)',
+                        }}
+                      >
+                        Edit
+                      </Link>
+                      <Link
                         href={`/student/lesson/${lesson.id}`}
                         style={{
                           ...btnStyle('default'),

@@ -22,6 +22,7 @@ export type ContentBlock = {
     | 'tip'
     | 'quote';
   content: string;
+  contentEn?: string | null;
   metadata?: Record<string, unknown>;
   order: number;
   pageId?: string;
@@ -55,6 +56,7 @@ export type LessonPage = {
   lessonId: string;
   pageNumber: number;
   title: string;
+  titleEn?: string | null;
   keyConcepts: { term: string; definition: string }[];
   contentBlocks: ContentBlock[];
   checkQuestions: QuizQuestion[];
@@ -197,6 +199,7 @@ export type Course = {
   description: string;
   descriptionEn?: string | null;
   tags: string[];
+  imageUrl?: string | null;
   userId?: string | null;
   createdAt: string;
   updatedAt: string;

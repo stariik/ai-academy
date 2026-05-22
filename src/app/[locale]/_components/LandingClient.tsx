@@ -1085,27 +1085,43 @@ function CourseCard({ course: co, category: c }: { course: Course; category: Cat
       />
 
       <div className={cn('relative aspect-[4/3] overflow-hidden', t.iconBg)}>
-        <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
-        <div
-          className={cn(
-            'absolute -bottom-12 -right-10 w-40 h-40 sm:w-44 sm:h-44 rounded-full blur-3xl transition-all duration-700',
-            t.bg,
-            'opacity-30 group-hover:opacity-70 group-hover:translate-x-2 group-hover:-translate-y-2',
-          )}
-          aria-hidden
-        />
+        {co.imageUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={co.imageUrl}
+              alt=""
+              aria-hidden
+              draggable={false}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+            />
+          </>
+        ) : (
+          <>
+            <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
+            <div
+              className={cn(
+                'absolute -bottom-12 -right-10 w-40 h-40 sm:w-44 sm:h-44 rounded-full blur-3xl transition-all duration-700',
+                t.bg,
+                'opacity-30 group-hover:opacity-70 group-hover:translate-x-2 group-hover:-translate-y-2',
+              )}
+              aria-hidden
+            />
 
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className={cn(
-              'flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl text-4xl sm:text-5xl lg:text-6xl',
-              'bg-card border border-border/80 shadow-[0_12px_30px_rgba(0,0,0,0.10)]',
-              'transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-6',
-            )}
-          >
-            {co.icon}
-          </div>
-        </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div
+                className={cn(
+                  'flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl text-4xl sm:text-5xl lg:text-6xl',
+                  'bg-card border border-border/80 shadow-[0_12px_30px_rgba(0,0,0,0.10)]',
+                  'transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-6',
+                )}
+              >
+                {co.icon}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 inline-flex items-center gap-1.5 rounded-full bg-card/85 backdrop-blur-sm border border-border/60 px-2 py-1 sm:px-2.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
           <LevelSignal level={co.level} tone={c.tone} />
