@@ -15,6 +15,7 @@ import Replicate from 'replicate';
 import { getAdminUser } from '@/lib/admin-auth';
 import { createClient } from '@/lib/supabase/server';
 import { getCourse, updateCourse } from '@/lib/supabase/db';
+import { uploadCourseImage } from '@/lib/supabase/storage';
 import type { Course } from '@/types';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -74,7 +75,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const replicate = new Replicate({ auth: apiKey });
 
-  let imageUrl: string | null = null;
+  // Replicate returns an ephemeral replicate.delivery URL — valid only for
+  // ~a day. We must download the bytes now and persist them ourselves.
+  let sourceUrl: string | null = null;
   try {
     const output = (await replicate.run('openai/gpt-image-2', {
       input: {
@@ -85,17 +88,31 @@ export async function POST(request: NextRequest, context: RouteContext) {
     })) as Array<{ url: () => string }> | { url: () => string };
 
     if (Array.isArray(output)) {
-      imageUrl = output[0]?.url() ?? null;
+      sourceUrl = output[0]?.url() ?? null;
     } else if (output && typeof output.url === 'function') {
-      imageUrl = output.url();
+      sourceUrl = output.url();
     }
   } catch (err) {
     console.error('[admin/courses/generate-image] replicate failed:', err);
     return NextResponse.json({ error: 'generation_failed' }, { status: 502 });
   }
 
-  if (!imageUrl) {
+  if (!sourceUrl) {
     return NextResponse.json({ error: 'no_image_returned' }, { status: 502 });
+  }
+
+  // Download from Replicate and re-host in Supabase Storage so the URL
+  // we save is permanent.
+  let imageUrl: string;
+  try {
+    const res = await fetch(sourceUrl);
+    if (!res.ok) throw new Error(`fetch ${res.status}`);
+    const contentType = res.headers.get('content-type') || 'image/webp';
+    const bytes = await res.arrayBuffer();
+    imageUrl = await uploadCourseImage(id, bytes, contentType);
+  } catch (err) {
+    console.error('[admin/courses/generate-image] persist failed:', err);
+    return NextResponse.json({ error: 'persist_failed' }, { status: 502 });
   }
 
   await updateCourse(supabase, id, { imageUrl });
