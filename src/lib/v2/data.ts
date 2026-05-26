@@ -30,6 +30,7 @@ export type Category = {
   retailPrice?: number;
   icon: string;
   tone: Tone;
+  imageUrl?: string | null; // AI-generated cover (Replicate); falls back to icon-on-gradient
 };
 
 export type Course = {
@@ -43,7 +44,6 @@ export type Course = {
   price?: number;        // not in real data
   level: Level;          // most common difficulty across lessons
   icon: string;          // inherited from category
-  imageUrl?: string | null; // AI-generated cover from Replicate; falls back to icon-on-gradient
 };
 
 export type Lesson = {
@@ -182,6 +182,16 @@ export const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
 export function pickLocale<T>(locale: Locale, ka: T, en: T | null | undefined): T {
   if (locale === 'en' && en !== null && en !== undefined && en !== '') return en;
   return ka;
+}
+
+/** Resolve a category slug (e.g. 'ai-foundations') to its KA name + visual. */
+export function getCategoryBySlug(
+  slug: string,
+): { nameKa: string; visual: CategoryVisual } | null {
+  for (const [nameKa, visual] of Object.entries(CATEGORY_VISUALS)) {
+    if (visual.slug === slug) return { nameKa, visual };
+  }
+  return null;
 }
 
 /** Localized category display name from the canonical KA tag key. */

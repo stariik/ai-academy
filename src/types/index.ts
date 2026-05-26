@@ -199,7 +199,6 @@ export type Course = {
   description: string;
   descriptionEn?: string | null;
   tags: string[];
-  imageUrl?: string | null;
   userId?: string | null;
   createdAt: string;
   updatedAt: string;

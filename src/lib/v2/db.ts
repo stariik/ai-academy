@@ -7,7 +7,7 @@
 // ============================================================
 
 import { createClient } from '@/lib/supabase/server';
-import { getAllCourses, getAllLessons } from '@/lib/supabase/db';
+import { getAllCourses, getAllLessons, getCategoryImages } from '@/lib/supabase/db';
 import { CATEGORIES as CANONICAL_CATEGORIES } from '@/lib/constants/categories';
 import {
   CATEGORY_VISUALS,
@@ -56,6 +56,7 @@ function buildCategory(
   locale: Locale,
   coursesInCat: RealCourse[],
   lessonsByCourse: Map<string, RealLesson[]>,
+  categoryImages: Record<string, string>,
 ): Category {
   const visual = CATEGORY_VISUALS[nameKa];
   const display = getCategoryDisplay(nameKa, locale);
@@ -73,6 +74,7 @@ function buildCategory(
     lessons: totalLessons,
     icon: visual.icon,
     tone: visual.tone,
+    imageUrl: categoryImages[visual.slug] ?? null,
   };
 }
 
@@ -94,15 +96,15 @@ function buildCourse(
     hours: Math.max(1, Math.round(totalMinutes(lessonsForCourse) / 60)),
     level: inferLevel(lessonsForCourse),
     icon: visual.icon,
-    imageUrl: real.imageUrl ?? null,
   };
 }
 
 async function loadAll() {
   const supabase = await createClient();
-  const [courses, lessons] = await Promise.all([
+  const [courses, lessons, categoryImages] = await Promise.all([
     getAllCourses(supabase),
     getAllLessons(supabase, { status: 'published' }),
+    getCategoryImages(supabase),
   ]);
   const lessonsByCourse = new Map<string, RealLesson[]>();
   for (const l of lessons) {
@@ -111,11 +113,11 @@ async function loadAll() {
     arr.push(l);
     lessonsByCourse.set(l.courseId, arr);
   }
-  return { courses, lessons, lessonsByCourse };
+  return { courses, lessons, lessonsByCourse, categoryImages };
 }
 
 export async function getCategories(locale: Locale): Promise<Category[]> {
-  const { courses, lessonsByCourse } = await loadAll();
+  const { courses, lessonsByCourse, categoryImages } = await loadAll();
 
   // Group real courses by their first canonical tag.
   const byTag = new Map<string, RealCourse[]>();
@@ -129,7 +131,7 @@ export async function getCategories(locale: Locale): Promise<Category[]> {
 
   // Emit one Category per canonical name, in the canonical order.
   return CANONICAL_CATEGORIES.map((nameKa) =>
-    buildCategory(nameKa, locale, byTag.get(nameKa) ?? [], lessonsByCourse),
+    buildCategory(nameKa, locale, byTag.get(nameKa) ?? [], lessonsByCourse, categoryImages),
   );
 }
 
@@ -192,7 +194,7 @@ export async function getCoursePayload(
   slug: string,
   locale: Locale,
 ): Promise<V2CoursePayload | null> {
-  const { courses, lessonsByCourse } = await loadAll();
+  const { courses, lessonsByCourse, categoryImages } = await loadAll();
   const real = courses.find((c) => c.id === slug);
   if (!real) return null;
 
@@ -216,6 +218,7 @@ export async function getCoursePayload(
     locale,
     courses.filter((c) => firstCanonicalTag(c.tags ?? []) === tag),
     lessonsByCourse,
+    categoryImages,
   );
 
   const dict = getDict(locale);

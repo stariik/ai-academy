@@ -1,11 +1,11 @@
 // ============================================================
 // Supabase Storage helpers
 //
-// Course cover images used to be hot-linked straight from Replicate's
-// `replicate.delivery` URLs, which are ephemeral and expire within a
-// day — so every cover eventually 404'd. We now download the bytes and
-// persist them in a public Supabase Storage bucket, saving that durable
-// URL to courses.image_url.
+// Category cover images are generated via Replicate, whose
+// `replicate.delivery` URLs are ephemeral and expire within a day — so
+// every cover eventually 404's. We download the bytes and persist them
+// in a public Supabase Storage bucket, saving that durable URL to
+// category_images.image_url.
 //
 // Uploads use the service-role key (RLS / bucket policies would
 // otherwise block writes). This module is `server-only` so the key
@@ -15,7 +15,7 @@
 import 'server-only';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const COURSE_IMAGE_BUCKET = 'course-images';
+const CATEGORY_IMAGE_BUCKET = 'category-images';
 
 function serviceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,12 +30,12 @@ function serviceClient(): SupabaseClient {
   });
 }
 
-/** Idempotently ensure the public course-images bucket exists. */
-async function ensureBucket(supabase: SupabaseClient): Promise<void> {
-  const { data, error } = await supabase.storage.getBucket(COURSE_IMAGE_BUCKET);
+/** Idempotently ensure a public image bucket exists. */
+async function ensureBucket(supabase: SupabaseClient, bucket: string): Promise<void> {
+  const { data, error } = await supabase.storage.getBucket(bucket);
   if (data && !error) return;
 
-  const { error: createError } = await supabase.storage.createBucket(COURSE_IMAGE_BUCKET, {
+  const { error: createError } = await supabase.storage.createBucket(bucket, {
     public: true,
     // Cover images are small; cap to keep accidental huge uploads out.
     fileSizeLimit: '10MB',
@@ -54,31 +54,31 @@ function extensionFor(contentType: string): string {
 }
 
 /**
- * Upload course cover bytes and return a durable public URL.
- * Filename is keyed by course id + timestamp so re-generations don't
+ * Upload category cover bytes and return a durable public URL.
+ * Filename is keyed by category slug + timestamp so re-generations don't
  * collide and CDN caches don't serve a stale image.
  */
-export async function uploadCourseImage(
-  courseId: string,
+export async function uploadCategoryImage(
+  slug: string,
   bytes: ArrayBuffer,
   contentType: string,
 ): Promise<string> {
   const supabase = serviceClient();
-  await ensureBucket(supabase);
+  await ensureBucket(supabase, CATEGORY_IMAGE_BUCKET);
 
   const ext = extensionFor(contentType);
-  const path = `${courseId}/${Date.now()}.${ext}`;
+  const path = `${slug}/${Date.now()}.${ext}`;
 
   const { error } = await supabase.storage
-    .from(COURSE_IMAGE_BUCKET)
+    .from(CATEGORY_IMAGE_BUCKET)
     .upload(path, bytes, {
       contentType,
       upsert: true,
       cacheControl: '31536000', // 1 year — filename changes on re-gen
     });
-  if (error) throw new Error(`Failed to upload course image: ${error.message}`);
+  if (error) throw new Error(`Failed to upload category image: ${error.message}`);
 
-  const { data } = supabase.storage.from(COURSE_IMAGE_BUCKET).getPublicUrl(path);
-  if (!data?.publicUrl) throw new Error('Failed to resolve public URL for course image');
+  const { data } = supabase.storage.from(CATEGORY_IMAGE_BUCKET).getPublicUrl(path);
+  if (!data?.publicUrl) throw new Error('Failed to resolve public URL for category image');
   return data.publicUrl;
 }

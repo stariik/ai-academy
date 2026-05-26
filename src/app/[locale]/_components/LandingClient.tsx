@@ -898,6 +898,7 @@ function CategoryMiniCard({
   const num = (index + 1).toString().padStart(2, '0');
   const disabled = c.courses === 0;
   const href = disabled ? '#' : `#cat-${c.id}`;
+  const hasImage = Boolean(c.imageUrl);
 
   return (
     <a
@@ -913,16 +914,36 @@ function CategoryMiniCard({
           : 'border-border hover:-translate-y-2 hover:border-transparent hover:shadow-[0_24px_60px_-20px_var(--pulse-glow)]',
       )}
     >
-      <div className={cn('absolute inset-0 -z-10 opacity-60', t.iconBg)} aria-hidden />
-
-      <div
-        className={cn(
-          'absolute -top-20 -right-20 w-56 h-56 rounded-full blur-3xl transition-all duration-700 ease-out',
-          t.bg,
-          'opacity-40 group-hover:opacity-90 group-hover:-translate-x-4 group-hover:translate-y-4',
-        )}
-        aria-hidden
-      />
+      {hasImage ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={c.imageUrl as string}
+            alt=""
+            aria-hidden
+            draggable={false}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+          />
+          {/* Scrim keeps the overlaid text legible over any image. */}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10"
+            aria-hidden
+          />
+        </>
+      ) : (
+        <>
+          <div className={cn('absolute inset-0 -z-10 opacity-60', t.iconBg)} aria-hidden />
+          <div
+            className={cn(
+              'absolute -top-20 -right-20 w-56 h-56 rounded-full blur-3xl transition-all duration-700 ease-out',
+              t.bg,
+              'opacity-40 group-hover:opacity-90 group-hover:-translate-x-4 group-hover:translate-y-4',
+            )}
+            aria-hidden
+          />
+        </>
+      )}
 
       <div
         className={cn(
@@ -946,8 +967,8 @@ function CategoryMiniCard({
         <span
           className={cn(
             'text-[44px] sm:text-[56px] lg:text-[64px] font-black tabular-nums leading-none select-none',
-            t.text,
-            'opacity-25 group-hover:opacity-40 transition-opacity',
+            hasImage ? 'text-white opacity-60 group-hover:opacity-80' : cn(t.text, 'opacity-25 group-hover:opacity-40'),
+            'transition-opacity',
           )}
           style={{ fontFamily: 'var(--font-display)' }}
         >
@@ -957,23 +978,41 @@ function CategoryMiniCard({
 
       <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6 space-y-1.5 sm:space-y-2">
         <h3
-          className="text-[15px] sm:text-lg lg:text-xl font-bold leading-tight tracking-tight line-clamp-2"
+          className={cn(
+            'text-[15px] sm:text-lg lg:text-xl font-bold leading-tight tracking-tight line-clamp-2',
+            hasImage && 'text-white',
+          )}
           style={{ fontFamily: 'var(--font-display)' }}
         >
           {c.name}
         </h3>
-        <p className="text-[10px] sm:text-[11px] lg:text-xs text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.4em]">
+        <p
+          className={cn(
+            'text-[10px] sm:text-[11px] lg:text-xs leading-relaxed line-clamp-2 min-h-[2.4em]',
+            hasImage ? 'text-white/80' : 'text-muted-foreground',
+          )}
+        >
           {c.tagline}
         </p>
 
-        <div className="pt-2 sm:pt-3 flex items-center justify-between border-t border-border/70">
-          <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">
+        <div
+          className={cn(
+            'pt-2 sm:pt-3 flex items-center justify-between border-t',
+            hasImage ? 'border-white/25' : 'border-border/70',
+          )}
+        >
+          <span
+            className={cn(
+              'text-[10px] sm:text-[11px] font-medium',
+              hasImage ? 'text-white/85' : 'text-muted-foreground',
+            )}
+          >
             {c.courses > 0 ? (
               <>
-                <span className="font-bold text-foreground tabular-nums">{c.courses}</span>{' '}
+                <span className={cn('font-bold tabular-nums', hasImage ? 'text-white' : 'text-foreground')}>{c.courses}</span>{' '}
                 {dict.catalog.coursesUnit}
                 <span className="opacity-50"> · </span>
-                <span className="font-bold text-foreground tabular-nums">{c.lessons}</span>{' '}
+                <span className={cn('font-bold tabular-nums', hasImage ? 'text-white' : 'text-foreground')}>{c.lessons}</span>{' '}
                 {dict.catalog.lessonsUnitShort}
               </>
             ) : (
@@ -1013,51 +1052,96 @@ function CourseSliderRow({
   if (courses.length === 0) return null;
   const num = (rowIndex + 1).toString().padStart(2, '0');
   const denom = totalRows.toString().padStart(2, '0');
+  const hasImage = Boolean(c.imageUrl);
+
+  const counts = (
+    <>
+      <span className="font-bold tabular-nums">{c.courses}</span> {dict.catalog.coursesUnit}
+      <span className="opacity-50"> · </span>
+      <span className="font-bold tabular-nums">{c.lessons}</span> {dict.catalog.lessonsUnit}
+    </>
+  );
 
   return (
     <div id={`cat-${c.id}`} className="scroll-mt-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-5 sm:mb-7 flex items-end justify-between gap-3 sm:gap-4">
-        <div className="flex items-end gap-3 sm:gap-5 min-w-0">
-          <span
-            className={cn(
-              'shrink-0 text-[28px] sm:text-4xl lg:text-5xl font-bold tabular-nums leading-none select-none',
-              t.text,
-              'opacity-30',
-            )}
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            {num}
-          </span>
-          <div className="min-w-0 pb-0.5 sm:pb-1">
-            <h3
-              className="text-lg sm:text-2xl lg:text-3xl font-bold leading-[1.15] tracking-tight line-clamp-2"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              <span className={cn('mr-1.5 sm:mr-2', t.text)}>{c.icon}</span>
-              {c.name}
-            </h3>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium">
-              <span className="font-bold text-foreground tabular-nums">{c.courses}</span>{' '}
-              {dict.catalog.coursesUnit}
-              <span className="opacity-50"> · </span>
-              <span className="font-bold text-foreground tabular-nums">{c.lessons}</span>{' '}
-              {dict.catalog.lessonsUnit}
-            </p>
+      {hasImage ? (
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-5 sm:mb-7">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={c.imageUrl as string}
+              alt=""
+              aria-hidden
+              draggable={false}
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/20" aria-hidden />
+            <div className="relative flex items-end justify-between gap-3 sm:gap-4 p-4 sm:p-6 lg:p-8 min-h-[120px] sm:min-h-[160px]">
+              <div className="flex items-end gap-3 sm:gap-5 min-w-0">
+                <span
+                  className="shrink-0 text-[28px] sm:text-4xl lg:text-5xl font-bold tabular-nums leading-none select-none text-white/40"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  {num}
+                </span>
+                <div className="min-w-0">
+                  <h3
+                    className="text-lg sm:text-2xl lg:text-3xl font-bold leading-[1.15] tracking-tight line-clamp-2 text-white"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
+                    <span className="mr-1.5 sm:mr-2">{c.icon}</span>
+                    {c.name}
+                  </h3>
+                  <p className="text-[10px] sm:text-xs text-white/80 mt-1 font-medium">{counts}</p>
+                </div>
+              </div>
+              <span className="hidden sm:inline-flex text-[10px] uppercase tracking-[0.22em] text-white/70 font-bold tabular-nums shrink-0">
+                {num} / {denom}
+              </span>
+            </div>
           </div>
         </div>
-        <span className="hidden sm:inline-flex text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold tabular-nums shrink-0">
-          {num} / {denom}
-        </span>
-      </div>
+      ) : (
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 mb-5 sm:mb-7 flex items-end justify-between gap-3 sm:gap-4">
+          <div className="flex items-end gap-3 sm:gap-5 min-w-0">
+            <span
+              className={cn(
+                'shrink-0 text-[28px] sm:text-4xl lg:text-5xl font-bold tabular-nums leading-none select-none',
+                t.text,
+                'opacity-30',
+              )}
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {num}
+            </span>
+            <div className="min-w-0 pb-0.5 sm:pb-1">
+              <h3
+                className="text-lg sm:text-2xl lg:text-3xl font-bold leading-[1.15] tracking-tight line-clamp-2"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                <span className={cn('mr-1.5 sm:mr-2', t.text)}>{c.icon}</span>
+                {c.name}
+              </h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium [&_span]:text-foreground">
+                {counts}
+              </p>
+            </div>
+          </div>
+          <span className="hidden sm:inline-flex text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold tabular-nums shrink-0">
+            {num} / {denom}
+          </span>
+        </div>
+      )}
 
       <HorizontalSlider ariaLabel={`${c.name} — ${dict.slider.ariaCourses}`}>
-        {courses.map((co) => (
+        {courses.map((co, i) => (
           <div
             key={co.id}
             data-slide-item
-            className="snap-start shrink-0 w-[220px] sm:w-[260px] lg:w-[300px]"
+            className="snap-start shrink-0 w-[230px] sm:w-[264px] lg:w-[288px]"
           >
-            <CourseCard course={co} category={c} />
+            <CourseCard course={co} category={c} index={i} />
           </div>
         ))}
       </HorizontalSlider>
@@ -1065,115 +1149,111 @@ function CourseSliderRow({
   );
 }
 
-function CourseCard({ course: co, category: c }: { course: Course; category: Category }) {
+// Course card — a tone-accented "console" readout (no cover image, no
+// icon). Visual interest comes from typography and instrument details: a
+// large faint catalog index, a level meter, a dot-grid + tone corner glow,
+// a display-font title, a short description, mono stats, and a tone-filling
+// "launch" arrow. Theme-aware via design tokens; a sheen sweeps on hover.
+function CourseCard({
+  course: co,
+  category: c,
+  index,
+}: {
+  course: Course;
+  category: Category;
+  index: number;
+}) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
+  const code = String(index + 1).padStart(2, '0');
+  const isFree = !(typeof co.price === 'number' && co.price > 0);
 
   return (
     <a
       href={href(`courses/${co.id}`)}
       draggable={false}
-      className="group relative block h-full flex flex-col rounded-3xl border border-border bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:border-transparent hover:shadow-[0_24px_60px_-20px_var(--pulse-glow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-border bg-card p-5 transition-all duration-300 ease-out hover:-translate-y-2 hover:border-transparent hover:shadow-[0_30px_70px_-26px_var(--pulse-glow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
+      {/* Tone accent edge along the top */}
+      <div className={cn('absolute inset-x-0 top-0 h-[3px] opacity-70 transition-opacity duration-300 group-hover:opacity-100', t.bg)} aria-hidden />
+
+      {/* Soft tone glow, top-right */}
+      <div className={cn('pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full blur-3xl opacity-25 transition-all duration-500 group-hover:opacity-50 group-hover:-translate-y-1', t.bg)} aria-hidden />
+
+      {/* Faint dot grid */}
       <div
-        className={cn(
-          'pointer-events-none absolute inset-0 rounded-3xl ring-2 ring-inset transition-opacity duration-300',
-          t.ring,
-          'opacity-0 group-hover:opacity-100',
-        )}
+        className="pointer-events-none absolute inset-0 opacity-60"
+        style={{ backgroundImage: 'radial-gradient(var(--grid-line) 1.1px, transparent 1.1px)', backgroundSize: '13px 13px' }}
         aria-hidden
       />
 
-      <div className={cn('relative aspect-[4/3] overflow-hidden', t.iconBg)}>
-        {co.imageUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={co.imageUrl}
-              alt=""
-              aria-hidden
-              draggable={false}
-              loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-            />
-          </>
-        ) : (
-          <>
-            <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
-            <div
-              className={cn(
-                'absolute -bottom-12 -right-10 w-40 h-40 sm:w-44 sm:h-44 rounded-full blur-3xl transition-all duration-700',
-                t.bg,
-                'opacity-30 group-hover:opacity-70 group-hover:translate-x-2 group-hover:-translate-y-2',
-              )}
-              aria-hidden
-            />
+      {/* Hover sheen sweep */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -inset-y-12 -left-1/3 w-1/3 rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-all duration-700 ease-out group-hover:left-[130%] group-hover:opacity-100" />
+      </div>
 
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div
-                className={cn(
-                  'flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl sm:rounded-3xl text-4xl sm:text-5xl lg:text-6xl',
-                  'bg-card border border-border/80 shadow-[0_12px_30px_rgba(0,0,0,0.10)]',
-                  'transition-all duration-500 ease-out group-hover:scale-110 group-hover:rotate-6',
-                )}
-              >
-                {co.icon}
-              </div>
-            </div>
-          </>
+      {/* Big faint catalog index watermark */}
+      <span
+        className={cn(
+          'pointer-events-none absolute right-3 top-1 select-none font-mono text-[58px] font-black leading-none tabular-nums opacity-[0.07] transition-opacity duration-300 group-hover:opacity-[0.13]',
+          t.text,
         )}
+        aria-hidden
+      >
+        {code}
+      </span>
 
-        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 inline-flex items-center gap-1.5 rounded-full bg-card/85 backdrop-blur-sm border border-border/60 px-2 py-1 sm:px-2.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">
+      {/* Header — index + level meter */}
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="font-mono text-[10px] font-semibold tracking-[0.22em] text-muted-foreground">
+          №{code}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/40 px-2 py-1 text-[8.5px] font-bold uppercase tracking-widest backdrop-blur-sm">
           <LevelSignal level={co.level} tone={c.tone} />
-          <span className="text-foreground/85">{dict.level[co.level]}</span>
-        </div>
+          <span className="text-foreground/70">{dict.level[co.level]}</span>
+        </span>
       </div>
 
-      <div className="flex-1 p-4 sm:p-5 flex flex-col">
-        <h4
-          className="text-sm sm:text-base lg:text-lg font-bold leading-snug line-clamp-2 min-h-[2.6em]"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          {co.title}
-        </h4>
+      {/* Title */}
+      <h4
+        className="relative mt-4 text-[17px] sm:text-lg font-bold leading-snug tracking-tight line-clamp-2"
+        style={{ fontFamily: 'var(--font-display)' }}
+      >
+        {co.title}
+      </h4>
 
-        <div className="mt-2.5 sm:mt-3 flex items-center gap-1.5 flex-wrap">
-          <MetaPill>
-            {co.lessons} {dict.courseCard.lessonsShort}
-          </MetaPill>
-          <MetaPill>
-            ~{co.hours} {dict.courseCard.hoursShort}
-          </MetaPill>
-        </div>
-      </div>
+      {/* Description */}
+      {co.description && (
+        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+          {co.description}
+        </p>
+      )}
 
-      <div className="px-4 pb-4 sm:px-5 sm:pb-5 flex items-center justify-between border-t border-border pt-3 sm:pt-4">
-        {typeof co.price === 'number' && co.price > 0 ? (
-          <span className="text-sm sm:text-base font-bold tabular-nums">₾{co.price}</span>
-        ) : (
-          <span className={cn('text-[10px] font-bold uppercase tracking-widest', t.text)}>
-            {dict.courseCard.free}
-          </span>
-        )}
-        <span
-          className={cn(
-            'flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border transition-all duration-300 text-sm sm:text-base',
-            'border-border bg-card text-foreground',
-            'group-hover:bg-pulse group-hover:border-pulse group-hover:text-primary-foreground group-hover:shadow-[0_8px_20px_var(--pulse-glow)]',
+      {/* Footer console */}
+      <div className="relative mt-auto flex items-center justify-between gap-2 border-t border-border/70 pt-3.5">
+        <span className="font-mono text-[10.5px] text-muted-foreground">
+          <span className="font-bold tabular-nums text-foreground">{co.lessons}</span>
+          {' '}{dict.courseCard.lessonsShort}
+          <span className="px-1 opacity-40">·</span>
+          ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
+          {dict.courseCard.hoursShort}
+        </span>
+
+        <span className="flex items-center gap-2">
+          {isFree ? (
+            <span className={cn('text-[10px] font-bold uppercase tracking-widest', t.text)}>
+              {dict.courseCard.free}
+            </span>
+          ) : (
+            <span className="text-sm font-bold tabular-nums">₾{co.price}</span>
           )}
-        >
-          →
+          <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full border border-border text-foreground transition-colors duration-300 group-hover:border-transparent group-hover:text-primary-foreground group-hover:shadow-[0_8px_20px_var(--pulse-glow)]">
+            <span className={cn('absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100', t.bg)} aria-hidden />
+            <span className="relative text-base transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+          </span>
         </span>
       </div>
     </a>
-  );
-}
-
-function MetaPill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted text-foreground/80 px-2.5 py-1 text-[10px] font-bold tracking-wide">
-      {children}
-    </span>
   );
 }
 

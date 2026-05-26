@@ -10,6 +10,7 @@ import type {
   QuizQuestionRow,
   LessonPageRow,
   CourseRow,
+  CategoryImageRow,
   StudentSessionRow,
   LessonProgressRow,
   QuizAttemptRow,
@@ -502,7 +503,6 @@ export async function createCourse(
     description: row.description,
     descriptionEn: row.description_en ?? null,
     tags: row.tags,
-    imageUrl: row.image_url ?? null,
     userId: row.user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -523,7 +523,6 @@ export async function getAllCourses(supabase: SupabaseClient): Promise<Course[]>
     description: row.description,
     descriptionEn: row.description_en ?? null,
     tags: row.tags,
-    imageUrl: row.image_url ?? null,
     userId: row.user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -541,7 +540,6 @@ export async function getCourse(supabase: SupabaseClient, id: string): Promise<C
     description: row.description,
     descriptionEn: row.description_en ?? null,
     tags: row.tags,
-    imageUrl: row.image_url ?? null,
     userId: row.user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -557,7 +555,6 @@ export async function updateCourse(
     description: string;
     descriptionEn: string | null;
     tags: string[];
-    imageUrl: string | null;
   }>
 ): Promise<Course | null> {
   const rowUpdates: Record<string, unknown> = {};
@@ -566,7 +563,6 @@ export async function updateCourse(
   if (updates.description !== undefined) rowUpdates.description = updates.description;
   if (updates.descriptionEn !== undefined) rowUpdates.description_en = updates.descriptionEn;
   if (updates.tags !== undefined) rowUpdates.tags = updates.tags;
-  if (updates.imageUrl !== undefined) rowUpdates.image_url = updates.imageUrl;
 
   if (Object.keys(rowUpdates).length > 0) {
     const { error } = await supabase.from('courses').update(rowUpdates).eq('id', id);
@@ -585,6 +581,67 @@ export async function deleteCourse(supabase: SupabaseClient, id: string): Promis
   }
   const { error } = await supabase.from('courses').delete().eq('id', id);
   return !error;
+}
+
+// ============================================================
+// Category cover images
+//
+// Categories live as the 9 canonical strings in
+// src/lib/constants/categories.ts (not a `categories` table). The
+// `category_images` table stores one admin-generated cover per category,
+// keyed by the category slug from CATEGORY_VISUALS.
+// ============================================================
+
+export type CategoryImage = {
+  slug: string;
+  imageUrl: string | null;
+  prompt: string | null;
+};
+
+/** All category images as a slug -> image_url map (only rows with a URL). */
+export async function getCategoryImages(
+  supabase: SupabaseClient,
+): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('category_images')
+    .select('slug, image_url');
+  if (error || !data) return {};
+  const map: Record<string, string> = {};
+  for (const row of data as Pick<CategoryImageRow, 'slug' | 'image_url'>[]) {
+    if (row.image_url) map[row.slug] = row.image_url;
+  }
+  return map;
+}
+
+export async function getCategoryImage(
+  supabase: SupabaseClient,
+  slug: string,
+): Promise<CategoryImage | null> {
+  const { data, error } = await supabase
+    .from('category_images')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as CategoryImageRow;
+  return { slug: row.slug, imageUrl: row.image_url ?? null, prompt: row.prompt ?? null };
+}
+
+/** Insert or update a category's cover image / prompt. */
+export async function upsertCategoryImage(
+  supabase: SupabaseClient,
+  slug: string,
+  updates: { imageUrl?: string | null; prompt?: string | null },
+): Promise<CategoryImage | null> {
+  const row: Record<string, unknown> = { slug, updated_at: new Date().toISOString() };
+  if (updates.imageUrl !== undefined) row.image_url = updates.imageUrl;
+  if (updates.prompt !== undefined) row.prompt = updates.prompt;
+
+  const { error } = await supabase
+    .from('category_images')
+    .upsert(row, { onConflict: 'slug' });
+  if (error) throw new Error(`Failed to upsert category image: ${error.message}`);
+  return getCategoryImage(supabase, slug);
 }
 
 export async function deleteAllLessons(supabase: SupabaseClient): Promise<number> {

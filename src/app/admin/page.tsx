@@ -457,6 +457,7 @@ export default function AdminPage() {
           <div className="flex gap-4 mt-2 flex-wrap">
             <Link href="/admin/lessons" className="text-teal hover:text-navy text-sm">View all lessons →</Link>
             <Link href="/admin/courses" className="text-teal hover:text-navy text-sm">Manage courses →</Link>
+            <Link href="/admin/categories" className="text-teal hover:text-navy text-sm">Category images →</Link>
             <Link href="/admin/analytics" className="text-teal hover:text-navy text-sm">Analytics →</Link>
             <Link href="/admin/promo-codes" className="text-teal hover:text-navy text-sm">Promo codes →</Link>
           </div>

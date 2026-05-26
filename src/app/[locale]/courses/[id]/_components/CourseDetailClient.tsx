@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 import { Walli, type WalliState } from '@/components/walli/Walli';
+import { EveCover } from '@/components/walli/EveCover';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import {
@@ -542,17 +543,18 @@ function Hero({
               />
               <Walli size={260} state={walliState} />
 
-              {/* Orbiting course-icon medallion */}
+              {/* Orbiting course medallion — Eve-head cover with the course icon */}
               <motion.div
                 aria-hidden
                 animate={reduced ? undefined : { y: [0, -10, 0] }}
                 transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
-                className={cn(
-                  'absolute -top-3 -right-3 w-20 h-20 rounded-3xl flex items-center justify-center text-4xl border bg-card shadow-[0_12px_30px_rgba(0,0,0,0.10)]',
-                  t.ring,
-                )}
+                className="absolute -top-4 -right-4 w-28 h-24"
               >
-                <span className="-rotate-6">{course.icon}</span>
+                <EveCover
+                  icon={<span className="-rotate-6 inline-block">{course.icon}</span>}
+                  className="h-full w-full drop-shadow-[0_12px_30px_rgba(0,0,0,0.12)]"
+                  iconClassName="text-3xl"
+                />
               </motion.div>
 
               {/* Floating chips */}
@@ -1063,10 +1065,13 @@ function RelatedCoursesSection({ related, category: cat }: { related: Course[]; 
               transition={{ duration: 0.45, delay: i * 0.06 }}
               className="group flex-shrink-0 sm:flex-shrink w-[280px] sm:w-auto rounded-2xl border border-border bg-card overflow-hidden hover:-translate-y-1 hover:border-pulse/40 hover:shadow-[0_12px_40px_var(--pulse-glow)] transition-all snap-start"
             >
-              <div className={cn('relative aspect-[16/9] flex items-center justify-center', t.gradient)}>
-                <div className={cn('w-14 h-14 rounded-2xl flex items-center justify-center text-3xl', t.iconBg)}>
-                  {co.icon}
-                </div>
+              <div className={cn('relative aspect-[5/4] overflow-hidden', t.iconBg)}>
+                <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
+                <EveCover
+                  icon={co.icon}
+                  className="absolute inset-0 p-5 transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+                  iconClassName="text-3xl sm:text-4xl"
+                />
               </div>
               <div className="p-4 sm:p-5">
                 <h4 className="text-base font-bold leading-snug" style={{ fontFamily: 'var(--font-display)' }}>

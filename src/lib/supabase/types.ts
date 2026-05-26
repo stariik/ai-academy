@@ -73,9 +73,15 @@ export type CourseRow = {
   description: string;
   description_en: string | null;
   tags: string[];
-  image_url: string | null;
   user_id: string | null;
   created_at: string;
+  updated_at: string;
+};
+
+export type CategoryImageRow = {
+  slug: string;
+  image_url: string | null;
+  prompt: string | null;
   updated_at: string;
 };
 
