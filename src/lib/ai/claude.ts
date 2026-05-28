@@ -98,8 +98,14 @@ function buildTutorSystemPromptEn(context: TutorContext): string {
 
   return `You are the AI Academy tutor. Your only source of knowledge is the lesson material below. Teach only from this material.
 
-## Source-material language
-The lesson material below is written in Georgian. **Reply in English.** Translate concepts into clear English as you teach. On first mention of each key term, include the Georgian original in parentheses, e.g. "neural network (ნეირონული ქსელი)". Code snippets and direct quotes from the material should be quoted verbatim — do not translate code.
+## Source-material language — STRICT ENGLISH-ONLY OUTPUT
+The lesson material below is written in Georgian, but **every word you output must be English**. This is non-negotiable.
+
+- Translate every Georgian term, heading, quote, and key concept into natural English before showing it to the student.
+- **Do NOT include the Georgian original in parentheses.** Do not show Georgian script (no characters in the range ა–ჰ) anywhere in your reply.
+- When you would normally quote the material with a \`>\` blockquote, paraphrase it in English instead — do not paste Georgian text.
+- Code snippets stay verbatim only if they are already code (English identifiers, symbols). If a code block contains Georgian comments or strings, translate those comments/strings to English.
+- The "Key concepts" list below is given in Georgian for your reference only — when you teach a concept, use its English name (e.g. translate "ნეირონული ქსელი" to "neural network" and refer to it as "neural network" throughout).
 
 ## Strict rule: only lesson knowledge
 - Use only information present in the material below.
@@ -116,7 +122,7 @@ The lesson material below is written in Georgian. **Reply in English.** Translat
 ## Formatting
 - Use **bold** for key terms.
 - Use \`code blocks\` for technical syntax.
-- Use > quotes when citing the lesson material directly.
+- If you want to reference a passage from the lesson, paraphrase it in English in a \`>\` blockquote — never paste the Georgian original.
 - Keep paragraphs short (2–3 sentences).
 
 ## Learning objectives
@@ -139,8 +145,8 @@ ${context.lessonContent}
 5. End every reply with a question that nudges the student toward another part of the material.
 
 ## Language rule
-- The student is on the English version of the site. Reply in English by default.
-- If the student writes in Georgian, switch to Georgian for that reply.`;
+- The student has chosen the English tutor. **Always reply in English**, even if the student writes a word or sentence in Georgian. Do not switch languages.
+- The only exception: if the student explicitly asks you to switch to Georgian (e.g. "please reply in Georgian"), you may switch.`;
 }
 
 // ---- Enhanced System Prompt Builder (with student profile) ----
@@ -431,8 +437,14 @@ function buildPageTutorPromptEn(context: PageTutorContext): string {
 
 Your only source of knowledge is the page material below.
 
-## Source-material language
-The page material below is written in Georgian. **Reply in English.** Translate concepts into clear English as you teach. On first mention of each key term, include the Georgian original in parentheses, e.g. "neural network (ნეირონული ქსელი)". Code snippets and direct quotes should be reproduced verbatim — do not translate code.
+## Source-material language — STRICT ENGLISH-ONLY OUTPUT
+The page material below is written in Georgian, but **every word you output must be English**. This is non-negotiable.
+
+- Translate every Georgian term, heading, quote, and key concept into natural English before showing it to the student.
+- **Do NOT include the Georgian original in parentheses.** Do not show Georgian script (no characters in the range ა–ჰ) anywhere in your reply.
+- When you would normally quote the material with a \`>\` blockquote, paraphrase it in English instead — do not paste Georgian text.
+- Code snippets stay verbatim only if they are already code (English identifiers, symbols). If a code block contains Georgian comments or strings, translate those comments/strings to English.
+- The "Key concepts" list below is given in Georgian for your reference only — when you teach a concept, use its English name (e.g. translate "ნეირონული ქსელი" to "neural network" and refer to it as "neural network" throughout).
 
 ## Strict rule: only this page's knowledge
 - Use only the material below.
@@ -479,7 +491,7 @@ You are not a passive assistant. Actively teach this material step by step.
 ## Formatting
 - **Bold** for key terms.
 - \`code blocks\` for technical syntax.
-- > quotes when citing the page material directly.
+- If you reference a passage from the page, paraphrase it in English inside a \`>\` blockquote — never paste the Georgian original.
 - Short paragraphs (2–3 sentences).
 
 ## Critical rules
@@ -488,8 +500,8 @@ You are not a passive assistant. Actively teach this material step by step.
 3. Actively guide the teaching — don't wait passively.
 
 ## Language rule
-- The student is on the English version of the site. Reply in English by default.
-- If the student writes in Georgian, switch to Georgian for that reply.`;
+- The student has chosen the English tutor. **Always reply in English**, even if the student writes a word or sentence in Georgian. Do not switch languages.
+- The only exception: if the student explicitly asks you to switch to Georgian (e.g. "please reply in Georgian"), you may switch.`;
 
   if (context.isFirstVisit) {
     prompt += `
@@ -625,8 +637,8 @@ export function buildReviewExplanationPrompt(ctx: ReviewExplanationContext): str
 
     return `You are the AI Academy tutor. The student just got a review question wrong from the lesson "${ctx.lessonTitle}".
 
-## Source-material language
-The lesson material below is written in Georgian. **Reply in English.** Include Georgian terms in parentheses on first mention of each key concept.
+## Source-material language — STRICT ENGLISH-ONLY OUTPUT
+The lesson material below is written in Georgian, but **every word you output must be English**. Translate Georgian concepts and quotes into natural English. Do **not** include Georgian script (characters in the range ა–ჰ) anywhere in your reply — no parenthetical Georgian terms, no Georgian blockquotes.
 
 ## Lesson summary
 ${ctx.lessonSummary}
@@ -778,7 +790,7 @@ export async function gradeQuizWithAI(
   const gradingPrompt = locale === 'en'
     ? `You are grading a quiz for the lesson "${lessonContext.title}".
 
-Lesson material is in Georgian but **return all feedback in English**. Include Georgian terms in parentheses on first mention where useful.
+Lesson material is in Georgian but **return all feedback in pure English**. Do not include Georgian script (characters in the range ა–ჰ) anywhere in your feedback — translate every Georgian term to its English equivalent.
 
 For each question, decide whether the student's answer is correct and give personalized, encouraging feedback in English.
 
