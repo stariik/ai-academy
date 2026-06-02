@@ -20,6 +20,7 @@ import {
   buildPageTutorPrompt,
   buildEnhancedPageTutorPrompt,
   streamChat,
+  enforceEnglish,
   ThinkingConfig,
   type TutorLocale,
 } from '@/lib/ai/claude';
@@ -222,9 +223,25 @@ export async function POST(request: NextRequest) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig)) {
-            fullResponse += chunk;
-            controller.enqueue(encoder.encode(chunk));
+          if (locale === 'en') {
+            // English tutor: buffer the full reply, then enforce English before
+            // anything reaches the student. This guarantees no Georgian ever
+            // flashes on screen (the client renders chunks live, so a
+            // post-hoc fix isn't enough). enforceEnglish is a no-op unless the
+            // model actually leaked Georgian, so clean replies add no latency
+            // beyond waiting for generation to finish.
+            let raw = '';
+            for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig)) {
+              raw += chunk;
+            }
+            fullResponse = await enforceEnglish(raw);
+            controller.enqueue(encoder.encode(fullResponse));
+          } else {
+            // Georgian tutor: stream live, unchanged.
+            for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig)) {
+              fullResponse += chunk;
+              controller.enqueue(encoder.encode(chunk));
+            }
           }
           controller.close();
 

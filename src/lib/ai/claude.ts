@@ -739,6 +739,66 @@ export async function* streamChat(
   }
 }
 
+// ---- English-only hard guard ----
+//
+// The EN tutor prompts forbid Georgian, but instructions alone don't fully
+// stop leaks: the lesson material is stored only in Georgian and the chat
+// history can contain earlier Georgian replies, both of which anchor the
+// model back into Georgian mid-reply. When the student has chosen the
+// English tutor, every reply must be 100% English — so we deterministically
+// detect any Georgian script in the model's output and, only when found,
+// run a cleanup pass that rewrites the message into pure English.
+//
+// (The Georgian tutor is intentionally left untouched — it already works.)
+
+// Georgian Unicode blocks: main (Asomtavruli + Mkhedruli, U+10A0–U+10FF),
+// Extended/Mtavruli (U+1C90–U+1CBF), and Supplement/Nuskhuri (U+2D00–U+2D2F).
+const GEORGIAN_SCRIPT_RE = /[Ⴀ-ჿᲐ-Ჿⴀ-⴯]/;
+
+export function containsGeorgian(text: string): boolean {
+  return GEORGIAN_SCRIPT_RE.test(text);
+}
+
+/**
+ * Guarantees an English-tutor reply contains no Georgian script.
+ * Returns the text unchanged when it's already clean (the common case, so no
+ * extra latency). When Georgian is present, rewrites the whole message into
+ * English while preserving Markdown, code blocks, and the [READY_FOR_QUIZ]
+ * marker. Best-effort: on any failure it falls back to the original text.
+ */
+export async function enforceEnglish(text: string): Promise<string> {
+  if (!text || !containsGeorgian(text)) return text;
+
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 4096,
+      system:
+        'You are a translation/cleanup filter for a tutoring chatbot. The ' +
+        'message you receive must be entirely in English but still contains ' +
+        'some Georgian text. Rewrite it so that EVERY word is natural ' +
+        'English, with no Georgian script (Unicode range ა–ჰ) remaining. ' +
+        'Rules:\n' +
+        '- Preserve all Markdown formatting exactly (bold, lists, blockquotes, headings).\n' +
+        '- Keep code blocks as code; only translate Georgian comments or string literals inside them.\n' +
+        '- If the exact marker [READY_FOR_QUIZ] appears, keep it verbatim in the same place.\n' +
+        '- Do not add, remove, or explain anything. Do not wrap your answer in quotes or code fences.\n' +
+        '- Output only the rewritten English message.',
+      messages: [{ role: 'user', content: text }],
+    });
+
+    const block = response.content.find((b) => b.type === 'text');
+    const cleaned = block && block.type === 'text' ? block.text.trim() : '';
+    // Only accept the rewrite if it actually removed the Georgian; otherwise
+    // keep the original so we never return something worse than we started with.
+    if (cleaned && !containsGeorgian(cleaned)) return cleaned;
+    return text;
+  } catch (err) {
+    console.error('enforceEnglish cleanup failed:', err);
+    return text;
+  }
+}
+
 // ---- Quiz Grading with AI ----
 
 type QuizQuestion = {

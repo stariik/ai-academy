@@ -17,7 +17,7 @@ import {
   unlockBadges,
 } from '@/lib/supabase/db';
 import { getSession } from '@/lib/session';
-import { buildReviewExplanationPrompt, type TutorLocale } from '@/lib/ai/claude';
+import { buildReviewExplanationPrompt, enforceEnglish, type TutorLocale } from '@/lib/ai/claude';
 import { XP_REVIEW_CORRECT, XP_REVIEW_INCORRECT, updateStreak } from '@/lib/gamification/xp';
 import { evaluateBadges } from '@/lib/gamification/badges';
 
@@ -127,7 +127,12 @@ export async function POST(request: NextRequest) {
           messages: [{ role: 'user', content: prompt }],
         });
         const textBlock = response.content.find((b) => b.type === 'text');
-        if (textBlock && textBlock.type === 'text') reExplanation = textBlock.text;
+        if (textBlock && textBlock.type === 'text') {
+          // English tutor must stay 100% English — strip any Georgian leak.
+          reExplanation = locale === 'en'
+            ? await enforceEnglish(textBlock.text)
+            : textBlock.text;
+        }
       } catch (err) {
         console.error('Review re-explanation failed:', err);
       }
