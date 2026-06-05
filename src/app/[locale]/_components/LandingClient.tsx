@@ -55,7 +55,15 @@ export default function LandingClient({
    Navbar
    ============================================================ */
 
-function Navbar({ authUser }: { authUser: AuthUser | null }) {
+export function Navbar({
+  authUser,
+  homeAnchors = true,
+}: {
+  authUser: AuthUser | null;
+  /** When true (landing), section links are same-page hashes. When false
+   *  (e.g. /about), they point back to the homepage's sections. */
+  homeAnchors?: boolean;
+}) {
   const { dict, href } = useV2Locale();
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -67,11 +75,12 @@ function Navbar({ authUser }: { authUser: AuthUser | null }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const anchor = (id: string) => (homeAnchors ? `#${id}` : `${href()}#${id}`);
   const NAV_LINKS = [
-    { label: dict.navbar.categories, href: '#categories' },
-    { label: dict.navbar.courses, href: '#courses' },
-    { label: dict.navbar.howItWorks, href: '#how' },
-    { label: dict.navbar.pricing, href: '#pricing' },
+    { label: dict.navbar.categories, href: anchor('categories') },
+    { label: dict.navbar.courses, href: anchor('courses') },
+    { label: dict.navbar.howItWorks, href: anchor('how') },
+    { label: dict.navbar.pricing, href: anchor('pricing') },
   ];
 
   return (
@@ -245,7 +254,7 @@ function toneFromString(s: string): Tone {
   return tones[Math.abs(h) % tones.length];
 }
 
-function LanguageSwitcher({ full = false }: { full?: boolean }) {
+export function LanguageSwitcher({ full = false }: { full?: boolean }) {
   const { locale } = useV2Locale();
   const router = useRouter();
   const pathname = usePathname();
@@ -1699,7 +1708,7 @@ function CtaBanner() {
    Footer
    ============================================================ */
 
-function Footer({ categories }: { categories: Category[] }) {
+export function Footer({ categories }: { categories: Category[] }) {
   const { dict, href } = useV2Locale();
   return (
     <footer className="border-t border-border bg-muted/30">
@@ -1750,7 +1759,7 @@ function Footer({ categories }: { categories: Category[] }) {
           <FooterColumn
             title={dict.footer.columnCompany}
             links={[
-              { label: dict.footer.companyAbout, href: '#' },
+              { label: dict.footer.companyAbout, href: href('about') },
               { label: dict.footer.companyContact, href: '#' },
               { label: dict.footer.companyPrivacy, href: '#' },
               { label: dict.footer.companyTerms, href: '#' },

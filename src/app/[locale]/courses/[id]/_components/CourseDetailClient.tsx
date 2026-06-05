@@ -35,6 +35,7 @@ import {
   type Course, type Category, type CourseDetail, type Module, type Lesson,
 } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
+import { LanguageSwitcher } from '../../../_components/LandingClient';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import {
   redeemPromoCode,
@@ -347,7 +348,7 @@ function Navbar() {
           <Walli size={36} state="idle" noShadow />
           <div>
             <p className="text-base font-bold leading-none tracking-tight">{dict.meta.brandName}</p>
-            <p className="text-[10px] text-muted-foreground leading-none mt-1">AI ქართულად</p>
+            <p className="text-[10px] text-muted-foreground leading-none mt-1">{dict.courseDetail.brandSubtitle}</p>
           </div>
         </a>
 
@@ -356,10 +357,11 @@ function Navbar() {
           className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          ყველა კურსი
+          {dict.courseDetail.backToCourses}
         </a>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <ThemeToggle />
           <a
             href={href('login')}
@@ -468,7 +470,7 @@ function Hero({
               {isEnrolled && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-2.5 py-1 text-[11px] font-bold">
                   <Trophy className="w-3.5 h-3.5" />
-                  ჩარიცხული
+                  {dict.courseDetail.enrolledBadge}
                 </span>
               )}
             </div>
@@ -486,22 +488,22 @@ function Hero({
 
             {/* Stats strip */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-1">
-              <Stat icon={<BookOpen className="w-4 h-4" />} label={`${course.lessons} გაკვეთილი`} />
-              <Stat icon={<Clock className="w-4 h-4" />} label={`~${course.hours} საათი`} />
+              <Stat icon={<BookOpen className="w-4 h-4" />} label={`${course.lessons} ${dict.courseDetail.lessonsLabel}`} />
+              <Stat icon={<Clock className="w-4 h-4" />} label={`~${course.hours} ${dict.courseDetail.hoursLabel}`} />
               <Stat icon={<LevelDots level={course.level} tone={category.tone} />} label={dict.level[course.level]} />
-              <Stat icon={<Users className="w-4 h-4" />} label="2,400+ მოსწავლე" />
+              <Stat icon={<Users className="w-4 h-4" />} label={`2,400+ ${dict.courseDetail.studentsUnit}`} />
             </div>
 
             {/* Hero CTA — visible on mobile (purchase rail handles desktop) */}
             <div className="lg:hidden pt-2 flex flex-wrap gap-3">
               {isEnrolled ? (
                 <a href="#curriculum" className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
-                  გააგრძელე გაკვეთილი
+                  {dict.courseDetail.heroContinueLesson}
                   <ArrowRight className="w-4 h-4" />
                 </a>
               ) : (
                 <a href={previewHref} className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
-                  უფასო გასინჯვა
+                  {dict.courseDetail.heroFreePreview}
                   <Play className="w-4 h-4 fill-current" />
                 </a>
               )}
@@ -511,7 +513,7 @@ function Hero({
             {isEnrolled && totalLessons > 0 && (
               <div className="rounded-2xl border border-pulse/30 bg-pulse/5 p-4 max-w-md">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <span className="font-bold text-pulse">შენი პროგრესი</span>
+                  <span className="font-bold text-pulse">{dict.courseDetail.yourProgress}</span>
                   <span className="font-semibold tabular-nums text-foreground">{completedCount}/{totalLessons}</span>
                 </div>
                 <div className="h-2 rounded-full bg-pulse/15 overflow-hidden">
@@ -563,14 +565,14 @@ function Hero({
                 delay={0.3}
                 tone={category.tone}
                 icon="✨"
-                label="AI მასწავლებელი"
+                label={dict.courseDetail.aiTeacher}
               />
               <FloatingPill
                 className="top-10 -right-10 sm:-right-16"
                 delay={0.6}
                 tone={category.tone}
                 icon="🎯"
-                label={`${course.lessons} გაკვეთილი`}
+                label={`${course.lessons} ${dict.courseDetail.lessonsLabel}`}
               />
             </div>
           </motion.div>
@@ -648,17 +650,18 @@ function FloatingPill({
    ============================================================ */
 
 function OutcomesSection({ detail, category }: { detail: CourseDetail; category: Category }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   if (detail.outcomes.length === 0) return null;
   return (
     <section>
       <div className="mb-4 sm:mb-5">
-        <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">რას ისწავლი</p>
+        <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">{dict.courseDetail.outcomesEyebrow}</p>
         <h2
           className="mt-1.5 text-base sm:text-lg font-bold tracking-tight leading-snug"
           style={{ fontFamily: 'var(--font-display)' }}
         >
-          ოთხი რეალური უნარი — და ერთი ნაკლები საფიქრალი.
+          {dict.courseDetail.outcomesTitle}
         </h2>
       </div>
 
@@ -721,6 +724,7 @@ function OutcomesSection({ detail, category }: { detail: CourseDetail; category:
    ============================================================ */
 
 function WalliIntroSection({ course, detail }: { course: Course; detail: CourseDetail }) {
+  const { dict } = useV2Locale();
   const [walliState, setWalliState] = React.useState<WalliState>('idle');
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -760,13 +764,13 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
 
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">
-              შენი მასწავლებელი
+              {dict.courseDetail.walliEyebrow}
             </p>
             <h3
               className="mt-1 text-xl font-bold leading-tight"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              გაიცანით Walli
+              {dict.courseDetail.walliTitle}
             </h3>
           </div>
 
@@ -781,8 +785,8 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
           </blockquote>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            გაკვეთილში ნებისმიერ წერტილში მკითხე — ვუპასუხებ ისე, როგორც გესაჭიროება.{' '}
-            <span className="text-foreground font-semibold">{course.title}</span> — ერთად დავიწყოთ.
+            {dict.courseDetail.walliIntro}{' '}
+            <span className="text-foreground font-semibold">{course.title}</span> — {dict.courseDetail.walliIntroEnd}
           </p>
         </div>
       </div>
@@ -811,14 +815,15 @@ function CurriculumSection({
   progress: Set<string>;
   onToggleLesson: (lessonId: string) => void;
 }) {
+  const { dict } = useV2Locale();
   const [openModuleId, setOpenModuleId] = React.useState<string | null>(detail.modules[0]?.id ?? null);
 
   return (
     <section id="curriculum" className="scroll-mt-24">
       <SectionHeader
-        eyebrow="კურიკულუმი"
-        title={`${detail.modules.length} მოდული, ${course.lessons} გაკვეთილი`}
-        description="სამი ნაბიჯი — საფუძვლები, პრაქტიკა, შენი პროექტი. ყოველი გაკვეთილი ცოცხალი დიალოგი ჩვენს შორის."
+        eyebrow={dict.courseDetail.curriculumEyebrow}
+        title={`${detail.modules.length} ${dict.courseDetail.modulesLabel}, ${course.lessons} ${dict.courseDetail.lessonsLabel}`}
+        description={dict.courseDetail.curriculumDescription}
       />
 
       <div className="mt-8 sm:mt-10 space-y-3 sm:space-y-4">
@@ -862,6 +867,7 @@ function ModuleCard({
   progress: Set<string>;
   onToggleLesson: (lessonId: string) => void;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const totalMin = module.lessons.reduce((acc, l) => acc + l.durationMin, 0);
   const completedInModule = module.lessons.filter((l) => progress.has(l.id)).length;
@@ -898,9 +904,9 @@ function ModuleCard({
             {module.title}
           </h3>
           <div className="mt-1 flex items-center gap-2.5 text-xs text-muted-foreground flex-wrap">
-            <span>{module.lessons.length} გაკვეთილი</span>
+            <span>{module.lessons.length} {dict.courseDetail.lessonsLabel}</span>
             <span className="opacity-50">·</span>
-            <span>~{Math.round(totalMin / 60 * 10) / 10} საათი</span>
+            <span>~{Math.round(totalMin / 60 * 10) / 10} {dict.courseDetail.hoursLabel}</span>
             {isEnrolled && (
               <>
                 <span className="opacity-50">·</span>
@@ -970,7 +976,7 @@ function LessonRow({
   isCompleted: boolean;
   onToggleComplete: () => void;
 }) {
-  const { href } = useV2Locale();
+  const { href, dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const isLocked = !isEnrolled && !lesson.isFree;
 
@@ -980,7 +986,7 @@ function LessonRow({
       <button
         type="button"
         onClick={isEnrolled ? onToggleComplete : undefined}
-        aria-label={isCompleted ? 'მონიშნე დაუსრულებლად' : 'მონიშნე დასრულებულად'}
+        aria-label={isCompleted ? dict.courseDetail.markIncomplete : dict.courseDetail.markComplete}
         disabled={!isEnrolled}
         className={cn(
           'flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold tabular-nums transition-all',
@@ -1004,14 +1010,14 @@ function LessonRow({
         <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            {lesson.durationMin} წთ
+            {lesson.durationMin} {dict.courseDetail.durationMinutes}
           </span>
           {lesson.isFree && (
             <>
               <span className="opacity-40">·</span>
               <span className={cn('inline-flex items-center gap-1 font-bold rounded-full px-2 py-0.5 text-[10px] uppercase tracking-widest', t.chip, 'border')}>
                 <Eye className="w-3 h-3" />
-                უფასო
+                {dict.courseDetail.freeLessonBadge}
               </span>
             </>
           )}
@@ -1028,7 +1034,7 @@ function LessonRow({
               : 'text-foreground hover:text-pulse hover:gap-1.5',
           )}
         >
-          {isCompleted ? 'გადახედვა' : 'დაწყება'}
+          {isCompleted ? dict.courseDetail.lessonReview : dict.courseDetail.lessonStart}
           <ChevronRight className="w-3.5 h-3.5" />
         </a>
       ) : (
@@ -1043,13 +1049,13 @@ function LessonRow({
    ============================================================ */
 
 function RelatedCoursesSection({ related, category: cat }: { related: Course[]; category: Category }) {
-  const { href } = useV2Locale();
+  const { href, dict } = useV2Locale();
   if (related.length === 0) return null;
   return (
     <section>
       <SectionHeader
-        eyebrow="გააგრძელე"
-        title="სხვა კურსები ამავე კატეგორიიდან"
+        eyebrow={dict.courseDetail.relatedEyebrowContinue}
+        title={dict.courseDetail.relatedTitle}
       />
 
       <div className="mt-8 sm:mt-10 -mx-4 sm:mx-0 px-4 sm:px-0 flex sm:grid gap-4 sm:gap-5 overflow-x-auto sm:overflow-visible sm:grid-cols-2 pb-2 sm:pb-0 snap-x">
@@ -1078,7 +1084,7 @@ function RelatedCoursesSection({ related, category: cat }: { related: Course[]; 
                   {co.title}
                 </h4>
                 <div className="mt-2.5 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{co.lessons} გაკვეთილი · ~{co.hours} სთ</span>
+                  <span className="text-muted-foreground">{co.lessons} {dict.courseDetail.lessonsLabel} · ~{co.hours} {dict.courseCard.hoursShort}</span>
                   <span className="font-bold tabular-nums">₾{co.price}</span>
                 </div>
               </div>
@@ -1119,6 +1125,7 @@ function PurchaseCard({
   onPromoRedeemed: (courseId: string) => void;
   previewHref: string;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const hasPrice = typeof course.price === 'number' && course.price > 0;
   const retail = detail.retailPrice ?? 0;
@@ -1166,7 +1173,7 @@ function PurchaseCard({
       {/* What's included — icon rows */}
       <div className="px-5 sm:px-6 pb-5 sm:pb-6">
         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold mb-3">
-          რა შედის
+          {dict.courseDetail.whatsIncludedLabel}
         </p>
         <ul className="space-y-2.5">
           {detail.whatsIncluded.map((item, i) => {
@@ -1193,7 +1200,7 @@ function PurchaseCard({
       {detail.prerequisites.length > 0 && (
         <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-border pt-5">
           <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold mb-2">
-            წინაპირობები
+            {dict.courseDetail.prerequisitesLabel}
           </p>
           <ul className="space-y-1.5">
             {detail.prerequisites.map((p) => (
@@ -1235,6 +1242,7 @@ function TrustPill({
 }
 
 function BundleCrossSell({ category }: { category: Category }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   return (
     <a
@@ -1252,7 +1260,7 @@ function BundleCrossSell({ category }: { category: Category }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-muted-foreground">
-              ბანდლი
+              {dict.courseDetail.bundleLabel}
             </p>
             <span className={cn('inline-flex items-center rounded-full text-[10px] font-bold px-1.5 py-0.5 border', t.chip)}>
               −40%
@@ -1262,12 +1270,12 @@ function BundleCrossSell({ category }: { category: Category }) {
             className="mt-0.5 text-sm font-bold leading-tight truncate"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            მთელი კატეგორია
+            {dict.courseDetail.bundleWholeCategory}
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            <span className="font-bold text-foreground tabular-nums">{category.courses}</span> კურსი
+            <span className="font-bold text-foreground tabular-nums">{category.courses}</span> {dict.courseDetail.bundleCoursesUnit}
             <span className="opacity-50"> · </span>
-            სამუდამოდ
+            {dict.courseDetail.bundleForever}
           </p>
         </div>
         <ArrowRight className={cn('flex-shrink-0 w-4 h-4 transition-transform group-hover:translate-x-1', t.text)} />
@@ -1387,6 +1395,7 @@ function BuyRailContent({
   onPromoRedeemed: (courseId: string) => void;
   previewHref: string;
 }) {
+  const { dict } = useV2Locale();
   const t = TONE_CLASSES[tone];
   return (
     <div className="relative px-5 sm:px-6 pt-6 pb-5">
@@ -1408,7 +1417,7 @@ function BuyRailContent({
               )}
               {discount > 0 && (
                 <span className={cn('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', t.chip)}>
-                  −{discount}% ფასდაკლება
+                  −{discount}% {dict.courseDetail.discountSuffix}
                 </span>
               )}
             </div>
@@ -1418,13 +1427,13 @@ function BuyRailContent({
             className="text-[56px] font-black leading-[0.9]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            უფასოდ
+            {dict.courseDetail.free}
           </span>
         )}
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        {hasPrice ? 'ერთხელ. სამუდამოდ შენია.' : '1-ლი გაკვეთილი ხელმისაწვდომია ახლავე.'}
+        {hasPrice ? dict.courseDetail.priceOnceForever : dict.courseDetail.freeFirstLessonNote}
       </p>
 
       {/* Social proof */}
@@ -1432,7 +1441,7 @@ function BuyRailContent({
         <span className="inline-flex items-center gap-1.5">
           <Users className={cn('w-3.5 h-3.5', t.text)} />
           <span className="font-bold tabular-nums">2,400+</span>
-          <span className="text-muted-foreground">მოსწავლე</span>
+          <span className="text-muted-foreground">{dict.courseDetail.studentsUnit}</span>
         </span>
         <span className="text-muted-foreground/40">·</span>
         <span className="inline-flex items-center gap-1.5">
@@ -1450,10 +1459,10 @@ function BuyRailContent({
       >
         <span>
           {isLoggedIn
-            ? 'დაიწყე სწავლა'
+            ? dict.courseDetail.ctaStartLearning
             : hasPrice
-              ? `შეიძინე — ₾${course.price}`
-              : 'დაიწყე უფასოდ'}
+              ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}`
+              : dict.courseDetail.ctaStartFree}
         </span>
         <ArrowRight className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
       </button>
@@ -1465,7 +1474,7 @@ function BuyRailContent({
       >
         <Play className="w-3 h-3 fill-current" />
         <span>
-          ან <span className="underline underline-offset-2">გასინჯე 1-ლი გაკვეთილი</span>
+          {dict.courseDetail.previewInlinePrefix}<span className="underline underline-offset-2">{dict.courseDetail.previewInlineLink}</span>
         </span>
       </a>
 
@@ -1477,13 +1486,13 @@ function BuyRailContent({
       {/* Trust pills */}
       <div className="mt-5 rounded-2xl bg-muted/40 p-3 space-y-2.5">
         <TrustPill icon={InfinityIcon} tone={tone}>
-          სამუდამო წვდომა — ერთხელ ყიდულობ
+          {dict.courseDetail.trustLifetimeBuy}
         </TrustPill>
         <TrustPill icon={ShieldCheck} tone={tone}>
-          7 დღე — უპირობო თანხის დაბრუნება
+          {dict.courseDetail.trustRefund}
         </TrustPill>
         <TrustPill icon={Award} tone={tone}>
-          ციფრული სერთიფიკატი დასრულებაზე
+          {dict.courseDetail.trustCertificateComplete}
         </TrustPill>
       </div>
     </div>
@@ -1503,6 +1512,7 @@ function EnrolledRailContent({
   totalLessons: number;
   tone: keyof typeof TONE_CLASSES;
 }) {
+  const { dict } = useV2Locale();
   const reduced = useReducedMotion();
   return (
     <div className="relative px-5 sm:px-6 pt-6 pb-5">
@@ -1510,7 +1520,7 @@ function EnrolledRailContent({
         <ProgressRing pct={progressPct} tone={tone} />
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">
-            შენ ხარ ჩარიცხული
+            {dict.courseDetail.youAreEnrolled}
           </p>
           <p
             className="text-base font-bold mt-0.5 truncate"
@@ -1522,7 +1532,7 @@ function EnrolledRailContent({
       </div>
 
       <div className="mt-4 rounded-xl bg-muted/40 p-3.5">
-        <p className="text-[11px] text-muted-foreground mb-1.5">პროგრესი</p>
+        <p className="text-[11px] text-muted-foreground mb-1.5">{dict.courseDetail.progressLabel}</p>
         <div className="flex items-center justify-between text-sm font-bold">
           <span className="tabular-nums">
             {completedCount}/{totalLessons}
@@ -1543,7 +1553,7 @@ function EnrolledRailContent({
         href="#curriculum"
         className="group/cta mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-pulse text-primary-foreground h-14 text-base font-bold shadow-[0_12px_30px_var(--pulse-glow)] hover:shadow-[0_18px_45px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
       >
-        <span>გააგრძელე გაკვეთილი</span>
+        <span>{dict.courseDetail.heroContinueLesson}</span>
         <ArrowRight className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
       </a>
     </div>
@@ -1588,6 +1598,7 @@ function CtaBanner({
   onEnroll: () => void;
   previewHref: string;
 }) {
+  const { dict } = useV2Locale();
   return (
     <section className="px-4 sm:px-6 pb-16 sm:pb-24">
       <div className="mx-auto max-w-5xl">
@@ -1602,12 +1613,12 @@ function CtaBanner({
                 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                {isEnrolled ? 'მზად ხარ გაგრძელებისთვის?' : 'გავაგრძელოთ ერთად?'}
+                {isEnrolled ? dict.courseDetail.ctaBannerEnrolledTitle : dict.courseDetail.ctaBannerTitle}
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0">
                 {isEnrolled
-                  ? 'დაბრუნდი იქ, სადაც შეჩერდი — Walli გელის. ყოველი გაკვეთილი — ერთი ნაბიჯით უფრო ახლოს.'
-                  : 'ერთხელ ყიდულობ. სამუდამოდ შენია. პირველი გაკვეთილი — უფასოდ. დანარჩენი — შენი ტემპით.'}
+                  ? dict.courseDetail.ctaBannerEnrolledDesc
+                  : dict.courseDetail.ctaBannerDesc}
               </p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
                 {isEnrolled ? (
@@ -1615,7 +1626,7 @@ function CtaBanner({
                     href="#curriculum"
                     className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                   >
-                    გააგრძელე გაკვეთილი
+                    {dict.courseDetail.heroContinueLesson}
                     <ArrowRight className="w-4 h-4" />
                   </a>
                 ) : (
@@ -1624,14 +1635,14 @@ function CtaBanner({
                       onClick={onEnroll}
                       className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                     >
-                      {course.price && course.price > 0 ? `შეიძინე — ₾${course.price}` : 'დაიწყე უფასოდ'}
+                      {course.price && course.price > 0 ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}` : dict.courseDetail.ctaStartFree}
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <a
                       href={previewHref}
                       className="text-sm font-bold text-pulse hover:underline"
                     >
-                      ჯერ გავსინჯო
+                      {dict.courseDetail.tryFirst}
                     </a>
                   </>
                 )}
@@ -1664,6 +1675,7 @@ function MobileBottomBar({
   progressPct: number;
   onEnroll: () => void;
 }) {
+  const { dict } = useV2Locale();
   return (
     <motion.div
       initial={{ y: 100 }}
@@ -1675,20 +1687,20 @@ function MobileBottomBar({
         <div className="flex-1 min-w-0">
           {isEnrolled ? (
             <>
-              <p className="text-[10px] uppercase tracking-widest text-pulse font-bold">პროგრესი</p>
+              <p className="text-[10px] uppercase tracking-widest text-pulse font-bold">{dict.courseDetail.progressLabel}</p>
               <div className="mt-0.5 h-1.5 rounded-full bg-pulse/15 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-pulse transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{progressPct}% დასრულებული</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{progressPct}% {dict.courseDetail.percentComplete}</p>
             </>
           ) : (
             <>
-              <p className="text-xs text-muted-foreground">ფასი</p>
+              <p className="text-xs text-muted-foreground">{dict.courseDetail.priceLabel}</p>
               <p className="text-lg font-bold tabular-nums leading-none mt-0.5" style={{ fontFamily: 'var(--font-display)' }}>
-                {course.price && course.price > 0 ? `₾${course.price}` : 'უფასოდ'}
+                {course.price && course.price > 0 ? `₾${course.price}` : dict.courseDetail.free}
               </p>
             </>
           )}
@@ -1698,7 +1710,7 @@ function MobileBottomBar({
             href="#curriculum"
             className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-[0_8px_24px_var(--pulse-glow)]"
           >
-            გააგრძელე
+            {dict.courseDetail.continueShort}
             <ArrowRight className="w-4 h-4" />
           </a>
         ) : (
@@ -1708,7 +1720,7 @@ function MobileBottomBar({
             className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-[0_8px_24px_var(--pulse-glow)]"
           >
             <Zap className="w-4 h-4" />
-            დაიწყე
+            {dict.courseDetail.startShort}
           </button>
         )}
       </div>
@@ -1731,10 +1743,10 @@ function Footer() {
             <span className="text-base font-bold">{dict.meta.brandName}</span>
           </a>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <a href={href()} className="text-muted-foreground hover:text-foreground">მთავარი</a>
-            <a href={`${href()}#categories`} className="text-muted-foreground hover:text-foreground">კატეგორიები</a>
-            <a href={`${href()}#courses`} className="text-muted-foreground hover:text-foreground">კურსები</a>
-            <a href={`${href()}#pricing`} className="text-muted-foreground hover:text-foreground">ფასები</a>
+            <a href={href()} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerHome}</a>
+            <a href={`${href()}#categories`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCategories}</a>
+            <a href={`${href()}#courses`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCourses}</a>
+            <a href={`${href()}#pricing`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerPricing}</a>
           </nav>
           <p className="text-xs text-muted-foreground">© 2026 {dict.meta.brandName}</p>
         </div>
@@ -1754,12 +1766,13 @@ function ViewAsToggle({
   viewAs: ViewAs;
   onChange: (v: ViewAs) => void;
 }) {
+  const { dict } = useV2Locale();
   const [open, setOpen] = React.useState(false);
 
   const labels: Record<ViewAs, string> = {
-    guest: 'სტუმარი',
-    'logged-in': 'შესული',
-    enrolled: 'ჩარიცხული',
+    guest: dict.courseDetail.viewAsGuest,
+    'logged-in': dict.courseDetail.viewAsLoggedIn,
+    enrolled: dict.courseDetail.viewAsEnrolled,
   };
 
   return (
@@ -1774,7 +1787,7 @@ function ViewAsToggle({
             className="mb-2 rounded-2xl border border-border bg-card shadow-[0_12px_40px_rgba(0,0,0,0.10)] p-2 w-52"
           >
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold px-2 pt-1 pb-2">
-              დემო რეჟიმი
+              {dict.courseDetail.demoMode}
             </p>
             {(['guest', 'logged-in', 'enrolled'] as ViewAs[]).map((v) => (
               <button
@@ -1793,7 +1806,7 @@ function ViewAsToggle({
               </button>
             ))}
             <p className="text-[10px] text-muted-foreground px-2 pt-2 pb-1">
-              მხოლოდ დროებითი — სანამ ნამდვილი auth ჩაირთვება.
+              {dict.courseDetail.demoModeNote}
             </p>
           </motion.div>
         )}
@@ -1807,7 +1820,7 @@ function ViewAsToggle({
         )}
       >
         {open ? <X className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">ხედი:</span>
+        <span className="hidden sm:inline">{dict.courseDetail.viewLabel}</span>
         <span className="text-pulse">{labels[viewAs]}</span>
       </button>
     </div>

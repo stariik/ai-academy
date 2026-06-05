@@ -216,6 +216,58 @@ export const en: Dict = {
     freeLessonBadge: 'Free',
     courseFreeBadge: 'Free course',
     durationMinutes: 'min',
+    brandSubtitle: 'AI in Georgian',
+    enrolledBadge: 'Enrolled',
+    youAreEnrolled: 'You are enrolled',
+    heroContinueLesson: 'Continue lesson',
+    heroFreePreview: 'Free preview',
+    yourProgress: 'Your progress',
+    aiTeacher: 'AI teacher',
+    walliIntro: 'Ask me anything at any point in the lesson — I will answer just the way you need.',
+    walliIntroEnd: 'let us begin together.',
+    modulesLabel: 'modules',
+    curriculumDescription: 'Three steps — foundations, practice, your project. Every lesson is a live dialogue between us.',
+    lessonReview: 'Review',
+    lessonStart: 'Start',
+    markComplete: 'Mark as complete',
+    markIncomplete: 'Mark as incomplete',
+    relatedEyebrowContinue: 'Keep going',
+    bundleLabel: 'Bundle',
+    bundleWholeCategory: 'The whole category',
+    bundleCoursesUnit: 'courses',
+    bundleForever: 'forever',
+    discountSuffix: 'off',
+    priceOnceForever: 'Once. Yours forever.',
+    freeFirstLessonNote: 'The first lesson is available right now.',
+    studentsUnit: 'students',
+    ctaStartLearning: 'Start learning',
+    ctaBuyPrefix: 'Buy — ',
+    ctaStartFree: 'Start free',
+    previewInlinePrefix: 'or ',
+    previewInlineLink: 'try the first lesson',
+    tryFirst: 'Try it first',
+    trustLifetimeBuy: 'Lifetime access — buy once',
+    trustRefund: '7 days — unconditional refund',
+    trustCertificateComplete: 'Digital certificate on completion',
+    progressLabel: 'Progress',
+    percentComplete: 'complete',
+    priceLabel: 'Price',
+    ctaBannerEnrolledTitle: 'Ready to keep going?',
+    ctaBannerTitle: 'Shall we continue together?',
+    ctaBannerEnrolledDesc: 'Pick up right where you left off — Walli is waiting. Every lesson is one step closer.',
+    ctaBannerDesc: 'Buy once. Yours forever. The first lesson is free. The rest — at your own pace.',
+    footerHome: 'Home',
+    footerCategories: 'Categories',
+    footerCourses: 'Courses',
+    footerPricing: 'Pricing',
+    continueShort: 'Continue',
+    startShort: 'Start',
+    viewAsGuest: 'Guest',
+    viewAsLoggedIn: 'Logged in',
+    viewAsEnrolled: 'Enrolled',
+    demoMode: 'Demo mode',
+    demoModeNote: 'Temporary only — until real auth is wired up.',
+    viewLabel: 'View:',
   },
 
   lesson: {
@@ -390,5 +442,110 @@ export const en: Dict = {
     errorRequiresCheckout: 'This code is a discount and applies at checkout, which is not available yet.',
     errorRateLimited: 'Too many attempts. Please wait a moment and try again.',
     errorGeneric: 'Something went wrong. Please try again.',
+  },
+
+  about: {
+    heroEyebrow: 'About WALLE',
+    heroTitle: 'Teaching the',
+    heroTitleHighlight: 'professions of the future',
+    heroSubtitle:
+      'WALLE is a Georgian AI academy preparing people of every age for the new digital-intelligence era — with a personal AI tutor that never tires.',
+    heroCtaPrimary: 'Start free',
+    heroCtaSecondary: 'Browse courses',
+
+    missionEyebrow: 'Why we exist',
+    missionTitle: 'The world is entering a new era',
+    missionBody:
+      'The world is leaving the information age and entering the digital-intelligence era — a shift that is fundamentally reshaping education, employment, and business. A new economic ecosystem is forming, one where AI-based skills, not diplomas, are what matter. Traditional education cannot keep up, and that gap breeds widespread anxiety and inefficiency. WALLE is the transformative tool that prepares professionals and citizens for this new era.',
+    missionPullquote:
+      'We are building a new system of education — and teaching the professions of the future.',
+
+    offerEyebrow: 'What we do',
+    offerTitle: 'A new kind of education',
+    offerSubtitle: 'Everything you need to actually learn AI — not just read about it.',
+    offerItems: [
+      {
+        title: 'A personal AI tutor',
+        description:
+          'Walli teaches you one-to-one, in your language, at your pace — patient with mistakes and available 24/7.',
+      },
+      {
+        title: 'Nine learning paths',
+        description:
+          'From AI foundations to creative tools and autonomous agents — a track for every goal and every level.',
+      },
+      {
+        title: 'Built for every age',
+        description:
+          'Tailored journeys for kids, teens, and adults — the same tutor, adapted to who you are.',
+      },
+      {
+        title: 'Learn by doing',
+        description:
+          'Practical projects and real skills over memorization — and you only move on once you truly understand.',
+      },
+      {
+        title: 'Motivation that sticks',
+        description:
+          'XP, streaks, collectible cards, badges, and leaderboards turn progress into a habit.',
+      },
+      {
+        title: 'Yours forever',
+        description:
+          'No subscription. Buy once for lifetime access, get future courses in a bundle, and earn a digital certificate.',
+      },
+    ],
+
+    teachEyebrow: 'How Walli teaches',
+    teachTitle: 'A tutor that actually waits for you',
+    teachItems: [
+      {
+        title: 'Speaks your language',
+        description: 'Native Georgian and English — no translation barrier between you and the idea.',
+      },
+      {
+        title: 'Socratic and patient',
+        description:
+          'Walli guides you to the answer instead of handing it over, and is always gentle on mistakes.',
+      },
+      {
+        title: 'Mastery, not memorization',
+        description:
+          'It will not advance until you have shown real understanding — no rushing, no rubber-stamping.',
+      },
+      {
+        title: 'Always there',
+        description: '24/7, on your schedule, with infinite patience.',
+      },
+    ],
+
+    audienceEyebrow: "Who it's for",
+    audienceTitle: 'One tutor, every stage of life',
+
+    valuesEyebrow: 'What we stand for',
+    valuesTitle: 'Our principles',
+    valuesItems: [
+      {
+        title: 'Georgian-first',
+        description: 'World-class AI education, native to you — not a rough translation.',
+      },
+      {
+        title: 'Skills that matter',
+        description: 'We teach the professions of the future, not credentials for their own sake.',
+      },
+      {
+        title: 'Safe and ad-free',
+        description: 'A focused, trustworthy space — especially for our youngest learners.',
+      },
+      {
+        title: 'Built for everyone',
+        description: 'From curious kids to working professionals — if you want to learn, you belong here.',
+      },
+    ],
+
+    ctaTitle: 'Ready for the world of AI?',
+    ctaSubtitle: 'Start with a free lesson — what happens next is up to you.',
+    ctaPrimary: 'Start free',
+    ctaSecondary: 'See pricing',
   },
 };
