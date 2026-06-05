@@ -12,20 +12,28 @@ import {
 } from 'lucide-react';
 import type { ContentBlock } from '@/types';
 import { cn } from '@/lib/utils';
+import { MATERIAL_STRINGS, type MaterialLocale } from './materialStrings';
 
-export function ContentRenderer({ blocks }: { blocks: ContentBlock[] }) {
+export function ContentRenderer({
+  blocks,
+  locale = 'ka',
+}: {
+  blocks: ContentBlock[];
+  locale?: MaterialLocale;
+}) {
   const sorted = [...blocks].sort((a, b) => a.order - b.order);
   return (
     <div className="space-y-3 sm:space-y-4">
       {sorted.map((b) => (
-        <Block key={b.id} block={b} />
+        <Block key={b.id} block={b} locale={locale} />
       ))}
     </div>
   );
 }
 
-function Block({ block }: { block: ContentBlock }) {
+function Block({ block, locale }: { block: ContentBlock; locale: MaterialLocale }) {
   const { type, content } = block;
+  const S = MATERIAL_STRINGS[locale];
 
   if (type === 'heading') {
     return (
@@ -59,7 +67,7 @@ function Block({ block }: { block: ContentBlock }) {
       <CalloutCard
         icon={<Lightbulb className="w-4 h-4" />}
         tone="pulse"
-        label={type === 'tip' ? 'რჩევა' : 'შენიშვნა'}
+        label={type === 'tip' ? S.tip : S.note}
       >
         {content}
       </CalloutCard>
@@ -71,7 +79,7 @@ function Block({ block }: { block: ContentBlock }) {
       <CalloutCard
         icon={<AlertTriangle className="w-4 h-4" />}
         tone="heart"
-        label="ყურადღება"
+        label={S.caution}
       >
         {content}
       </CalloutCard>
@@ -83,7 +91,7 @@ function Block({ block }: { block: ContentBlock }) {
       <CalloutCard
         icon={<BookMarked className="w-4 h-4" />}
         tone="indigo"
-        label={type === 'definition' ? 'განმარტება' : 'ძირითადი ცნება'}
+        label={type === 'definition' ? S.definition : S.keyConcept}
       >
         {content}
       </CalloutCard>
@@ -106,7 +114,7 @@ function Block({ block }: { block: ContentBlock }) {
       <CalloutCard
         icon={<Sparkles className="w-4 h-4" />}
         tone="violet"
-        label={type === 'analogy' ? 'ანალოგია' : 'მაგალითი'}
+        label={type === 'analogy' ? S.analogy : S.example}
       >
         {content}
       </CalloutCard>
@@ -118,7 +126,7 @@ function Block({ block }: { block: ContentBlock }) {
       <CalloutCard
         icon={<ListChecks className="w-4 h-4" />}
         tone="pulse"
-        label={type === 'step_by_step' ? 'ნაბიჯ-ნაბიჯ' : 'სია'}
+        label={type === 'step_by_step' ? S.stepByStep : S.list}
       >
         {content}
       </CalloutCard>
@@ -129,7 +137,7 @@ function Block({ block }: { block: ContentBlock }) {
     return (
       <div className="rounded-2xl border border-pulse/30 bg-gradient-to-br from-pulse/8 via-card to-card p-4">
         <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold mb-2">
-          მოკლედ
+          {S.inShort}
         </p>
         <div className="lesson-prose text-sm text-foreground/90">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
@@ -151,7 +159,7 @@ function Block({ block }: { block: ContentBlock }) {
       <CalloutCard
         icon={<Sparkles className="w-4 h-4" />}
         tone="indigo"
-        label="დიაგრამა"
+        label={S.diagram}
       >
         {content}
       </CalloutCard>

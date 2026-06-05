@@ -132,7 +132,8 @@ export function ChatPanelV2({
   lessonId,
   lesson,
   pageNumber,
-  siteLocale,
+  teacherLocale,
+  onTeacherLocaleChange,
   onUnlockCheck,
   walliPulseKey,
   pendingPrompt,
@@ -140,39 +141,20 @@ export function ChatPanelV2({
   lessonId: string;
   lesson: Lesson;
   pageNumber: number;
-  siteLocale: TutorLocale;
+  /** Teacher language — owned by the parent so chat + material panel stay in
+   *  sync. The in-panel toggle calls onTeacherLocaleChange. */
+  teacherLocale: TutorLocale;
+  onTeacherLocaleChange: (next: TutorLocale) => void;
   onUnlockCheck?: () => void;
   walliPulseKey?: number;
   pendingPrompt?: { id: number; text: string } | null;
 }) {
-  // Teacher language — defaults to the site locale, can be overridden per-lesson
-  // via the in-panel toggle. Persisted in localStorage keyed by lesson.
-  const [teacherLocale, setTeacherLocale] = React.useState<TutorLocale>(siteLocale);
-  // Ref mirrors the state so async closures (the auto-intro fetch chain) always
+  // Ref mirrors the prop so async closures (the auto-intro fetch chain) always
   // pick up the freshest value, even before the next render commits.
-  const teacherLocaleRef = React.useRef<TutorLocale>(siteLocale);
-
+  const teacherLocaleRef = React.useRef<TutorLocale>(teacherLocale);
   React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem(`walli_lang:${lessonId}`);
-      const next: TutorLocale = stored === 'ka' || stored === 'en' ? stored : siteLocale;
-      setTeacherLocale(next);
-      teacherLocaleRef.current = next;
-    } catch {
-      teacherLocaleRef.current = siteLocale;
-    }
-  }, [lessonId, siteLocale]);
-
-  const setAndPersistTeacherLocale = React.useCallback(
-    (next: TutorLocale) => {
-      setTeacherLocale(next);
-      teacherLocaleRef.current = next;
-      try {
-        localStorage.setItem(`walli_lang:${lessonId}`, next);
-      } catch { /* ignore */ }
-    },
-    [lessonId],
-  );
+    teacherLocaleRef.current = teacherLocale;
+  }, [teacherLocale]);
 
   const T = STRINGS[teacherLocale];
   const [messages, setMessages] = React.useState<ChatMessage[]>([]);
@@ -560,7 +542,7 @@ export function ChatPanelV2({
         </div>
         <TeacherLocaleToggle
           locale={teacherLocale}
-          onChange={setAndPersistTeacherLocale}
+          onChange={onTeacherLocaleChange}
           label={T.toggleLabel}
         />
         {unlockFiredRef.current && (

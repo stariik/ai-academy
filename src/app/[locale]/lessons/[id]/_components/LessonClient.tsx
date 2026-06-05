@@ -18,7 +18,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BookOpen } from 'lucide-react';
-import type { Lesson } from '@/types';
+import type { Lesson, LessonPage, TranslatedPageOverlay } from '@/types';
 import { useSession } from '@/hooks/useSession';
 import { LoadingState, ErrorState } from './LoadingState';
 import { LessonHeader } from './LessonHeader';
@@ -33,6 +33,30 @@ import { V2LocaleProvider } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 
 const CONTENT_PREF_KEY = 'walle:v2-lesson-content-visible';
+
+type TeacherLocale = 'ka' | 'en';
+
+/** Overlay a translated payload onto the Georgian page so only the material
+ *  text is swapped — block ids, types, order and check questions are kept. */
+function mergePageOverlay(page: LessonPage, overlay: TranslatedPageOverlay): LessonPage {
+  const blockEn = new Map(overlay.blocks.map((b) => [b.id, b.content]));
+  return {
+    ...page,
+    title: overlay.title || page.title,
+    bridgeFromPrevious: overlay.bridgeFromPrevious ?? undefined,
+    contentBlocks: page.contentBlocks.map((b) => ({ ...b, content: blockEn.get(b.id) ?? b.content })),
+    keyConcepts: overlay.keyConcepts.length ? overlay.keyConcepts : page.keyConcepts,
+    commonMisconceptions: overlay.commonMisconceptions.length
+      ? overlay.commonMisconceptions
+      : page.commonMisconceptions,
+    realWorldApplications: overlay.realWorldApplications.length
+      ? overlay.realWorldApplications
+      : page.realWorldApplications,
+    teachingFlow: page.teachingFlow
+      ? { ...page.teachingFlow, reflectionPrompt: overlay.reflectionPrompt ?? page.teachingFlow.reflectionPrompt }
+      : page.teachingFlow,
+  };
+}
 
 export default function LessonClient({
   lessonId,
@@ -64,6 +88,36 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
   // Right-rail panel preference (desktop persists; mobile uses sheet state)
   const [contentVisibleDesktop, setContentVisibleDesktop] = React.useState(true);
   const [contentSheetOpen, setContentSheetOpen] = React.useState(false);
+
+  // Teacher/material language — single source of truth shared by the chat
+  // panel and the material panel so they stay in sync. Defaults to the site
+  // locale; the in-panel KA/EN toggle overrides it, persisted per lesson.
+  const [teacherLocale, setTeacherLocale] = React.useState<TeacherLocale>(() => {
+    const fallback: TeacherLocale = locale === 'en' ? 'en' : 'ka';
+    if (typeof window === 'undefined') return fallback;
+    try {
+      const stored = localStorage.getItem(`walli_lang:${lessonId}`);
+      return stored === 'ka' || stored === 'en' ? stored : fallback;
+    } catch {
+      return fallback;
+    }
+  });
+  const setAndPersistTeacherLocale = React.useCallback(
+    (next: TeacherLocale) => {
+      setTeacherLocale(next);
+      try {
+        localStorage.setItem(`walli_lang:${lessonId}`, next);
+      } catch {
+        /* ignore */
+      }
+    },
+    [lessonId],
+  );
+
+  // On-the-fly English translation of the current page's material (cached
+  // server-side). Keyed by page; cleared when locale is Georgian.
+  const [translatedPage, setTranslatedPage] = React.useState<TranslatedPageOverlay | null>(null);
+  const [translating, setTranslating] = React.useState(false);
 
   // Walli reactions surface — child components can request a temporary state
   const [walliPulse, setWalliPulse] = React.useState<0 | 1>(0);
@@ -182,6 +236,44 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
 
   const isCheckUnlocked =
     completedPages.includes(currentPage) || unlockedPages.has(currentPage);
+
+  /* ─── translate current page material to EN on demand ─── */
+  React.useEffect(() => {
+    if (teacherLocale !== 'en' || isQuizPage || !currentPageData) {
+      setTranslatedPage(null);
+      setTranslating(false);
+      return;
+    }
+    let cancelled = false;
+    setTranslatedPage(null);
+    setTranslating(true);
+    fetch(`/api/lessons/${lessonId}/translate?pageNumber=${currentPage}&locale=en`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('translate failed'))))
+      .then((data: TranslatedPageOverlay) => {
+        if (!cancelled) setTranslatedPage(data);
+      })
+      .catch(() => {
+        // Fall back to Georgian material on failure.
+        if (!cancelled) setTranslatedPage(null);
+      })
+      .finally(() => {
+        if (!cancelled) setTranslating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [teacherLocale, isQuizPage, currentPageData, currentPage, lessonId]);
+
+  // The page handed to the material panel: translated when EN + ready,
+  // Georgian otherwise. `materialLoading` covers the in-flight EN case.
+  const displayPage = React.useMemo<LessonPage | null>(() => {
+    if (!currentPageData) return null;
+    if (teacherLocale === 'en' && translatedPage) {
+      return mergePageOverlay(currentPageData, translatedPage);
+    }
+    return currentPageData;
+  }, [currentPageData, teacherLocale, translatedPage]);
+  const materialLoading = teacherLocale === 'en' && translating && !translatedPage;
 
   const canAccessPage = React.useCallback(
     (pageNum: number) => {
@@ -327,7 +419,8 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
               lessonId={lessonId}
               lesson={lesson}
               pageNumber={currentPage}
-              siteLocale={locale}
+              teacherLocale={teacherLocale}
+              onTeacherLocaleChange={setAndPersistTeacherLocale}
               onUnlockCheck={() => handleCheckUnlocked(currentPage)}
               walliPulseKey={walliPulse}
               pendingPrompt={chatPrompt}
@@ -366,7 +459,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
 
         {/* Desktop content rail */}
         <AnimatePresence initial={false}>
-          {contentVisibleDesktop && !isQuizPage && currentPageData && (
+          {contentVisibleDesktop && !isQuizPage && displayPage && (
             <motion.aside
               key="content-rail"
               initial={{ width: 0, opacity: 0 }}
@@ -378,7 +471,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
             >
               <ContentSheet
                 lessonId={lessonId}
-                page={currentPageData}
+                page={displayPage}
                 pageNumber={currentPage}
                 totalPages={totalPages}
                 completedPages={completedPages}
@@ -389,6 +482,8 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
                 onNext={() => navigateToPage(currentPage + 1)}
                 onPrev={() => navigateToPage(currentPage - 1)}
                 inline
+                locale={teacherLocale}
+                materialLoading={materialLoading}
               />
             </motion.aside>
           )}
@@ -397,11 +492,11 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
 
       {/* Mobile content sheet */}
       <AnimatePresence>
-        {contentSheetOpen && !isQuizPage && currentPageData && (
+        {contentSheetOpen && !isQuizPage && displayPage && (
           <ContentSheet
             key="mobile-sheet"
             lessonId={lessonId}
-            page={currentPageData}
+            page={displayPage}
             pageNumber={currentPage}
             totalPages={totalPages}
             completedPages={completedPages}
@@ -415,6 +510,8 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
             }}
             onPrev={() => navigateToPage(currentPage - 1)}
             onClose={() => setContentSheetOpen(false)}
+            locale={teacherLocale}
+            materialLoading={materialLoading}
           />
         )}
       </AnimatePresence>

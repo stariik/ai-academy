@@ -32,6 +32,7 @@ import type {
   ReviewQueueItem,
   UserBadge,
   LeaderboardEntry,
+  TranslatedPageOverlay,
 } from '@/types';
 import { applySm2, DEFAULT_EASE, qualityFromQuiz } from '@/lib/spaced-repetition/sm2';
 
@@ -296,6 +297,60 @@ export async function getAllLessons(
       ((allQuestions ?? []) as QuizQuestionRow[]).filter((q) => q.lesson_id === row.id)
     )
   );
+}
+
+/**
+ * Lightweight lesson row — just the fields the storefront (landing / course
+ * cards / course detail) needs. Unlike getAllLessons it does NOT fetch
+ * content_blocks or quiz_questions or assemble full lessons, so it's an order
+ * of magnitude cheaper for list views.
+ */
+export type LessonLite = {
+  id: string;
+  title: string;
+  titleEn: string | null;
+  description: string;
+  descriptionEn: string | null;
+  learningObjectives: string[];
+  learningObjectivesEn: string[] | null;
+  difficulty: Lesson['difficulty'];
+  estimatedDurationMinutes: number;
+  courseId?: string;
+  positionInCourse?: number;
+  status: string;
+};
+
+export async function getAllLessonsLite(
+  supabase: SupabaseClient,
+  filters?: { status?: string; courseId?: string }
+): Promise<LessonLite[]> {
+  let query = supabase
+    .from('lessons')
+    .select(
+      'id, course_id, difficulty, estimated_duration_minutes, title, title_en, description, description_en, learning_objectives, learning_objectives_en, position_in_course, status'
+    )
+    .order('created_at', { ascending: false });
+
+  if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.courseId) query = query.eq('course_id', filters.courseId);
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  return (data as Array<Record<string, unknown>>).map((r) => ({
+    id: r.id as string,
+    title: (r.title as string) ?? '',
+    titleEn: (r.title_en as string | null) ?? null,
+    description: (r.description as string) ?? '',
+    descriptionEn: (r.description_en as string | null) ?? null,
+    learningObjectives: (r.learning_objectives as string[] | null) ?? [],
+    learningObjectivesEn: (r.learning_objectives_en as string[] | null) ?? null,
+    difficulty: r.difficulty as Lesson['difficulty'],
+    estimatedDurationMinutes: (r.estimated_duration_minutes as number) ?? 0,
+    courseId: (r.course_id as string | null) ?? undefined,
+    positionInCourse: (r.position_in_course as number | null) ?? undefined,
+    status: (r.status as string) ?? '',
+  }));
 }
 
 export async function updateLesson(
@@ -1987,4 +2042,54 @@ export async function getGlobalLeaderboard(
   }
 
   return { top, total, yourRank, yourXp };
+}
+
+// ============================================================
+// Page translation cache
+// ============================================================
+
+export async function getPageTranslation(
+  supabase: SupabaseClient,
+  lessonId: string,
+  pageNumber: number,
+  locale: string
+): Promise<{ sourceHash: string; payload: TranslatedPageOverlay } | null> {
+  const { data } = await supabase
+    .from('lesson_page_translations')
+    .select('source_hash, payload')
+    .eq('lesson_id', lessonId)
+    .eq('page_number', pageNumber)
+    .eq('locale', locale)
+    .single();
+
+  if (!data) return null;
+  return {
+    sourceHash: data.source_hash as string,
+    payload: data.payload as TranslatedPageOverlay,
+  };
+}
+
+export async function upsertPageTranslation(
+  supabase: SupabaseClient,
+  lessonId: string,
+  pageNumber: number,
+  locale: string,
+  sourceHash: string,
+  payload: TranslatedPageOverlay
+): Promise<void> {
+  const { error } = await supabase
+    .from('lesson_page_translations')
+    .upsert(
+      {
+        lesson_id: lessonId,
+        page_number: pageNumber,
+        locale,
+        source_hash: sourceHash,
+        payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'lesson_id,page_number,locale' }
+    );
+
+  if (error) throw new Error(`Failed to cache page translation: ${error.message}`);
 }

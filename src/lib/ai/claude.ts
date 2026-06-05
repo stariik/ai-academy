@@ -351,12 +351,19 @@ ${context.pageContent}
 2. ასწავლე თითო ნაწილი ცალ-ცალკე:
    - ახსენი ძირითადი იდეები მასალის გამოყენებით
    - ახსნის შემდეგ დასვი გაგების კითხვა
-   - დაელოდე პასუხს სანამ შემდეგ ნაწილზე გადახვალ
+   - **შეაფასე პასუხი, სანამ შემდეგ ნაწილზე გადახვალ.** გადადი მხოლოდ მაშინ, თუ პასუხი ნამდვილად პასუხობს კითხვას არსებითად.
 3. ასწავლე ყველა ძირითადი ცნება: ${conceptNames.length > 0 ? conceptNames.join(', ') : 'ყველა ცნება ამ გვერდზე'}
 4. როცა ყველა ნაწილი ასწავლე და მოსწავლემ გაგება აჩვენა, ჩასვი მარკერი \`[READY_FOR_QUIZ]\` შეტყობინების ბოლოს.
 
+### პასუხის შეფასება — ნუ დაუმტკიცებ ბრმად
+- პასუხი ჩაითვლება მხოლოდ მაშინ, თუ ის ნამდვილად ეხება კითხვას. ჩათვალე **არა-პასუხად**: ცარიელი პასუხი, ერთსიტყვიანი შემავსებელი („კი", „ოკ", „ხო", „yes", „ok"), შემთხვევითი სიმბოლოები, თემის გარეშე ტექსტი, ან გამოტოვების თხოვნა („შემდეგი", „შემდეგი კითხვა", „გავაგრძელოთ", „სწორი ვარ").
+- არა-პასუხზე: **ნუ** შეაქებ, **ნუ** უპასუხებ კითხვას თავად, და **ნუ** გადახვალ შემდეგზე. თბილად ხელახლა დასვი კითხვა — გადააფრაზე ან მიეცი ერთი პატარა მინიშნება — და დაელოდე ნამდვილ მცდელობას.
+- ქება („მშვენიერია!", „ზუსტად!", „ყოჩაღ!") მხოლოდ ნამდვილად სწორი, არსებითი პასუხისთვისაა. არასოდეს შეაქო არა-პასუხი.
+- თუ მოსწავლე გამოტოვებას დაჟინებით ითხოვს, თბილად აუხსენი, რომ ჯერ დარწმუნება გინდა, რომ გაიგო, და კიდევ ერთხელ დასვი კითხვა.
+
 ### [READY_FOR_QUIZ] წესები:
-- ჩასვი მხოლოდ მაშინ, როცა ყველა ნაწილი ასწავლე და მოსწავლემ სწორად უპასუხა კითხვებს.
+- ჩასვი მხოლოდ მაშინ, როცა ყველა ნაწილი ასწავლე და მოსწავლემ კითხვებს სწორად და არსებითად უპასუხა.
+- არასოდეს ჩასვა არა-პასუხის ან გამოტოვების თხოვნის საფუძველზე.
 - არასოდეს ჩასვა პირველ შეტყობინებაში.
 - არასოდეს ჩასვა, თუ მოსწავლე დაბნეულია.
 - როცა ჩასვამ, ასევე უთხარი: „მშვენიერია! ამ გვერდის მასალა ბოლომდე გავიარეთ. შეამოწმე შენი ცოდნა — კითხვები უკვე გახსნილია!"
@@ -471,12 +478,19 @@ You are not a passive assistant. Actively teach this material step by step.
 2. Teach each section one at a time:
    - Explain the core idea using the material
    - After explaining, ask a comprehension question
-   - Wait for the student's reply before moving to the next section
+   - **Evaluate the reply before you advance.** Move on ONLY if the answer actually addresses the question in substance.
 3. Teach every key concept: ${conceptNames.length > 0 ? conceptNames.join(', ') : 'all concepts on this page'}
 4. Once you've covered every section and the student has shown understanding, insert the marker \`[READY_FOR_QUIZ]\` at the very end of your message.
 
+### Evaluating replies — do NOT rubber-stamp
+- An answer counts only if it genuinely engages the question. Treat these as a **non-answer**: empty/blank, one-word filler ("yes", "ok", "sure", "yeah", "yeus"), random characters, off-topic text, or a request to skip ("next", "next question", "move on", "i'm right").
+- On a non-answer: do **not** praise it, do **not** answer the question yourself, and do **not** advance. Gently re-ask — rephrase the question or give one small hint — and wait for a real attempt.
+- Praise ("Great!", "Exactly!", "Excellent thinking!") is reserved for a genuinely correct, substantive answer. Never congratulate a non-answer.
+- If the student insists on skipping, explain warmly that you want to make sure it clicked first, then re-ask the question once more.
+
 ### [READY_FOR_QUIZ] rules:
-- Insert only after every section has been taught and the student has answered questions correctly.
+- Insert only after every section has been taught and the student has answered the comprehension questions correctly and substantively.
+- Never insert it on the basis of a non-answer or a skip request.
 - Never insert it in your first message.
 - Never insert it if the student is confused.
 - When you insert it, also say: "Great work! We've covered everything on this page. Test your understanding — the questions are unlocked now!"
@@ -559,7 +573,7 @@ export function buildEnhancedPageTutorPrompt(context: EnhancedPageTutorContext):
 - Ask the student to explain concepts in their own words.
 - Point them toward the harder parts of the material.
 - Ask "what if..." questions.
-- If the student knows the material well, move faster.`,
+- Once the student has answered correctly, you may move faster — but never skip ahead on a non-answer or a "skip" request.`,
     };
     sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
 
@@ -588,7 +602,7 @@ Pick up where you left off. Don't repeat sections you've already taught. Check w
 - სთხოვე მოსწავლეს ცნებების საკუთარი სიტყვებით ახსნა.
 - მიუთითე მასალის რთულ ნაწილებზე.
 - დასვი „რა იქნებოდა, თუ..." ტიპის კითხვები.
-- თუ მოსწავლე კარგად ფლობს მასალას, უფრო სწრაფად იარე.`,
+- მას შემდეგ, რაც მოსწავლე სწორად უპასუხებს, შეგიძლია უფრო სწრაფად იარო — მაგრამ არასოდეს გადახვიდე არა-პასუხის ან გამოტოვების თხოვნის საფუძველზე.`,
     };
 
     sections.push(styleInstructions[context.profile.preferredStyle] ?? styleInstructions.socratic);
@@ -797,6 +811,91 @@ export async function enforceEnglish(text: string): Promise<string> {
     console.error('enforceEnglish cleanup failed:', err);
     return text;
   }
+}
+
+// ---- Lesson-page material translation (KA → EN) ----
+//
+// The lesson material panel (right rail of the lesson page) is stored in
+// Georgian. When the student switches the tutor to English, the material
+// must follow. Page title and content blocks may already have human EN
+// variants (title_en / content_en); the remaining fields (key concepts,
+// misconceptions, real-world examples, bridge, reflection) have no EN
+// columns, so we translate the whole page on the fly and cache the result.
+
+export type PageTranslationInput = {
+  title: string;
+  bridgeFromPrevious?: string;
+  blocks: { id: string; type: string; content: string }[];
+  keyConcepts: { term: string; definition: string }[];
+  commonMisconceptions?: string[];
+  realWorldApplications?: string[];
+  reflectionPrompt?: string;
+};
+
+export type PageTranslationOutput = {
+  title: string;
+  bridgeFromPrevious: string | null;
+  blocks: { id: string; content: string }[];
+  keyConcepts: { term: string; definition: string }[];
+  commonMisconceptions: string[];
+  realWorldApplications: string[];
+  reflectionPrompt: string | null;
+};
+
+export async function translatePageMaterialToEnglish(
+  input: PageTranslationInput
+): Promise<PageTranslationOutput> {
+  const prompt = `Translate the following lesson-page material from Georgian into natural, fluent English for a student-facing learning UI.
+
+Return ONLY a JSON object with EXACTLY this shape (no commentary, no code fences):
+{
+  "title": string,
+  "bridgeFromPrevious": string | null,
+  "blocks": [{ "id": string, "content": string }],
+  "keyConcepts": [{ "term": string, "definition": string }],
+  "commonMisconceptions": string[],
+  "realWorldApplications": string[],
+  "reflectionPrompt": string | null
+}
+
+Rules:
+- Translate every Georgian value into fluent English. No Georgian script (ა–ჰ) may remain in the output.
+- Preserve Markdown formatting exactly (bold, lists, headings, blockquotes, tables, links).
+- For "blocks": keep the SAME "id" values from the input. If a block's content is source code, keep the code verbatim and only translate human-language comments or string literals inside it.
+- Translate both the "term" and the "definition" of each key concept; keep them paired and in order.
+- Preserve array lengths and order. If an input field is absent or empty, return null (for strings) or [] (for arrays).
+- Output valid JSON only.
+
+Material (Georgian):
+${JSON.stringify(input, null, 2)}`;
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 8192,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  const textBlock = response.content.find((b) => b.type === 'text');
+  if (!textBlock || textBlock.type !== 'text') {
+    throw new Error('No text response from Claude for page translation');
+  }
+
+  let jsonText = textBlock.text.trim();
+  if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  }
+  const parsed = JSON.parse(jsonText) as Partial<PageTranslationOutput>;
+
+  // Normalize so the caller always gets a complete, well-shaped object.
+  return {
+    title: parsed.title ?? input.title,
+    bridgeFromPrevious: parsed.bridgeFromPrevious ?? null,
+    blocks: Array.isArray(parsed.blocks) ? parsed.blocks : [],
+    keyConcepts: Array.isArray(parsed.keyConcepts) ? parsed.keyConcepts : [],
+    commonMisconceptions: Array.isArray(parsed.commonMisconceptions) ? parsed.commonMisconceptions : [],
+    realWorldApplications: Array.isArray(parsed.realWorldApplications) ? parsed.realWorldApplications : [],
+    reflectionPrompt: parsed.reflectionPrompt ?? null,
+  };
 }
 
 // ---- Quiz Grading with AI ----

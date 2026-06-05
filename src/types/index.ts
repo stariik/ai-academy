@@ -67,6 +67,22 @@ export type LessonPage = {
   realWorldApplications?: string[];
 };
 
+/**
+ * Translated (e.g. English) overlay for a LessonPage's material, produced on
+ * the fly and cached. Merged onto the Georgian page for display: `blocks` is
+ * keyed by ContentBlock id so only the text content is swapped, leaving block
+ * type/order intact. Check questions are intentionally not translated here.
+ */
+export type TranslatedPageOverlay = {
+  title: string;
+  bridgeFromPrevious: string | null;
+  blocks: { id: string; content: string }[];
+  keyConcepts: { term: string; definition: string }[];
+  commonMisconceptions: string[];
+  realWorldApplications: string[];
+  reflectionPrompt: string | null;
+};
+
 export type Lesson = {
   id: string;
   title: string;

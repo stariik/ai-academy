@@ -6,8 +6,14 @@
 // All returned strings are already-localized — components do not pick.
 // ============================================================
 
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
-import { getAllCourses, getAllLessons, getCategoryImages } from '@/lib/supabase/db';
+import {
+  getAllCourses,
+  getAllLessonsLite,
+  getCategoryImages,
+  type LessonLite,
+} from '@/lib/supabase/db';
 import { CATEGORIES as CANONICAL_CATEGORIES } from '@/lib/constants/categories';
 import {
   CATEGORY_VISUALS,
@@ -23,7 +29,11 @@ import type {
   Lesson as V2Lesson,
 } from './data';
 import { getDict, type Locale } from './i18n';
-import type { Course as RealCourse, Lesson as RealLesson } from '@/types';
+import type { Course as RealCourse } from '@/types';
+
+// The storefront only needs the lightweight lesson shape (counts, titles,
+// durations) — never content blocks or quiz questions.
+type RealLesson = LessonLite;
 
 function firstCanonicalTag(tags: string[]): string | null {
   for (const tag of tags) {
@@ -99,11 +109,13 @@ function buildCourse(
   };
 }
 
-async function loadAll() {
+// Wrapped in React cache() so getCategories() and getCourses() share a single
+// fetch within one render instead of each hitting Supabase independently.
+const loadAll = cache(async () => {
   const supabase = await createClient();
   const [courses, lessons, categoryImages] = await Promise.all([
     getAllCourses(supabase),
-    getAllLessons(supabase, { status: 'published' }),
+    getAllLessonsLite(supabase, { status: 'published' }),
     getCategoryImages(supabase),
   ]);
   const lessonsByCourse = new Map<string, RealLesson[]>();
@@ -114,7 +126,7 @@ async function loadAll() {
     lessonsByCourse.set(l.courseId, arr);
   }
   return { courses, lessons, lessonsByCourse, categoryImages };
-}
+});
 
 export async function getCategories(locale: Locale): Promise<Category[]> {
   const { courses, lessonsByCourse, categoryImages } = await loadAll();
