@@ -463,7 +463,7 @@ function Hero() {
           </div>
         </div>
 
-        <div className="order-2 lg:order-1 text-center lg:text-left">
+        <div className="order-2 lg:order-1 text-center lg:text-left lg:pl-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-pulse/30 bg-pulse/10 text-pulse px-3 py-1.5 text-xs font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" />
             {dict.hero.eyebrow}

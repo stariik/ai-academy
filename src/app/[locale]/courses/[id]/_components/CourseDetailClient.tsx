@@ -352,14 +352,6 @@ function Navbar() {
           </div>
         </a>
 
-        <a
-          href={`${href()}#courses`}
-          className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {dict.courseDetail.backToCourses}
-        </a>
-
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
@@ -440,14 +432,40 @@ function Hero({
         >
           <a
             href={`/v2#cat-${category.id}`}
+            title={dict.courseDetail.backToCourses}
             className={cn(
-              'inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-xs font-bold transition-all hover:-translate-x-0.5',
+              'group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full border bg-card/80 backdrop-blur-sm py-1.5 pl-1.5 pr-4 text-xs font-bold shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
               t.ring,
             )}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className={t.text}>{category.icon}</span>
-            <span>{category.name}</span>
+            {/* tone wash sweeps in on hover */}
+            <span
+              className={cn('absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100', t.gradient)}
+              aria-hidden
+            />
+            {/* icon bubble — flips to a back arrow on hover */}
+            <span className={cn('relative grid h-6 w-6 place-items-center overflow-hidden rounded-full text-[13px] leading-none', t.iconBg)}>
+              <span className="col-start-1 row-start-1 transition-all duration-300 group-hover:-translate-y-4 group-hover:opacity-0">
+                {category.icon}
+              </span>
+              <ArrowLeft
+                className={cn(
+                  'col-start-1 row-start-1 h-3.5 w-3.5 translate-y-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100',
+                  t.text,
+                )}
+              />
+            </span>
+            <span className="relative">
+              {category.name}
+              {/* tone underline draws in on hover */}
+              <span
+                className={cn(
+                  'absolute -bottom-0.5 left-0 h-px w-full origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100',
+                  t.bg,
+                )}
+                aria-hidden
+              />
+            </span>
           </a>
         </motion.div>
 
