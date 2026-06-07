@@ -14,7 +14,6 @@ export type Dict = {
     categories: string;
     courses: string;
     howItWorks: string;
-    pricing: string;
     signIn: string;
     signUp: string;
     menu: string;
@@ -54,6 +53,8 @@ export type Dict = {
     lessonsShort: string;
     hoursShort: string;
     free: string;
+    open: string;
+    minPerLesson: string;
   };
   howItWorks: {
     eyebrow: string;
@@ -65,35 +66,12 @@ export type Dict = {
     step3Title: string;
     step3Description: string;
   };
+  // Audience copy is still used on the /about page; the landing-page
+  // audience + pricing sections were removed.
   audience: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    mostPopular: string;
-    ageBandSuffix: string;
-    learnMore: string;
     kids: { title: string; tagline: string; features: string[] };
     teens: { title: string; tagline: string; features: string[] };
     adults: { title: string; tagline: string; features: string[] };
-  };
-  pricing: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    fromSuffix: string;
-    soloLabel: string;
-    soloPrice: string;
-    soloSubtitle: string;
-    soloFeatures: string[];
-    soloCta: string;
-    bundleLabel: string;
-    bundlePrice: string;
-    bundleOldPrice: string;
-    bundleSave: string;
-    bundleDiscount: string;
-    bundleBadge: string;
-    bundleFeatures: string[];
-    bundleCta: string;
   };
   ctaBanner: {
     titleBefore: string;
@@ -109,8 +87,6 @@ export type Dict = {
     columnProduct: string;
     columnCompany: string;
     productCourses: string;
-    productPricing: string;
-    productParents: string;
     productFreeSample: string;
     companyAbout: string;
     companyContact: string;
@@ -217,7 +193,6 @@ export type Dict = {
     footerHome: string;
     footerCategories: string;
     footerCourses: string;
-    footerPricing: string;
     continueShort: string;
     startShort: string;
     viewAsGuest: string;

@@ -343,7 +343,7 @@ function Navbar() {
           : 'bg-transparent border-b border-transparent',
       )}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-0 flex items-center justify-between h-16">
         <a href={href()} className="flex items-center gap-2">
           <Walli size={36} state="idle" noShadow />
           <div>
@@ -398,7 +398,7 @@ function Hero({
   totalLessons: number;
   previewHref: string;
 }) {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const reduced = useReducedMotion();
   const [walliState, setWalliState] = React.useState<WalliState>('idle');
@@ -431,7 +431,7 @@ function Hero({
           className="mb-6 sm:mb-8"
         >
           <a
-            href={`/v2#cat-${category.id}`}
+            href={`${href()}#cat-${category.id}`}
             title={dict.courseDetail.backToCourses}
             className={cn(
               'group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full border bg-card/80 backdrop-blur-sm py-1.5 pl-1.5 pr-4 text-xs font-bold shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
@@ -1260,11 +1260,11 @@ function TrustPill({
 }
 
 function BundleCrossSell({ category }: { category: Category }) {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   return (
     <a
-      href="/v2#pricing"
+      href={`${href()}#cat-${category.id}`}
       className={cn(
         'group block mx-5 sm:mx-6 mb-5 sm:mb-6 rounded-2xl border-2 border-dashed p-4 transition-all',
         t.ring,
@@ -1764,7 +1764,6 @@ function Footer() {
             <a href={href()} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerHome}</a>
             <a href={`${href()}#categories`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCategories}</a>
             <a href={`${href()}#courses`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCourses}</a>
-            <a href={`${href()}#pricing`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerPricing}</a>
           </nav>
           <p className="text-xs text-muted-foreground">© 2026 {dict.meta.brandName}</p>
         </div>

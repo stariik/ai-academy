@@ -322,6 +322,38 @@ body {
   );
 }
 
+/* Catalog sliders — cards stagger up the first time a row scrolls into
+   view. The Slider component toggles `.is-shown` via IntersectionObserver;
+   transforms live on the [data-slide-item] wrappers so they never fight
+   the cards' own hover transforms. */
+.reveal-row > [data-slide-item] {
+  opacity: 0;
+  transform: translateY(26px);
+}
+.reveal-row.is-shown > [data-slide-item] {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 0.55s ease-out,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-row.is-shown > [data-slide-item]:nth-child(1) { transition-delay: 0.05s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(2) { transition-delay: 0.1s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(3) { transition-delay: 0.15s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(4) { transition-delay: 0.2s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(5) { transition-delay: 0.25s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(6) { transition-delay: 0.3s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(7) { transition-delay: 0.35s; }
+.reveal-row.is-shown > [data-slide-item]:nth-child(n + 8) { transition-delay: 0.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-row > [data-slide-item] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* ============================================================
    Lesson Content Prose — used in ContentBlockRenderer
    ============================================================ */

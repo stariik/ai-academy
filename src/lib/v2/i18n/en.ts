@@ -11,7 +11,6 @@ export const en: Dict = {
     categories: 'Categories',
     courses: 'Courses',
     howItWorks: 'How it works',
-    pricing: 'Pricing',
     signIn: 'Sign in',
     signUp: 'Sign up',
     menu: 'Menu',
@@ -56,6 +55,8 @@ export const en: Dict = {
     lessonsShort: 'lsn',
     hoursShort: 'h',
     free: 'Free',
+    open: 'Open course',
+    minPerLesson: 'min / lesson',
   },
 
   howItWorks: {
@@ -72,14 +73,8 @@ export const en: Dict = {
       'Every completed lesson earns you a beautiful card for your library. Share with family.',
   },
 
+  // Used on the /about page (the landing audience section was removed).
   audience: {
-    eyebrow: 'Who we build for',
-    title: 'One tool, three lives',
-    description:
-      'walle.academy fits everyone — but adapts itself to who you are.',
-    mostPopular: 'Most popular',
-    ageBandSuffix: 'years',
-    learnMore: 'Learn more',
     kids: {
       title: 'Kids',
       tagline: 'Learn AI through play',
@@ -105,32 +100,6 @@ export const en: Dict = {
     },
   },
 
-  pricing: {
-    eyebrow: 'Pricing',
-    title: 'Buy a single course or a full category',
-    description:
-      'No subscription. Buy once — yours forever. The category bundle automatically includes future courses.',
-    fromSuffix: '+',
-    soloLabel: 'Single course',
-    soloPrice: '₾19',
-    soloSubtitle: 'Per course — lifetime access',
-    soloFeatures: ['Full access to the course', 'Daily review', 'AI tutor 24/7'],
-    soloCta: 'Browse courses',
-    bundleLabel: 'Category bundle',
-    bundlePrice: '₾79',
-    bundleOldPrice: '₾145',
-    bundleSave: 'Save ₾66',
-    bundleDiscount: '−40%',
-    bundleBadge: 'Best value',
-    bundleFeatures: [
-      'All courses in the category',
-      'Future courses included',
-      'One payment — lifetime access',
-      'AI tutor 24/7',
-    ],
-    bundleCta: 'View bundles',
-  },
-
   ctaBanner: {
     titleBefore: 'Ready for the',
     titleHighlight: 'world of AI?',
@@ -147,8 +116,6 @@ export const en: Dict = {
     columnProduct: 'Product',
     columnCompany: 'Company',
     productCourses: 'Courses',
-    productPricing: 'Pricing',
-    productParents: 'For parents',
     productFreeSample: 'Free sample',
     companyAbout: 'About us',
     companyContact: 'Contact',
@@ -259,7 +226,6 @@ export const en: Dict = {
     footerHome: 'Home',
     footerCategories: 'Categories',
     footerCourses: 'Courses',
-    footerPricing: 'Pricing',
     continueShort: 'Continue',
     startShort: 'Start',
     viewAsGuest: 'Guest',
@@ -546,6 +512,6 @@ export const en: Dict = {
     ctaTitle: 'Ready for the world of AI?',
     ctaSubtitle: 'Start with a free lesson — what happens next is up to you.',
     ctaPrimary: 'Start free',
-    ctaSecondary: 'See pricing',
+    ctaSecondary: 'Browse courses',
   },
 };

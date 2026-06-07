@@ -11,7 +11,6 @@ export const ka: Dict = {
     categories: 'კატეგორიები',
     courses: 'კურსები',
     howItWorks: 'როგორ მუშაობს',
-    pricing: 'ფასები',
     signIn: 'შესვლა',
     signUp: 'რეგისტრაცია',
     menu: 'მენიუ',
@@ -56,6 +55,8 @@ export const ka: Dict = {
     lessonsShort: 'გაკვ.',
     hoursShort: 'სთ',
     free: 'უფასოდ',
+    open: 'კურსის ნახვა',
+    minPerLesson: 'წთ / გაკვ.',
   },
 
   howItWorks: {
@@ -71,13 +72,8 @@ export const ka: Dict = {
     step3Description: 'ყოველ დასრულებულ გაკვეთილზე — ულამაზესი ბარათი ბიბლიოთეკაში. გაუზიარე ოჯახს.',
   },
 
+  // Used on the /about page (the landing audience section was removed).
   audience: {
-    eyebrow: 'ვისთვის ვაგებთ',
-    title: 'ერთი ხელსაწყო, სამი ცხოვრება',
-    description: 'walle.academy ერგება ყველას — მაგრამ მოარგებს თავის თავს იმის მიხედვით, ვინ ხარ.',
-    mostPopular: 'ყველაზე პოპულარული',
-    ageBandSuffix: 'წელი',
-    learnMore: 'გაიგე მეტი',
     kids: {
       title: 'ბავშვები',
       tagline: 'თამაშით ვისწავლოთ AI',
@@ -103,32 +99,6 @@ export const ka: Dict = {
     },
   },
 
-  pricing: {
-    eyebrow: 'ფასები',
-    title: 'იყიდე ცალკე ან მთელი კატეგორია',
-    description:
-      'არცერთი გამოწერა. ერთხელ ყიდულობ — სამუდამოდ შენია. კატეგორიის ბანდლი ავტომატურად მოიცავს მომავალ კურსებს.',
-    fromSuffix: '-დან',
-    soloLabel: 'ცალკე კურსი',
-    soloPrice: '₾19',
-    soloSubtitle: 'თითო კურსი — სამუდამო წვდომა',
-    soloFeatures: ['სრული წვდომა კურსზე', 'ყოველდღიური განმეორება', 'AI მასწავლებელი 24/7'],
-    soloCta: 'კურსების ნახვა',
-    bundleLabel: 'კატეგორიის ბანდლი',
-    bundlePrice: '₾79',
-    bundleOldPrice: '₾145',
-    bundleSave: 'დაზოგე ₾66',
-    bundleDiscount: '−40%',
-    bundleBadge: 'საუკეთესო ფასი',
-    bundleFeatures: [
-      'მთელი კატეგორიის კურსები',
-      'მომავალი კურსები ჩართულია',
-      'ერთი გადახდა — სამუდამო წვდომა',
-      'AI მასწავლებელი 24/7',
-    ],
-    bundleCta: 'ბანდლების ნახვა',
-  },
-
   ctaBanner: {
     titleBefore: 'მზად ხარ',
     titleHighlight: 'AI-ს სამყაროსთვის?',
@@ -145,8 +115,6 @@ export const ka: Dict = {
     columnProduct: 'პროდუქტი',
     columnCompany: 'კომპანია',
     productCourses: 'კურსები',
-    productPricing: 'ფასები',
-    productParents: 'მშობლებისთვის',
     productFreeSample: 'უფასო გასინჯვა',
     companyAbout: 'ჩვენ შესახებ',
     companyContact: 'კონტაქტი',
@@ -257,7 +225,6 @@ export const ka: Dict = {
     footerHome: 'მთავარი',
     footerCategories: 'კატეგორიები',
     footerCourses: 'კურსები',
-    footerPricing: 'ფასები',
     continueShort: 'გააგრძელე',
     startShort: 'დაიწყე',
     viewAsGuest: 'სტუმარი',
@@ -544,6 +511,6 @@ export const ka: Dict = {
     ctaTitle: 'მზად ხარ AI-ის სამყაროსთვის?',
     ctaSubtitle: 'დაიწყე უფასო გაკვეთილით — შემდეგი შენზეა.',
     ctaPrimary: 'დაიწყე უფასოდ',
-    ctaSecondary: 'ნახე ფასები',
+    ctaSecondary: 'კურსების ნახვა',
   },
 };
