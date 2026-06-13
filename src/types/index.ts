@@ -216,6 +216,10 @@ export type Course = {
   descriptionEn?: string | null;
   tags: string[];
   userId?: string | null;
+  /** Selling price in tetri (₾ × 100). null/undefined = shown as free. */
+  priceCents?: number | null;
+  /** Optional struck-through retail price in tetri for discount display. */
+  retailPriceCents?: number | null;
   createdAt: string;
   updatedAt: string;
 };

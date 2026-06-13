@@ -46,11 +46,11 @@ export default function LessonEditClient({ initialLesson }: { initialLesson: Les
   }, [initialLesson.id]);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
-      <div className="max-w-4xl mx-auto">
+    <div>
+      <div className="max-w-4xl">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Link href="/admin/lessons" className="text-sm text-teal hover:text-navy">
+            <Link href="/admin/lessons" className="text-xs font-semibold text-teal hover:text-navy">
               ← All lessons
             </Link>
             <h1 className="text-2xl font-bold text-gray-900 mt-1">{lesson.title}</h1>

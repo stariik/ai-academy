@@ -3,8 +3,21 @@
 // Translates text between languages using Google Cloud Translation API v2
 // ============================================================
 
+import { logAiUsage, translateCharsCostUsd } from '@/lib/ai/usage';
+
 const GOOGLE_TRANSLATE_API = 'https://translation.googleapis.com/language/translate/v2';
 const API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
+
+/** Record translated character volume ($20/M chars) in the AI usage log. */
+function logTranslateUsage(chars: number, targetLang: string): void {
+  void logAiUsage({
+    feature: 'ui_translation',
+    provider: 'google-translate',
+    model: 'translate-v2',
+    costUsd: translateCharsCostUsd(chars),
+    metadata: { chars, targetLang },
+  });
+}
 
 export type TranslateResult = {
   translatedText: string;
@@ -41,6 +54,7 @@ export async function translateText(
   }
 
   const data = await res.json();
+  logTranslateUsage(text.length, targetLang);
   return data.data.translations[0].translatedText;
 }
 
@@ -82,6 +96,7 @@ export async function translateBatch(
   }
 
   const data = await res.json();
+  logTranslateUsage(nonEmpty.reduce((sum, n) => sum + n.text.length, 0), targetLang);
   const translations: { translatedText: string }[] = data.data.translations;
 
   // Reconstruct full array with translated texts in correct positions

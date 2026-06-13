@@ -61,12 +61,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const sessionId = await getSessionId();
+
     // Grade with AI for personalized feedback
     const gradingResults = await gradeQuizWithAI(
       questions,
       answers,
       { title: lesson.title, summary: lesson.summary },
-      locale
+      locale,
+      { feature: 'quiz_grading', sessionId, lessonId, locale }
     );
 
     // Calculate totals
@@ -90,7 +93,6 @@ export async function POST(request: NextRequest) {
     };
 
     // Persist quiz attempt and update profile
-    const sessionId = await getSessionId();
     if (sessionId) {
       try {
         // Save the quiz attempt

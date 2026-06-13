@@ -10,11 +10,15 @@ import { analyzeSectionAsLesson, type LLMProvider } from '@/lib/ai/gemini';
 import { createClient } from '@/lib/supabase/server';
 import { saveLesson } from '@/lib/supabase/db';
 import { buildLessonFromGeminiResponse } from '@/lib/lesson-builder';
+import { isAdmin } from '@/lib/admin-auth';
 import type { Lesson } from '@/types';
 
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const {

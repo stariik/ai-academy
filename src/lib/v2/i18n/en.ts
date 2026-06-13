@@ -11,6 +11,8 @@ export const en: Dict = {
     categories: 'Categories',
     courses: 'Courses',
     howItWorks: 'How it works',
+    about: 'About',
+    contact: 'Contact',
     signIn: 'Sign in',
     signUp: 'Sign up',
     menu: 'Menu',
@@ -49,6 +51,23 @@ export const en: Dict = {
     lessonsUnit: 'lessons',
     lessonsUnitShort: 'lsn',
     soon: 'soon',
+    bundleEyebrow: 'Bundle deal',
+    bundleCta: 'Get the bundle',
+    bundleSave: 'Save',
+    bundleForever: 'Lifetime access',
+    bundleDialogTitle: 'Unlock the whole bundle',
+    bundleIncludes: "What's included",
+    bundleConfirm: 'Confirm & unlock',
+    bundleProcessing: 'Unlocking…',
+    bundleDoneTitle: 'The bundle is yours',
+    bundleDoneDesc: 'Every course is unlocked. Jump in whenever you like.',
+    bundleStart: 'Start learning',
+    bundleOwned: 'You own this',
+    bundleGuestNote: 'Saved on this device — sign in anytime to sync your progress.',
+    bundleCancel: 'Maybe later',
+    bundleErrorRetry: 'Something went wrong. Please try again.',
+    bundleIncluded: 'included',
+    bundleSecure: 'Secure & private',
   },
 
   courseCard: {
@@ -411,107 +430,127 @@ export const en: Dict = {
   },
 
   about: {
-    heroEyebrow: 'About WALLE',
-    heroTitle: 'Teaching the',
-    heroTitleHighlight: 'professions of the future',
+    heroEyebrow: 'About walle.academy',
+    heroTitle: "Georgia's first",
+    heroTitleHighlight: 'AI academy',
     heroSubtitle:
-      'WALLE is a Georgian AI academy preparing people of every age for the new digital-intelligence era — with a personal AI tutor that never tires.',
+      'We built walle.academy because world-class AI education did not exist in Georgian — and that gap was costing an entire generation. We are closing it.',
     heroCtaPrimary: 'Start free',
     heroCtaSecondary: 'Browse courses',
 
-    missionEyebrow: 'Why we exist',
-    missionTitle: 'The world is entering a new era',
-    missionBody:
-      'The world is leaving the information age and entering the digital-intelligence era — a shift that is fundamentally reshaping education, employment, and business. A new economic ecosystem is forming, one where AI-based skills, not diplomas, are what matter. Traditional education cannot keep up, and that gap breeds widespread anxiety and inefficiency. WALLE is the transformative tool that prepares professionals and citizens for this new era.',
-    missionPullquote:
-      'We are building a new system of education — and teaching the professions of the future.',
+    storyEyebrow: 'Our story',
+    storyTitle: 'Born from a simple observation',
+    storyBody:
+      "In 2025, the world's best AI courses were in English. Georgians who did not speak English fluently were locked out of the fastest-growing field in the world. Schools could not keep up. The tools that existed were built for other countries, other languages, other contexts. So we built our own — an AI tutor that speaks Georgian, teaches AI from scratch, and never runs out of patience.",
+    storyPullquote: 'Every Georgian deserves a world-class AI education — in their own language.',
 
-    offerEyebrow: 'What we do',
-    offerTitle: 'A new kind of education',
-    offerSubtitle: 'Everything you need to actually learn AI — not just read about it.',
-    offerItems: [
+    whatEyebrow: 'What we built',
+    whatTitle: 'Walli — your personal AI tutor',
+    whatBody:
+      'Walli is a conversational AI tutor powered by Claude. It teaches in Georgian and English through structured lessons, asks questions instead of just giving answers, and will not let you move forward until you actually understand. Each course is a genuine dialogue — not a video lecture, not a quiz loop.',
+    whatItems: [
       {
-        title: 'A personal AI tutor',
+        title: '9 learning paths',
         description:
-          'Walli teaches you one-to-one, in your language, at your pace — patient with mistakes and available 24/7.',
+          'AI Foundations, Prompt Engineering, Creative Tools, Coding with AI, Business AI, AI for Kids, and more — every level from total beginner to practitioner.',
       },
       {
-        title: 'Nine learning paths',
+        title: 'Mastery-based progression',
         description:
-          'From AI foundations to creative tools and autonomous agents — a track for every goal and every level.',
+          'Walli uses check questions and a final quiz on every lesson. You move on when you understand — not just when you click "next".',
       },
       {
-        title: 'Built for every age',
+        title: 'Spaced repetition built in',
         description:
-          'Tailored journeys for kids, teens, and adults — the same tutor, adapted to who you are.',
+          'Weak answers resurface automatically on an SM-2 schedule, so what you learn actually sticks.',
       },
       {
-        title: 'Learn by doing',
+        title: 'Progress you can share',
         description:
-          'Practical projects and real skills over memorization — and you only move on once you truly understand.',
-      },
-      {
-        title: 'Motivation that sticks',
-        description:
-          'XP, streaks, collectible cards, badges, and leaderboards turn progress into a habit.',
-      },
-      {
-        title: 'Yours forever',
-        description:
-          'No subscription. Buy once for lifetime access, get future courses in a bundle, and earn a digital certificate.',
+          'XP, streaks, badges, and a shareable dashboard — for parents, teachers, or just yourself.',
       },
     ],
 
-    teachEyebrow: 'How Walli teaches',
-    teachTitle: 'A tutor that actually waits for you',
-    teachItems: [
-      {
-        title: 'Speaks your language',
-        description: 'Native Georgian and English — no translation barrier between you and the idea.',
-      },
-      {
-        title: 'Socratic and patient',
-        description:
-          'Walli guides you to the answer instead of handing it over, and is always gentle on mistakes.',
-      },
-      {
-        title: 'Mastery, not memorization',
-        description:
-          'It will not advance until you have shown real understanding — no rushing, no rubber-stamping.',
-      },
-      {
-        title: 'Always there',
-        description: '24/7, on your schedule, with infinite patience.',
-      },
-    ],
+    audienceEyebrow: 'Who we teach',
+    audienceTitle: 'Every age, one platform',
 
-    audienceEyebrow: "Who it's for",
-    audienceTitle: 'One tutor, every stage of life',
-
-    valuesEyebrow: 'What we stand for',
-    valuesTitle: 'Our principles',
+    valuesEyebrow: 'How we work',
+    valuesTitle: 'What drives every decision',
     valuesItems: [
       {
         title: 'Georgian-first',
-        description: 'World-class AI education, native to you — not a rough translation.',
+        description:
+          'The language of instruction is not an afterthought. Georgian is the default — English is a second option, not a translation.',
       },
       {
-        title: 'Skills that matter',
-        description: 'We teach the professions of the future, not credentials for their own sake.',
+        title: 'Mastery over speed',
+        description:
+          'We refuse to rubber-stamp progress. If you did not understand, Walli asks again. That is the whole point.',
       },
       {
-        title: 'Safe and ad-free',
-        description: 'A focused, trustworthy space — especially for our youngest learners.',
+        title: 'Safe and honest',
+        description:
+          'No ads, no dark patterns, no inflated student counts. Especially important for the kids and families who trust us.',
       },
       {
-        title: 'Built for everyone',
-        description: 'From curious kids to working professionals — if you want to learn, you belong here.',
+        title: 'Built to last',
+        description:
+          'No subscription. Buy once, access forever. We align our revenue with your long-term success, not your monthly renewal.',
       },
     ],
 
-    ctaTitle: 'Ready for the world of AI?',
-    ctaSubtitle: 'Start with a free lesson — what happens next is up to you.',
-    ctaPrimary: 'Start free',
+    ctaTitle: 'Ready to start?',
+    ctaSubtitle: 'The first lesson is free. No account, no card, no commitment.',
+    ctaPrimary: 'Try a free lesson',
+    ctaSecondary: 'Browse all courses',
+  },
+
+  contact: {
+    heroEyebrow: 'Contact us',
+    heroTitle: "We'd love to",
+    heroTitleHighlight: 'hear from you',
+    heroSubtitle:
+      'Got a question, a great idea, or just want to say hello? Fill in the form — we read every message.',
+    topics: [
+      {
+        title: 'Technical support',
+        description: 'Something not working? Tell us what happened.',
+      },
+      {
+        title: 'Course questions',
+        description: 'Curious about a topic or which path fits you?',
+      },
+      {
+        title: 'Partnerships',
+        description: 'Schools, companies — let us talk.',
+      },
+      {
+        title: 'Feedback & ideas',
+        description: 'Found something we can improve? We listen.',
+      },
+    ],
+    formTitle: 'Send us a message',
+    formSubtitle: 'We will get back to you within 24 hours on weekdays.',
+    fieldName: 'Your name',
+    fieldNamePlaceholder: 'How should we address you?',
+    fieldEmail: 'Your email',
+    fieldEmailPlaceholder: 'your@email.com',
+    fieldSubject: 'Subject',
+    fieldSubjectPlaceholder: 'What is this about?',
+    fieldMessage: 'Message',
+    fieldMessagePlaceholder: 'Tell us everything — the more detail, the faster we can help.',
+    formNote: 'We typically reply within 24 hours on weekdays.',
+    send: 'Send message',
+    sending: 'Sending…',
+    successTitle: 'Message sent!',
+    successBody: 'Thank you — we will get back to you within 24 hours on weekdays.',
+    successAgain: 'Send another message',
+    errorRequired: 'This field is required.',
+    errorEmail: 'Please enter a valid email address.',
+    errorGeneric: 'Something went wrong. Please try again.',
+    ctaTitle: 'Start learning while you wait',
+    ctaSubtitle: 'The first lesson is free. No account needed.',
+    ctaPrimary: 'Try a free lesson',
     ctaSecondary: 'Browse courses',
   },
 };

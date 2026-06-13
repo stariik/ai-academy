@@ -1,164 +1,36 @@
-'use client';
+// ============================================================
+// /admin/courses — every course with lesson/enrollment/price stats.
+// Server component; the client table handles filter + delete.
+// ============================================================
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Course } from '@/types';
-import { CATEGORIES } from '@/lib/constants/categories';
+import { listCoursesWithStats } from '@/lib/admin/queries';
+import CoursesTable from './_components/CoursesTable';
 
-export default function AdminCoursesPage() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const fetchCourses = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/courses');
-      const data = await res.json();
-      setCourses(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to fetch courses:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+export const dynamic = 'force-dynamic';
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this course? Lessons will be unlinked but not deleted.')) return;
-    try {
-      const res = await fetch(`/api/courses/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchCourses();
-    } catch (err) {
-      console.error('Failed to delete course:', err);
-    }
-  };
-
-  const filteredCourses = courses.filter((course) => {
-    if (categoryFilter === 'all') return true;
-    if (categoryFilter === 'uncategorized') return course.tags.length === 0;
-    return course.tags.includes(categoryFilter);
-  });
+export default async function AdminCoursesPage() {
+  const courses = await listCoursesWithStats();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Courses</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Organize lessons into structured courses
-            </p>
-          </div>
-          <Link
-            href="/admin"
-            className="inline-flex justify-center px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-          >
-            Back to Admin
-          </Link>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Courses</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {courses.length} {courses.length === 1 ? 'course' : 'courses'} — lessons, enrollments,
+            and pricing. Click one to manage lessons, prices, and translations.
+          </p>
         </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-5">
-          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by category
-          </label>
-          <select
-            id="categoryFilter"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full sm:w-80 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
-          >
-            <option value="all">All courses</option>
-            <option value="uncategorized">Uncategorized</option>
-            {CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Course list */}
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="h-8 w-8 border-4 border-navy-100 border-t-navy rounded-full animate-spin" />
-          </div>
-        ) : courses.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg mb-1">No courses yet</p>
-            <p className="text-sm">Courses are created when you upload a document on the admin page.</p>
-          </div>
-        ) : filteredCourses.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 bg-white border border-gray-200 rounded-lg">
-            <p className="text-lg mb-1">No courses in this category</p>
-            <p className="text-sm">Choose another category or update a course from its Manage page.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredCourses.map((course) => (
-              <div
-                key={course.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/admin/courses/${course.id}`}
-                    className="text-lg font-semibold text-gray-900 hover:text-teal"
-                  >
-                    {course.title}
-                  </Link>
-                  {course.description && (
-                    <p className="text-sm text-gray-500 mt-1 truncate">{course.description}</p>
-                  )}
-                  <p className="text-xs text-gray-400 mt-1">
-                    Created {new Date(course.createdAt).toLocaleDateString()}
-                  </p>
-                  <CategoryBadges tags={course.tags} />
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:ml-4 sm:flex sm:shrink-0 w-full sm:w-auto">
-                  <Link
-                    href={`/admin/courses/${course.id}`}
-                    className="text-center px-3 py-2 sm:py-1.5 text-xs border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
-                  >
-                    Manage
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(course.id)}
-                    className="px-3 py-2 sm:py-1.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CategoryBadges({ tags }: { tags: string[] }) {
-  if (!tags.length) {
-    return (
-      <div className="mt-3 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-100">
-        Uncategorized
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className="rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal border border-teal/20"
+        <Link
+          href="/admin/generator"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
         >
-          {tag}
-        </span>
-      ))}
+          + Generate course
+        </Link>
+      </div>
+
+      <CoursesTable courses={courses} />
     </div>
   );
 }

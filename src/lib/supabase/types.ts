@@ -74,6 +74,10 @@ export type CourseRow = {
   description_en: string | null;
   tags: string[];
   user_id: string | null;
+  // Optional pre-migration (2026-06-12-admin-panel.sql); mappers treat
+  // undefined as null so the app works before the columns exist.
+  price_cents?: number | null;
+  retail_price_cents?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -82,6 +86,8 @@ export type CategoryImageRow = {
   slug: string;
   image_url: string | null;
   prompt: string | null;
+  bundle_price_cents?: number | null;
+  bundle_retail_cents?: number | null;
   updated_at: string;
 };
 

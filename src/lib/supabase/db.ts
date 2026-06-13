@@ -535,6 +535,22 @@ export async function reorderContentBlocks(
 // Courses CRUD
 // ============================================================
 
+function mapCourseRow(row: CourseRow): Course {
+  return {
+    id: row.id,
+    title: row.title,
+    titleEn: row.title_en ?? null,
+    description: row.description,
+    descriptionEn: row.description_en ?? null,
+    tags: row.tags,
+    userId: row.user_id,
+    priceCents: row.price_cents ?? null,
+    retailPriceCents: row.retail_price_cents ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export async function createCourse(
   supabase: SupabaseClient,
   course: { title: string; description: string; tags?: string[] }
@@ -550,18 +566,7 @@ export async function createCourse(
     .single();
 
   if (error || !data) throw new Error(`Failed to create course: ${error?.message}`);
-  const row = data as CourseRow;
-  return {
-    id: row.id,
-    title: row.title,
-    titleEn: row.title_en ?? null,
-    description: row.description,
-    descriptionEn: row.description_en ?? null,
-    tags: row.tags,
-    userId: row.user_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  return mapCourseRow(data as CourseRow);
 }
 
 export async function getAllCourses(supabase: SupabaseClient): Promise<Course[]> {
@@ -571,34 +576,13 @@ export async function getAllCourses(supabase: SupabaseClient): Promise<Course[]>
     .order('created_at', { ascending: false });
 
   if (error || !data) return [];
-  return (data as CourseRow[]).map((row) => ({
-    id: row.id,
-    title: row.title,
-    titleEn: row.title_en ?? null,
-    description: row.description,
-    descriptionEn: row.description_en ?? null,
-    tags: row.tags,
-    userId: row.user_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+  return (data as CourseRow[]).map(mapCourseRow);
 }
 
 export async function getCourse(supabase: SupabaseClient, id: string): Promise<Course | null> {
   const { data, error } = await supabase.from('courses').select('*').eq('id', id).single();
   if (error || !data) return null;
-  const row = data as CourseRow;
-  return {
-    id: row.id,
-    title: row.title,
-    titleEn: row.title_en ?? null,
-    description: row.description,
-    descriptionEn: row.description_en ?? null,
-    tags: row.tags,
-    userId: row.user_id,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+  return mapCourseRow(data as CourseRow);
 }
 
 export async function updateCourse(
@@ -610,6 +594,8 @@ export async function updateCourse(
     description: string;
     descriptionEn: string | null;
     tags: string[];
+    priceCents: number | null;
+    retailPriceCents: number | null;
   }>
 ): Promise<Course | null> {
   const rowUpdates: Record<string, unknown> = {};
@@ -618,6 +604,8 @@ export async function updateCourse(
   if (updates.description !== undefined) rowUpdates.description = updates.description;
   if (updates.descriptionEn !== undefined) rowUpdates.description_en = updates.descriptionEn;
   if (updates.tags !== undefined) rowUpdates.tags = updates.tags;
+  if (updates.priceCents !== undefined) rowUpdates.price_cents = updates.priceCents;
+  if (updates.retailPriceCents !== undefined) rowUpdates.retail_price_cents = updates.retailPriceCents;
 
   if (Object.keys(rowUpdates).length > 0) {
     const { error } = await supabase.from('courses').update(rowUpdates).eq('id', id);
@@ -651,7 +639,20 @@ export type CategoryImage = {
   slug: string;
   imageUrl: string | null;
   prompt: string | null;
+  /** Admin override of the derived storefront bundle price (tetri). */
+  bundlePriceCents: number | null;
+  bundleRetailCents: number | null;
 };
+
+function mapCategoryImageRow(row: CategoryImageRow): CategoryImage {
+  return {
+    slug: row.slug,
+    imageUrl: row.image_url ?? null,
+    prompt: row.prompt ?? null,
+    bundlePriceCents: row.bundle_price_cents ?? null,
+    bundleRetailCents: row.bundle_retail_cents ?? null,
+  };
+}
 
 /** All category images as a slug -> image_url map (only rows with a URL). */
 export async function getCategoryImages(
@@ -668,6 +669,19 @@ export async function getCategoryImages(
   return map;
 }
 
+/** Full per-category metadata rows (image + bundle price), keyed by slug. */
+export async function getCategoryMeta(
+  supabase: SupabaseClient,
+): Promise<Record<string, CategoryImage>> {
+  const { data, error } = await supabase.from('category_images').select('*');
+  if (error || !data) return {};
+  const map: Record<string, CategoryImage> = {};
+  for (const row of data as CategoryImageRow[]) {
+    map[row.slug] = mapCategoryImageRow(row);
+  }
+  return map;
+}
+
 export async function getCategoryImage(
   supabase: SupabaseClient,
   slug: string,
@@ -678,19 +692,25 @@ export async function getCategoryImage(
     .eq('slug', slug)
     .maybeSingle();
   if (error || !data) return null;
-  const row = data as CategoryImageRow;
-  return { slug: row.slug, imageUrl: row.image_url ?? null, prompt: row.prompt ?? null };
+  return mapCategoryImageRow(data as CategoryImageRow);
 }
 
-/** Insert or update a category's cover image / prompt. */
+/** Insert or update a category's cover image / prompt / bundle price. */
 export async function upsertCategoryImage(
   supabase: SupabaseClient,
   slug: string,
-  updates: { imageUrl?: string | null; prompt?: string | null },
+  updates: {
+    imageUrl?: string | null;
+    prompt?: string | null;
+    bundlePriceCents?: number | null;
+    bundleRetailCents?: number | null;
+  },
 ): Promise<CategoryImage | null> {
   const row: Record<string, unknown> = { slug, updated_at: new Date().toISOString() };
   if (updates.imageUrl !== undefined) row.image_url = updates.imageUrl;
   if (updates.prompt !== undefined) row.prompt = updates.prompt;
+  if (updates.bundlePriceCents !== undefined) row.bundle_price_cents = updates.bundlePriceCents;
+  if (updates.bundleRetailCents !== undefined) row.bundle_retail_cents = updates.bundleRetailCents;
 
   const { error } = await supabase
     .from('category_images')

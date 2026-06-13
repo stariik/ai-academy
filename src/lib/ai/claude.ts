@@ -10,10 +10,35 @@
 // ============================================================
 
 import Anthropic from '@anthropic-ai/sdk';
+import { logAiUsage, type UsageMeta } from '@/lib/ai/usage';
 
 const client = new Anthropic();
 
-const MODEL = 'claude-sonnet-4-5-20250929';
+/** Report a non-streaming Claude response to the usage log. */
+function logClaudeUsage(
+  meta: UsageMeta | undefined,
+  fallbackFeature: UsageMeta['feature'],
+  startedAt: number,
+  usage: Anthropic.Usage | undefined,
+  success = true,
+): void {
+  void logAiUsage({
+    feature: fallbackFeature,
+    ...meta,
+    provider: 'anthropic',
+    model: MODEL,
+    inputTokens: usage?.input_tokens ?? 0,
+    outputTokens: usage?.output_tokens ?? 0,
+    cacheWriteTokens: usage?.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: usage?.cache_read_input_tokens ?? 0,
+    durationMs: Date.now() - startedAt,
+    success,
+  });
+}
+
+// Tutor model — overridable via env without a code change, e.g.
+//   CLAUDE_TUTOR_MODEL=claude-haiku-4-5
+const MODEL = process.env.CLAUDE_TUTOR_MODEL ?? 'claude-sonnet-4-5-20250929';
 
 export type TutorLocale = 'ka' | 'en';
 
@@ -728,16 +753,45 @@ export type ThinkingConfig = {
 export async function* streamChat(
   messages: { role: 'user' | 'assistant'; content: string }[],
   systemPrompt: string,
-  thinkingConfig?: ThinkingConfig
+  thinkingConfig?: ThinkingConfig,
+  usageMeta?: UsageMeta
 ): AsyncGenerator<string, void, unknown> {
   const useThinking = thinkingConfig?.enabled === true;
   const budgetTokens = thinkingConfig?.budgetTokens ?? 4096;
+  const startedAt = Date.now();
+
+  // Prompt caching: the system prompt (page material) is byte-identical across
+  // every turn of a page session, and the chat history is an append-only
+  // prefix. Breakpoints on both let each turn read the previous turn's prefix
+  // at ~0.1x input price instead of re-paying full price. Prefixes below the
+  // model's cacheable minimum (1024 tokens on Sonnet 4.5) silently skip
+  // caching — harmless, just billed as before.
+  const cachedMessages: Anthropic.MessageParam[] = messages.map((m, i) =>
+    i === messages.length - 1
+      ? {
+          role: m.role,
+          content: [
+            {
+              type: 'text' as const,
+              text: m.content,
+              cache_control: { type: 'ephemeral' as const },
+            },
+          ],
+        }
+      : m
+  );
 
   const stream = client.messages.stream({
     model: MODEL,
     max_tokens: useThinking ? budgetTokens + 4096 : 4096,
-    system: systemPrompt,
-    messages: messages,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: cachedMessages,
     ...(useThinking && {
       thinking: { type: 'enabled' as const, budget_tokens: budgetTokens },
     }),
@@ -750,6 +804,13 @@ export async function* streamChat(
     ) {
       yield event.delta.text;
     }
+  }
+
+  try {
+    const final = await stream.finalMessage();
+    logClaudeUsage(usageMeta, 'tutor_chat', startedAt, final.usage);
+  } catch {
+    // Usage accounting must never break the chat stream.
   }
 }
 
@@ -780,9 +841,10 @@ export function containsGeorgian(text: string): boolean {
  * English while preserving Markdown, code blocks, and the [READY_FOR_QUIZ]
  * marker. Best-effort: on any failure it falls back to the original text.
  */
-export async function enforceEnglish(text: string): Promise<string> {
+export async function enforceEnglish(text: string, usageMeta?: UsageMeta): Promise<string> {
   if (!text || !containsGeorgian(text)) return text;
 
+  const startedAt = Date.now();
   try {
     const response = await client.messages.create({
       model: MODEL,
@@ -801,6 +863,8 @@ export async function enforceEnglish(text: string): Promise<string> {
       messages: [{ role: 'user', content: text }],
     });
 
+    logClaudeUsage(usageMeta, 'english_guard', startedAt, response.usage);
+
     const block = response.content.find((b) => b.type === 'text');
     const cleaned = block && block.type === 'text' ? block.text.trim() : '';
     // Only accept the rewrite if it actually removed the Georgian; otherwise
@@ -809,6 +873,7 @@ export async function enforceEnglish(text: string): Promise<string> {
     return text;
   } catch (err) {
     console.error('enforceEnglish cleanup failed:', err);
+    logClaudeUsage(usageMeta, 'english_guard', startedAt, undefined, false);
     return text;
   }
 }
@@ -843,8 +908,10 @@ export type PageTranslationOutput = {
 };
 
 export async function translatePageMaterialToEnglish(
-  input: PageTranslationInput
+  input: PageTranslationInput,
+  usageMeta?: UsageMeta
 ): Promise<PageTranslationOutput> {
+  const startedAt = Date.now();
   const prompt = `Translate the following lesson-page material from Georgian into natural, fluent English for a student-facing learning UI.
 
 Return ONLY a JSON object with EXACTLY this shape (no commentary, no code fences):
@@ -874,6 +941,8 @@ ${JSON.stringify(input, null, 2)}`;
     max_tokens: 8192,
     messages: [{ role: 'user', content: prompt }],
   });
+
+  logClaudeUsage(usageMeta, 'material_translation', startedAt, response.usage);
 
   const textBlock = response.content.find((b) => b.type === 'text');
   if (!textBlock || textBlock.type !== 'text') {
@@ -930,8 +999,10 @@ export async function gradeQuizWithAI(
   questions: QuizQuestion[],
   answers: QuizAnswer[],
   lessonContext: { title: string; summary: string },
-  locale: TutorLocale = 'ka'
+  locale: TutorLocale = 'ka',
+  usageMeta?: UsageMeta
 ): Promise<GradingResult[]> {
+  const startedAt = Date.now();
   const questionsWithAnswers = questions.map((q) => {
     const studentAnswer = answers.find((a) => a.questionId === q.id);
     return {
@@ -1001,6 +1072,8 @@ ${JSON.stringify(questionsWithAnswers, null, 2)}
     max_tokens: 4096,
     messages: [{ role: 'user', content: gradingPrompt }],
   });
+
+  logClaudeUsage(usageMeta, 'quiz_grading', startedAt, response.usage);
 
   const textBlock = response.content.find((block) => block.type === 'text');
   if (!textBlock || textBlock.type !== 'text') {

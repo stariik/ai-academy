@@ -44,41 +44,33 @@ export default function AnalyticsPage() {
       try {
         const res = await fetch('/api/admin/analytics');
         if (!res.ok) {
-          setError('ვერ ჩაიტვირთა');
+          setError('Failed to load analytics.');
           return;
         }
         setData(await res.json());
       } catch {
-        setError('ვერ ჩაიტვირთა');
+        setError('Failed to load analytics.');
       }
     })();
   }, []);
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-10 px-4 text-center">
-        <p className="text-sm text-red-500">{error}</p>
-      </div>
-    );
+    return <p className="py-10 text-center text-sm text-red-500">{error}</p>;
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 py-10 flex justify-center">
+      <div className="flex justify-center py-20">
         <div className="h-10 w-10 border-4 border-gray-200 border-t-teal rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-5xl mx-auto space-y-10">
+    <div className="space-y-10">
         {/* Header */}
         <div>
-          <Link href="/admin" className="text-teal hover:text-navy text-xs font-bold">
-            ← Back to admin
-          </Link>
-          <h1 className="text-3xl font-black text-navy mt-2">Analytics</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Learning analytics</h1>
           <p className="text-sm text-gray-500 mt-1">
             Where students struggle · what to rewrite · how long courses take.
           </p>
@@ -128,7 +120,7 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="text-lg font-black text-navy mb-1">Lesson pass rates</h2>
           <p className="text-xs text-gray-500 mb-3">
-            Sorted by attempts desc, then pass-rate asc — "tough lessons with real traffic" rise to the top.
+            Sorted by attempts desc, then pass-rate asc — &ldquo;tough lessons with real traffic&rdquo; rise to the top.
           </p>
           {data.passRates.length === 0 ? (
             <EmptyCard message="No quiz attempts yet." />
@@ -179,7 +171,7 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="text-lg font-black text-navy mb-1">Lesson drop-off</h2>
           <p className="text-xs text-gray-500 mb-3">
-            Lessons ranked by non-completion count. "Stuck on" shows the pages students last reached.
+            Lessons ranked by non-completion count. &ldquo;Stuck on&rdquo; shows the pages students last reached.
           </p>
           {data.dropOff.length === 0 ? (
             <EmptyCard message="No lesson progress recorded yet." />
@@ -235,7 +227,6 @@ export default function AnalyticsPage() {
             </div>
           )}
         </section>
-      </div>
     </div>
   );
 }

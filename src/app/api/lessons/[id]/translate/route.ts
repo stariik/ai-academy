@@ -77,7 +77,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
   // Translate, preferring human EN columns where they exist.
   let overlay: TranslatedPageOverlay;
   try {
-    const translated = await translatePageMaterialToEnglish(input);
+    const translated = await translatePageMaterialToEnglish(input, {
+      feature: 'material_translation',
+      lessonId: id,
+      locale,
+    });
     const aiById = new Map(translated.blocks.map((b) => [b.id, b.content]));
     overlay = {
       title: page.titleEn ?? translated.title,

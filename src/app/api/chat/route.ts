@@ -220,6 +220,13 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     let fullResponse = '';
 
+    const usageMeta = {
+      feature: 'tutor_chat' as const,
+      sessionId,
+      lessonId,
+      locale,
+    };
+
     const readable = new ReadableStream({
       async start(controller) {
         try {
@@ -231,14 +238,14 @@ export async function POST(request: NextRequest) {
             // model actually leaked Georgian, so clean replies add no latency
             // beyond waiting for generation to finish.
             let raw = '';
-            for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig)) {
+            for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig, usageMeta)) {
               raw += chunk;
             }
-            fullResponse = await enforceEnglish(raw);
+            fullResponse = await enforceEnglish(raw, { ...usageMeta, feature: 'english_guard' });
             controller.enqueue(encoder.encode(fullResponse));
           } else {
             // Georgian tutor: stream live, unchanged.
-            for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig)) {
+            for await (const chunk of streamChat(claudeMessages, systemPrompt, thinkingConfig, usageMeta)) {
               fullResponse += chunk;
               controller.enqueue(encoder.encode(chunk));
             }

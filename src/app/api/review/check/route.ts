@@ -18,6 +18,7 @@ import {
 } from '@/lib/supabase/db';
 import { getSession } from '@/lib/session';
 import { buildReviewExplanationPrompt, enforceEnglish, type TutorLocale } from '@/lib/ai/claude';
+import { logAiUsage } from '@/lib/ai/usage';
 import { XP_REVIEW_CORRECT, XP_REVIEW_INCORRECT, updateStreak } from '@/lib/gamification/xp';
 import { evaluateBadges } from '@/lib/gamification/badges';
 
@@ -121,16 +122,35 @@ export async function POST(request: NextRequest) {
           preferredStyle: profile.preferredStyle,
           locale,
         });
+        const startedAt = Date.now();
         const response = await anthropic.messages.create({
           model: MODEL,
           max_tokens: 800,
           messages: [{ role: 'user', content: prompt }],
         });
+        void logAiUsage({
+          feature: 'review_explanation',
+          provider: 'anthropic',
+          model: MODEL,
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+          cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+          cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+          durationMs: Date.now() - startedAt,
+          sessionId,
+          lessonId,
+          locale,
+        });
         const textBlock = response.content.find((b) => b.type === 'text');
         if (textBlock && textBlock.type === 'text') {
           // English tutor must stay 100% English — strip any Georgian leak.
           reExplanation = locale === 'en'
-            ? await enforceEnglish(textBlock.text)
+            ? await enforceEnglish(textBlock.text, {
+                feature: 'english_guard',
+                sessionId,
+                lessonId,
+                locale,
+              })
             : textBlock.text;
         }
       } catch (err) {

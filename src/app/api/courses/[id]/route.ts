@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCourse, getLesson, updateCourse, deleteCourse, getAllLessons } from '@/lib/supabase/db';
+import { isAdmin } from '@/lib/admin-auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -43,6 +44,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   const { id } = await context.params;
   try {
     const body = await request.json();
@@ -58,6 +62,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   const { id } = await context.params;
   const supabase = await createClient();
   const deleted = await deleteCourse(supabase, id);

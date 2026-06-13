@@ -100,8 +100,8 @@ export default function PromoCodesClient() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
-      <div className="max-w-5xl mx-auto">
+    <div>
+      <div>
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
@@ -109,14 +109,6 @@ export default function PromoCodesClient() {
             <p className="text-sm text-gray-500 mt-1">
               Generate unlock codes for courses. Codes are case-insensitive on redemption.
             </p>
-          </div>
-          <div className="flex gap-2">
-            <Link
-              href="/admin"
-              className="inline-flex justify-center px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Back to Admin
-            </Link>
           </div>
         </div>
 

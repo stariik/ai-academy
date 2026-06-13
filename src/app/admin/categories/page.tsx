@@ -9,7 +9,6 @@
 // ============================================================
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 
 type AdminCategory = {
   slug: string;
@@ -18,6 +17,9 @@ type AdminCategory = {
   icon: string;
   tone: string;
   imageUrl: string | null;
+  bundlePriceCents: number | null;
+  bundleRetailCents: number | null;
+  courseCount: number;
 };
 
 export default function AdminCategoriesPage() {
@@ -48,25 +50,19 @@ export default function AdminCategoriesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
-      <div className="max-w-4xl mx-auto">
-        <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block">
-          &larr; Back to Admin
-        </Link>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+        <p className="text-gray-500 mt-1 text-sm">
+          Each category is sold as a bundle. Set its cover image and bundle price — both show up on
+          the landing-page category slider and the bundle checkout.
+        </p>
+      </div>
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Category Cover Images</h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Generate one AI cover image per category. Shown on the landing-page category slider and
-            section headers.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          {categories.map((cat) => (
-            <CategoryImageCard key={cat.slug} category={cat} onChange={fetchCategories} />
-          ))}
-        </div>
+      <div className="space-y-4">
+        {categories.map((cat) => (
+          <CategoryImageCard key={cat.slug} category={cat} onChange={fetchCategories} />
+        ))}
       </div>
     </div>
   );
@@ -83,6 +79,48 @@ function CategoryImageCard({
   const [imageUrl, setImageUrl] = useState<string | null>(category.imageUrl);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Bundle price (edited in whole ₾, stored as tetri).
+  const toGel = (cents: number | null) => (cents == null ? '' : String(cents / 100));
+  const [price, setPrice] = useState(toGel(category.bundlePriceCents));
+  const [retail, setRetail] = useState(toGel(category.bundleRetailCents));
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [priceSaved, setPriceSaved] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  const savePrice = async () => {
+    const toCents = (gel: string): number | null => {
+      const t = gel.trim();
+      if (t === '') return null;
+      const n = Number(t);
+      if (!Number.isFinite(n) || n < 0) return NaN as unknown as number;
+      return Math.round(n * 100);
+    };
+    const priceC = toCents(price);
+    const retailC = toCents(retail);
+    if (Number.isNaN(priceC) || Number.isNaN(retailC)) {
+      setPriceError('Enter valid numbers, or leave blank for the auto price.');
+      return;
+    }
+    setSavingPrice(true);
+    setPriceError(null);
+    setPriceSaved(false);
+    try {
+      const res = await fetch(`/api/admin/categories/${category.slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bundlePriceCents: priceC, bundleRetailCents: retailC }),
+      });
+      if (!res.ok) throw new Error('save_failed');
+      setPriceSaved(true);
+      onChange();
+      setTimeout(() => setPriceSaved(false), 2000);
+    } catch {
+      setPriceError('Save failed.');
+    } finally {
+      setSavingPrice(false);
+    }
+  };
 
   const fetchPrompt = useCallback(async () => {
     try {
@@ -220,6 +258,59 @@ function CategoryImageCard({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Bundle pricing */}
+      <div className="mt-5 border-t border-gray-100 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Bundle price</h3>
+            <p className="mt-0.5 text-[11px] text-gray-400">
+              {category.courseCount} {category.courseCount === 1 ? 'course' : 'courses'} in this
+              bundle. Blank = auto-priced from catalog size.
+            </p>
+          </div>
+          {priceSaved && <span className="text-xs font-medium text-teal">Saved ✓</span>}
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[140px_140px_auto] sm:items-end">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
+              Bundle (₾)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="Auto"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
+              Retail (₾)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={retail}
+              onChange={(e) => setRetail(e.target.value)}
+              placeholder="Optional"
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+            />
+          </div>
+          <button
+            onClick={savePrice}
+            disabled={savingPrice}
+            className="px-4 py-2 text-sm bg-navy text-white rounded-lg hover:bg-navy-light disabled:bg-gray-300"
+          >
+            {savingPrice ? 'Saving…' : 'Save price'}
+          </button>
+        </div>
+        {priceError && <p className="mt-2 text-xs text-red-600">{priceError}</p>}
       </div>
     </div>
   );

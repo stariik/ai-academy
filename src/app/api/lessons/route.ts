@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getAllLessons, saveLesson, deleteAllLessons } from '@/lib/supabase/db';
+import { isAdmin } from '@/lib/admin-auth';
 import { Lesson } from '@/types';
 
 // GET /api/lessons - Return all lessons
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/lessons - Save a new lesson
 export async function POST(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const lesson = body as Lesson;
@@ -41,6 +45,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE /api/lessons - Delete all lessons
 export async function DELETE() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   const supabase = await createClient();
   const count = await deleteAllLessons(supabase);
   return NextResponse.json({ success: true, deleted: count });

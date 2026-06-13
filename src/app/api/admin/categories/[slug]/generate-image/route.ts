@@ -17,6 +17,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCategoryImage, upsertCategoryImage } from '@/lib/supabase/db';
 import { uploadCategoryImage } from '@/lib/supabase/storage';
 import { getCategoryBySlug, type CategoryVisual } from '@/lib/v2/data';
+import { logAiUsage } from '@/lib/ai/usage';
 
 type RouteContext = { params: Promise<{ slug: string }> };
 
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   // Replicate returns an ephemeral replicate.delivery URL — valid only for
   // ~a day. We must download the bytes now and persist them ourselves.
   let sourceUrl: string | null = null;
+  const startedAt = Date.now();
   try {
     const output = (await replicate.run('openai/gpt-image-2', {
       input: {
@@ -91,8 +93,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
     } else if (output && typeof output.url === 'function') {
       sourceUrl = output.url();
     }
+
+    void logAiUsage({
+      feature: 'category_image',
+      provider: 'replicate',
+      model: 'openai/gpt-image-2',
+      costUsd: 0.01, // 'low' quality tier — flat per-image estimate
+      durationMs: Date.now() - startedAt,
+      metadata: { slug },
+    });
   } catch (err) {
     console.error('[admin/categories/generate-image] replicate failed:', err);
+    void logAiUsage({
+      feature: 'category_image',
+      provider: 'replicate',
+      model: 'openai/gpt-image-2',
+      durationMs: Date.now() - startedAt,
+      success: false,
+      metadata: { slug },
+    });
     return NextResponse.json({ error: 'generation_failed' }, { status: 502 });
   }
 

@@ -1,19 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Lesson } from '@/types';
 
 export default function AdminLessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
 
   const fetchLessons = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/lessons');
       const data: Lesson[] = await res.json();
-      setLessons(data);
+      setLessons(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch lessons:', err);
     } finally {
@@ -33,224 +35,140 @@ export default function AdminLessonsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        fetchLessons();
-      }
+      if (res.ok) fetchLessons();
     } catch (err) {
       console.error('Failed to update lesson:', err);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this lesson?')) return;
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? Its pages, content, and quiz questions are permanently removed.`))
+      return;
     try {
       const res = await fetch(`/api/lessons/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchLessons();
-      }
+      if (res.ok) fetchLessons();
     } catch (err) {
       console.error('Failed to delete lesson:', err);
     }
   };
 
-  const handleDeleteAll = async () => {
-    if (!confirm(`Delete ALL ${lessons.length} lessons? This cannot be undone.`)) return;
-    if (!confirm('Are you sure? This will permanently delete all lessons and their content.')) return;
-    try {
-      const res = await fetch('/api/lessons', { method: 'DELETE' });
-      if (res.ok) {
-        fetchLessons();
-      }
-    } catch (err) {
-      console.error('Failed to delete all lessons:', err);
-    }
-  };
+  const counts = useMemo(() => {
+    const published = lessons.filter((l) => l.status === 'published').length;
+    return { published, draft: lessons.length - published };
+  }, [lessons]);
 
-  const btnStyle = (variant: 'default' | 'danger' | 'success' = 'default'): React.CSSProperties => ({
-    padding: '0.3rem 0.7rem',
-    fontSize: '0.75rem',
-    border: '1px solid var(--border)',
-    borderRadius: '4px',
-    background:
-      variant === 'danger'
-        ? 'var(--danger)'
-        : variant === 'success'
-          ? 'var(--success)'
-          : 'var(--background)',
-    color:
-      variant === 'default' ? 'var(--foreground)' : '#ffffff',
-    cursor: 'pointer',
-  });
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return lessons.filter((l) => {
+      if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+      if (q && !l.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [lessons, query, statusFilter]);
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '2rem 1.5rem' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Lessons</h1>
-          <p style={{ fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>
-            {lessons.length} lesson{lessons.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {lessons.length > 0 && (
-            <button
-              onClick={handleDeleteAll}
-              style={{
-                padding: '0.5rem 1rem',
-                fontSize: '0.85rem',
-                background: 'var(--danger)',
-                color: '#ffffff',
-                borderRadius: '6px',
-                border: 'none',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Delete All ({lessons.length})
-            </button>
-          )}
-          <Link
-            href="/admin"
-            style={{
-              padding: '0.5rem 1rem',
-              fontSize: '0.85rem',
-              background: 'var(--accent)',
-              color: '#ffffff',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontWeight: 500,
-            }}
-          >
-            Generate New Lesson
-          </Link>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Lessons</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          {lessons.length} total · {counts.published} published · {counts.draft} draft
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search lessons…"
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100 sm:max-w-xs"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+          className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+        >
+          <option value="all">All statuses</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
+        </select>
+        <span className="text-xs text-gray-400 sm:ml-auto">{rows.length} shown</span>
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-          <div className="spinner spinner-lg" />
+        <div className="flex justify-center py-16">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-navy-100 border-t-navy" />
         </div>
-      ) : lessons.length === 0 ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '3rem',
-            color: 'var(--muted-foreground)',
-          }}
-        >
-          <p>No lessons yet. Generate your first lesson from the Admin panel.</p>
+      ) : rows.length === 0 ? (
+        <div className="rounded-xl border border-gray-200 bg-white py-12 text-center text-sm text-gray-400">
+          {lessons.length === 0
+            ? 'No lessons yet — generate your first course from the Course generator.'
+            : 'No lessons match.'}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: '0.875rem',
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  borderBottom: '1px solid var(--border)',
-                  textAlign: 'left',
-                }}
-              >
-                <th style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>Title</th>
-                <th style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>Difficulty</th>
-                <th style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>Date</th>
-                <th style={{ padding: '0.6rem 0.75rem', fontWeight: 600 }}>Actions</th>
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead className="bg-gray-50 text-left text-[11px] uppercase tracking-wider text-gray-500">
+              <tr>
+                <th className="px-4 py-2.5">Title</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="px-3 py-2.5">Difficulty</th>
+                <th className="px-3 py-2.5">Created</th>
+                <th className="px-4 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {lessons.map((lesson) => (
-                <tr
-                  key={lesson.id}
-                  style={{ borderBottom: '1px solid var(--border)' }}
-                >
-                  <td style={{ padding: '0.6rem 0.75rem', maxWidth: '280px' }}>
-                    <span style={{ fontWeight: 500 }}>{lesson.title}</span>
+              {rows.map((lesson) => (
+                <tr key={lesson.id} className="border-t border-gray-100">
+                  <td className="max-w-sm px-4 py-3">
+                    <p className="truncate font-medium text-gray-900">{lesson.title}</p>
                   </td>
-                  <td style={{ padding: '0.6rem 0.75rem' }}>
+                  <td className="px-3 py-3">
                     <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '9999px',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        background:
-                          lesson.status === 'published'
-                            ? 'var(--accent-light)'
-                            : 'var(--muted)',
-                        color:
-                          lesson.status === 'published'
-                            ? 'var(--accent)'
-                            : 'var(--muted-foreground)',
-                      }}
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        lesson.status === 'published'
+                          ? 'bg-teal-50 text-teal'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}
                     >
                       {lesson.status}
                     </span>
                   </td>
-                  <td
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {lesson.difficulty}
+                  <td className="px-3 py-3 capitalize text-gray-600">{lesson.difficulty}</td>
+                  <td className="px-3 py-3 text-xs text-gray-500">
+                    {new Date(lesson.createdAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: '2-digit',
+                    })}
                   </td>
-                  <td
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      color: 'var(--muted-foreground)',
-                      fontSize: '0.8rem',
-                    }}
-                  >
-                    {new Date(lesson.createdAt).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: '0.6rem 0.75rem' }}>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
                       <Link
                         href={`/admin/lessons/${lesson.id}/edit`}
-                        style={{
-                          ...btnStyle('default'),
-                          textDecoration: 'none',
-                          display: 'inline-block',
-                          fontWeight: 600,
-                          color: 'var(--accent)',
-                          borderColor: 'var(--accent)',
-                        }}
+                        className="rounded-lg bg-navy px-2.5 py-1 text-xs font-medium text-white transition hover:bg-navy-light"
                       >
                         Edit
                       </Link>
                       <Link
-                        href={`/student/lesson/${lesson.id}`}
-                        style={{
-                          ...btnStyle('default'),
-                          textDecoration: 'none',
-                          display: 'inline-block',
-                        }}
+                        href={`/ka/lessons/${lesson.id}`}
+                        target="_blank"
+                        className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
                       >
                         View
                       </Link>
                       <button
                         onClick={() => toggleStatus(lesson)}
-                        style={btnStyle(lesson.status === 'published' ? 'default' : 'success')}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                          lesson.status === 'published'
+                            ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                            : 'border-teal/30 bg-teal-50 text-teal hover:bg-teal-100'
+                        }`}
                       >
                         {lesson.status === 'published' ? 'Unpublish' : 'Publish'}
                       </button>
                       <button
-                        onClick={() => handleDelete(lesson.id)}
-                        style={btnStyle('danger')}
+                        onClick={() => handleDelete(lesson.id, lesson.title)}
+                        className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50"
                       >
                         Delete
                       </button>

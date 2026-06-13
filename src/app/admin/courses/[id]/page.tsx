@@ -191,11 +191,11 @@ export default function AdminCourseDetailPage({
   const availableLessons = allLessons.filter((l) => !courselesionIds.has(l.id));
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4 sm:py-8">
-      <div className="max-w-4xl mx-auto">
+    <div>
+      <div className="max-w-4xl">
         <Link
           href="/admin/courses"
-          className="text-sm text-gray-500 hover:text-gray-700 mb-4 inline-block"
+          className="text-xs font-semibold text-teal hover:text-navy mb-4 inline-block"
         >
           &larr; Back to Courses
         </Link>
@@ -281,6 +281,14 @@ export default function AdminCourseDetailPage({
             </div>
           )}
         </div>
+
+        {/* Pricing */}
+        <PricingCard
+          courseId={courseId}
+          priceCents={course.priceCents ?? null}
+          retailPriceCents={course.retailPriceCents ?? null}
+          onSaved={fetchCourse}
+        />
 
         {/* Course Lessons */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
@@ -392,6 +400,120 @@ export default function AdminCourseDetailPage({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function PricingCard({
+  courseId,
+  priceCents,
+  retailPriceCents,
+  onSaved,
+}: {
+  courseId: string;
+  priceCents: number | null;
+  retailPriceCents: number | null;
+  onSaved: () => void;
+}) {
+  // Edit in whole ₾ (lari); convert to/from tetri at the API boundary.
+  const toGel = (cents: number | null) => (cents == null ? '' : String(cents / 100));
+  const [price, setPrice] = useState(toGel(priceCents));
+  const [retail, setRetail] = useState(toGel(retailPriceCents));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Keep inputs in sync if the parent refetches.
+  useEffect(() => {
+    setPrice(toGel(priceCents));
+    setRetail(toGel(retailPriceCents));
+  }, [priceCents, retailPriceCents]);
+
+  const toCents = (gel: string): number | null => {
+    const t = gel.trim();
+    if (t === '') return null;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 0) return NaN as unknown as number;
+    return Math.round(n * 100);
+  };
+
+  const save = async () => {
+    const priceC = toCents(price);
+    const retailC = toCents(retail);
+    if (Number.isNaN(priceC) || Number.isNaN(retailC)) {
+      setError('Enter a valid number, or leave blank for free.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceCents: priceC, retailPriceCents: retailC }),
+      });
+      if (!res.ok) throw new Error('save_failed');
+      setSaved(true);
+      onSaved();
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setError('Save failed — check your permissions and try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 mb-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Pricing</h2>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Shown on the storefront in ₾. Leave price blank to list the course as free.
+          </p>
+        </div>
+        {saved && <span className="text-xs font-medium text-teal">Saved ✓</span>}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[160px_160px_1fr] sm:items-end">
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
+            Price (₾)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="Free"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
+            Retail / strike-through (₾)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value={retail}
+            onChange={(e) => setRetail(e.target.value)}
+            placeholder="Optional"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+          />
+        </div>
+        <button
+          onClick={save}
+          disabled={saving}
+          className="px-4 py-2 text-sm bg-navy text-white rounded-lg hover:bg-navy-light disabled:bg-gray-300 sm:w-auto"
+        >
+          {saving ? 'Saving…' : 'Save pricing'}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

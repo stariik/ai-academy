@@ -11,7 +11,8 @@ import { createClient } from '@/lib/supabase/server';
 import {
   getAllCourses,
   getAllLessonsLite,
-  getCategoryImages,
+  getCategoryMeta,
+  type CategoryImage,
   type LessonLite,
 } from '@/lib/supabase/db';
 import { CATEGORIES as CANONICAL_CATEGORIES } from '@/lib/constants/categories';
@@ -66,10 +67,11 @@ function buildCategory(
   locale: Locale,
   coursesInCat: RealCourse[],
   lessonsByCourse: Map<string, RealLesson[]>,
-  categoryImages: Record<string, string>,
+  categoryMeta: Record<string, CategoryImage>,
 ): Category {
   const visual = CATEGORY_VISUALS[nameKa];
   const display = getCategoryDisplay(nameKa, locale);
+  const meta = categoryMeta[visual.slug];
   const totalLessons = coursesInCat.reduce(
     (sum, co) => sum + (lessonsByCourse.get(co.id)?.length ?? 0),
     0,
@@ -82,9 +84,13 @@ function buildCategory(
     audience: visual.audience,
     courses: coursesInCat.length,
     lessons: totalLessons,
+    // Admin-set bundle price override (₾); when absent the storefront
+    // falls back to its derived bundle pricing.
+    price: meta?.bundlePriceCents != null ? meta.bundlePriceCents / 100 : undefined,
+    retailPrice: meta?.bundleRetailCents != null ? meta.bundleRetailCents / 100 : undefined,
     icon: visual.icon,
     tone: visual.tone,
-    imageUrl: categoryImages[visual.slug] ?? null,
+    imageUrl: meta?.imageUrl ?? null,
   };
 }
 
@@ -104,6 +110,7 @@ function buildCourse(
     audience: visual.audience,
     lessons: lessonsForCourse.length,
     hours: Math.max(1, Math.round(totalMinutes(lessonsForCourse) / 60)),
+    price: real.priceCents != null ? real.priceCents / 100 : undefined,
     level: inferLevel(lessonsForCourse),
     icon: visual.icon,
   };
@@ -113,10 +120,10 @@ function buildCourse(
 // fetch within one render instead of each hitting Supabase independently.
 const loadAll = cache(async () => {
   const supabase = await createClient();
-  const [courses, lessons, categoryImages] = await Promise.all([
+  const [courses, lessons, categoryMeta] = await Promise.all([
     getAllCourses(supabase),
     getAllLessonsLite(supabase, { status: 'published' }),
-    getCategoryImages(supabase),
+    getCategoryMeta(supabase),
   ]);
   const lessonsByCourse = new Map<string, RealLesson[]>();
   for (const l of lessons) {
@@ -125,11 +132,11 @@ const loadAll = cache(async () => {
     arr.push(l);
     lessonsByCourse.set(l.courseId, arr);
   }
-  return { courses, lessons, lessonsByCourse, categoryImages };
+  return { courses, lessons, lessonsByCourse, categoryMeta };
 });
 
 export async function getCategories(locale: Locale): Promise<Category[]> {
-  const { courses, lessonsByCourse, categoryImages } = await loadAll();
+  const { courses, lessonsByCourse, categoryMeta } = await loadAll();
 
   // Group real courses by their first canonical tag.
   const byTag = new Map<string, RealCourse[]>();
@@ -143,7 +150,7 @@ export async function getCategories(locale: Locale): Promise<Category[]> {
 
   // Emit one Category per canonical name, in the canonical order.
   return CANONICAL_CATEGORIES.map((nameKa) =>
-    buildCategory(nameKa, locale, byTag.get(nameKa) ?? [], lessonsByCourse, categoryImages),
+    buildCategory(nameKa, locale, byTag.get(nameKa) ?? [], lessonsByCourse, categoryMeta),
   );
 }
 
@@ -206,7 +213,7 @@ export async function getCoursePayload(
   slug: string,
   locale: Locale,
 ): Promise<V2CoursePayload | null> {
-  const { courses, lessonsByCourse, categoryImages } = await loadAll();
+  const { courses, lessonsByCourse, categoryMeta } = await loadAll();
   const real = courses.find((c) => c.id === slug);
   if (!real) return null;
 
@@ -230,7 +237,7 @@ export async function getCoursePayload(
     locale,
     courses.filter((c) => firstCanonicalTag(c.tags ?? []) === tag),
     lessonsByCourse,
-    categoryImages,
+    categoryMeta,
   );
 
   const dict = getDict(locale);
@@ -270,6 +277,8 @@ export async function getCoursePayload(
           'ციფრული სერთიფიკატი დასრულების შემდეგ',
         ],
     modules: lessonsAsModule(real.id, locale, courseLessons),
+    retailPrice:
+      real.retailPriceCents != null ? real.retailPriceCents / 100 : undefined,
   };
 
   return { course, category, detail, related };

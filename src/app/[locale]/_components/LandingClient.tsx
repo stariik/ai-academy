@@ -27,12 +27,14 @@ export default function LandingClient({
   dict,
   locale,
   authUser,
+  enrolledCourseIds = [],
 }: {
   categories: Category[];
   courses: Course[];
   dict: Dict;
   locale: Locale;
   authUser: AuthUser | null;
+  enrolledCourseIds?: string[];
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
@@ -40,7 +42,12 @@ export default function LandingClient({
         <Navbar authUser={authUser} />
         <main>
           <Hero />
-          <CatalogSection categories={categories} courses={courses} />
+          <CatalogSection
+            categories={categories}
+            courses={courses}
+            authed={Boolean(authUser)}
+            enrolledCourseIds={enrolledCourseIds}
+          />
           <HowItWorks />
           <CtaBanner />
         </main>
@@ -79,6 +86,8 @@ export function Navbar({
     { label: dict.navbar.categories, href: anchor('categories') },
     { label: dict.navbar.courses, href: anchor('courses') },
     { label: dict.navbar.howItWorks, href: anchor('how') },
+    { label: dict.navbar.about, href: href('about') },
+    { label: dict.navbar.contact, href: href('contact') },
   ];
 
   return (
@@ -822,9 +831,9 @@ export function Footer({ categories }: { categories: Category[] }) {
             title={dict.footer.columnCompany}
             links={[
               { label: dict.footer.companyAbout, href: href('about') },
-              { label: dict.footer.companyContact, href: '#' },
-              { label: dict.footer.companyPrivacy, href: '#' },
-              { label: dict.footer.companyTerms, href: '#' },
+              { label: dict.footer.companyContact, href: href('contact') },
+              { label: dict.footer.companyPrivacy, href: href('privacy') },
+              { label: dict.footer.companyTerms, href: href('terms') },
             ]}
           />
         </div>

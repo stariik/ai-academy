@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getLesson, updateLesson, deleteLesson } from '@/lib/supabase/db';
+import { isAdmin } from '@/lib/admin-auth';
 import { Lesson } from '@/types';
 
 type RouteContext = {
@@ -31,6 +32,9 @@ export async function PUT(
   request: NextRequest,
   context: RouteContext
 ) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   const { id } = await context.params;
 
   try {
@@ -60,6 +64,9 @@ export async function DELETE(
   _request: NextRequest,
   context: RouteContext
 ) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   const { id } = await context.params;
   const supabase = await createClient();
   const deleted = await deleteLesson(supabase, id);

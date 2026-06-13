@@ -22,16 +22,41 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
-  let body: { imageUrl?: string | null } = {};
+  let body: {
+    imageUrl?: string | null;
+    bundlePriceCents?: number | null;
+    bundleRetailCents?: number | null;
+  } = {};
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'invalid_request' }, { status: 400 });
   }
 
+  // Build a partial update so a price-only save doesn't clear the image
+  // (and vice-versa).
+  const updates: {
+    imageUrl?: string | null;
+    bundlePriceCents?: number | null;
+    bundleRetailCents?: number | null;
+  } = {};
+  if ('imageUrl' in body) updates.imageUrl = body.imageUrl ?? null;
+  if ('bundlePriceCents' in body) {
+    const v = body.bundlePriceCents;
+    if (v != null && (!Number.isFinite(v) || v < 0)) {
+      return NextResponse.json({ error: 'invalid_price' }, { status: 400 });
+    }
+    updates.bundlePriceCents = v ?? null;
+  }
+  if ('bundleRetailCents' in body) {
+    const v = body.bundleRetailCents;
+    if (v != null && (!Number.isFinite(v) || v < 0)) {
+      return NextResponse.json({ error: 'invalid_price' }, { status: 400 });
+    }
+    updates.bundleRetailCents = v ?? null;
+  }
+
   const supabase = await createClient();
-  const updated = await upsertCategoryImage(supabase, slug, {
-    imageUrl: body.imageUrl ?? null,
-  });
+  const updated = await upsertCategoryImage(supabase, slug, updates);
   return NextResponse.json(updated);
 }

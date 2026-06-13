@@ -7,6 +7,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
+import { logAiUsage, type AiFeature } from '@/lib/ai/usage';
 import { z } from 'zod';
 import type { GeminiPagedLessonResponse } from '@/types';
 import {
@@ -634,6 +635,15 @@ function recoverTruncatedLessonJson(rawText: string): unknown | null {
   };
 }
 
+// Map a call-site label (e.g. 'Outline/gemini', 'Chunk-2/claude', 'Lesson 3')
+// to the ai_usage feature bucket shown in the admin cost dashboard.
+function featureFromLabel(label: string): AiFeature {
+  if (label.startsWith('Outline')) return 'outline_detection';
+  if (label.startsWith('FinalQuiz')) return 'quiz_generation';
+  if (label.startsWith('Review')) return 'metadata_generation';
+  return 'lesson_generation';
+}
+
 async function callGeminiForJson<T>(
   prompt: string,
   config: GeminiConfig,
@@ -658,7 +668,20 @@ async function callGeminiForJson<T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`[${label}] Attempt ${attempt}/${maxRetries}...`);
+      const startedAt = Date.now();
       const result = await model.generateContent(prompt);
+
+      const usage = result.response.usageMetadata;
+      void logAiUsage({
+        feature: featureFromLabel(label),
+        provider: 'gemini',
+        model: config.model,
+        inputTokens: usage?.promptTokenCount ?? 0,
+        outputTokens: usage?.candidatesTokenCount ?? 0,
+        durationMs: Date.now() - startedAt,
+        metadata: { label, attempt },
+      });
+
       const responseText = result.response.text();
       if (!responseText) throw new Error('Gemini returned an empty response');
 
@@ -776,6 +799,7 @@ async function callClaudeForJson<T>(
       // cap (triggered automatically when max_tokens is high). `.finalMessage()`
       // still returns the complete Message object once streaming finishes, so
       // downstream parsing logic is unchanged.
+      const startedAt = Date.now();
       const stream = anthropic.messages.stream({
         model,
         max_tokens: maxTokens,
@@ -783,6 +807,18 @@ async function callClaudeForJson<T>(
         messages: [{ role: 'user', content: prompt }],
       });
       const response = await stream.finalMessage();
+
+      void logAiUsage({
+        feature: featureFromLabel(label),
+        provider: 'anthropic',
+        model,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+        cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+        durationMs: Date.now() - startedAt,
+        metadata: { label, attempt },
+      });
 
       // Log cache stats when available so we can verify hits in prod
       if (cachedSystemBlock && response.usage) {

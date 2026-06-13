@@ -7,8 +7,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractText } from '@/lib/document-parser';
 import { extractDocumentOutline, type LLMProvider } from '@/lib/ai/gemini';
+import { isAdmin } from '@/lib/admin-auth';
 
 export async function POST(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

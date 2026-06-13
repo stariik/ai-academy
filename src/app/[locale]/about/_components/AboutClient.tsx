@@ -1,34 +1,19 @@
 'use client';
 
-/**
- * /about — the WALLE story page.
- *
- * Reuses the landing Navbar + Footer for consistent chrome (Navbar in
- * `homeAnchors={false}` mode so its section links point back to the home
- * page). All copy comes from the `about` dict section, so the page is fully
- * bilingual / EN-ready. Sections reveal on scroll; motion respects
- * prefers-reduced-motion via the global MotionConfig.
- */
-
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import {
-  Bot,
-  LayoutGrid,
-  Users,
-  FlaskConical,
-  Trophy,
-  Infinity as InfinityIcon,
-  Languages,
-  MessageCircle,
-  Brain,
-  Clock,
-  Globe,
-  GraduationCap,
-  ShieldCheck,
-  Heart,
   ArrowRight,
   Sparkles,
+  BookOpen,
+  BarChart3,
+  RepeatIcon,
+  Share2,
+  Globe,
+  Clock,
+  ShieldCheck,
+  Infinity as InfinityIcon,
+  Mail,
 } from 'lucide-react';
 import type { Category } from '@/lib/v2/data';
 import type { AuthUser } from '@/lib/auth';
@@ -61,7 +46,6 @@ export default function AboutClient({
   );
 }
 
-/* ─── motion helper ─── */
 function Reveal({
   children,
   delay = 0,
@@ -93,9 +77,8 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-const OFFER_ICONS = [Bot, LayoutGrid, Users, FlaskConical, Trophy, InfinityIcon];
-const TEACH_ICONS = [Languages, MessageCircle, Brain, Clock];
-const VALUE_ICONS = [Globe, GraduationCap, ShieldCheck, Heart];
+const WHAT_ICONS = [BookOpen, BarChart3, RepeatIcon, Share2];
+const VALUE_ICONS = [Globe, Clock, ShieldCheck, InfinityIcon];
 
 function AboutSections() {
   const { dict, href } = useV2Locale();
@@ -106,13 +89,12 @@ function AboutSections() {
     <>
       {/* ─── Hero ─── */}
       <section className="relative overflow-hidden">
-        {/* ambient glow */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[420px] w-[820px] max-w-[120vw] rounded-full bg-pulse/15 blur-[120px]"
+          className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[480px] w-[900px] max-w-[120vw] rounded-full bg-pulse/15 blur-[120px]"
         />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-14 pb-16 sm:pt-20 sm:pb-24">
-          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-6">
               <Reveal>
                 <Eyebrow>{a.heroEyebrow}</Eyebrow>
@@ -156,21 +138,21 @@ function AboutSections() {
               <div className="relative">
                 <div
                   aria-hidden
-                  className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/20 to-transparent blur-2xl"
+                  className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/20 to-transparent blur-2xl scale-150"
                 />
-                <Walli size={208} state="wave" />
+                <Walli size={210} state="wave" />
               </div>
             </Reveal>
           </div>
         </div>
       </section>
 
-      {/* ─── Mission ─── */}
-      <section className="py-16 sm:py-24 border-t border-border">
+      {/* ─── Story ─── */}
+      <section className="py-16 sm:py-24 border-t border-border bg-muted/20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 space-y-6 text-center">
           <Reveal>
             <div className="flex justify-center">
-              <Eyebrow>{a.missionEyebrow}</Eyebrow>
+              <Eyebrow>{a.storyEyebrow}</Eyebrow>
             </div>
           </Reveal>
           <Reveal delay={0.05}>
@@ -178,12 +160,12 @@ function AboutSections() {
               className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              {a.missionTitle}
+              {a.storyTitle}
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              {a.missionBody}
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed text-left sm:text-center">
+              {a.storyBody}
             </p>
           </Reveal>
           <Reveal delay={0.15}>
@@ -193,94 +175,69 @@ function AboutSections() {
                 className="text-xl sm:text-2xl font-bold leading-snug text-foreground"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                “{a.missionPullquote}”
+                "{a.storyPullquote}"
               </p>
             </blockquote>
           </Reveal>
         </div>
       </section>
 
-      {/* ─── What we do ─── */}
+      {/* ─── What we built ─── */}
       <section className="py-16 sm:py-24 border-t border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="max-w-2xl space-y-3">
-            <Reveal>
-              <Eyebrow>{a.offerEyebrow}</Eyebrow>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <h2
-                className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {a.offerTitle}
-              </h2>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                {a.offerSubtitle}
-              </p>
-            </Reveal>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {a.offerItems.map((item, i) => {
-              const Icon = OFFER_ICONS[i % OFFER_ICONS.length];
-              return (
-                <Reveal key={item.title} delay={0.04 * i}>
-                  <div className="group h-full rounded-2xl border border-border bg-card p-5 sm:p-6 transition-all hover:-translate-y-1 hover:border-pulse/40 hover:shadow-[0_18px_44px_-24px_var(--pulse-glow)]">
-                    <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-pulse/12 text-pulse mb-4 transition-colors group-hover:bg-pulse group-hover:text-primary-foreground">
-                      <Icon className="w-5 h-5" />
-                    </span>
-                    <h3 className="text-base font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                      {item.title}
-                    </h3>
-                    <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
-                </Reveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── How Walli teaches ─── */}
-      <section className="py-16 sm:py-24 border-t border-border bg-muted/20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <div className="space-y-4">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-start">
+            {/* text left */}
+            <div className="space-y-5 lg:sticky lg:top-24">
               <Reveal>
-                <Eyebrow>{a.teachEyebrow}</Eyebrow>
+                <Eyebrow>{a.whatEyebrow}</Eyebrow>
               </Reveal>
               <Reveal delay={0.05}>
                 <h2
                   className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
-                  {a.teachTitle}
+                  {a.whatTitle}
                 </h2>
               </Reveal>
-              <Reveal delay={0.1} className="hidden lg:block">
-                <Walli size={140} state="idle" />
+              <Reveal delay={0.1}>
+                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                  {a.whatBody}
+                </p>
+              </Reveal>
+              <Reveal delay={0.15} className="hidden lg:block pt-4">
+                <div className="relative w-fit">
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/15 to-transparent blur-2xl scale-125"
+                  />
+                  <Walli size={140} state="idle" />
+                </div>
               </Reveal>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {a.teachItems.map((item, i) => {
-                const Icon = TEACH_ICONS[i % TEACH_ICONS.length];
+            {/* cards right */}
+            <div className="grid gap-4 sm:gap-5">
+              {a.whatItems.map((item, i) => {
+                const Icon = WHAT_ICONS[i % WHAT_ICONS.length];
                 return (
-                  <Reveal key={item.title} delay={0.04 * i}>
-                    <div className="h-full rounded-2xl border border-border bg-card p-5">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-pulse/12 text-pulse shrink-0">
-                          <Icon className="w-4 h-4" />
+                  <Reveal key={item.title} delay={0.06 * i}>
+                    <div className="group rounded-2xl border border-border bg-card p-5 sm:p-6 transition-all hover:-translate-y-0.5 hover:border-pulse/40 hover:shadow-[0_18px_44px_-24px_var(--pulse-glow)]">
+                      <div className="flex items-start gap-4">
+                        <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-pulse/12 text-pulse shrink-0 transition-colors group-hover:bg-pulse group-hover:text-primary-foreground">
+                          <Icon className="w-5 h-5" />
                         </span>
-                        <h3 className="text-[15px] font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-                          {item.title}
-                        </h3>
+                        <div>
+                          <h3
+                            className="text-[15px] font-bold tracking-tight"
+                            style={{ fontFamily: 'var(--font-display)' }}
+                          >
+                            {item.title}
+                          </h3>
+                          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                            {item.description}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
                     </div>
                   </Reveal>
                 );
@@ -290,8 +247,8 @@ function AboutSections() {
         </div>
       </section>
 
-      {/* ─── Who it's for ─── */}
-      <section className="py-16 sm:py-24 border-t border-border">
+      {/* ─── Who we teach ─── */}
+      <section className="py-16 sm:py-24 border-t border-border bg-muted/20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="max-w-2xl space-y-3">
             <Reveal>
@@ -311,7 +268,10 @@ function AboutSections() {
             {audiences.map((aud, i) => (
               <Reveal key={aud.title} delay={0.05 * i}>
                 <div className="h-full rounded-3xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-pulse/40">
-                  <p className="text-lg font-bold tracking-tight text-pulse" style={{ fontFamily: 'var(--font-display)' }}>
+                  <p
+                    className="text-lg font-bold tracking-tight text-pulse"
+                    style={{ fontFamily: 'var(--font-display)' }}
+                  >
                     {aud.title}
                   </p>
                   <p className="mt-0.5 text-sm text-muted-foreground">{aud.tagline}</p>
@@ -331,7 +291,7 @@ function AboutSections() {
       </section>
 
       {/* ─── Values ─── */}
-      <section className="py-16 sm:py-24 border-t border-border bg-muted/20">
+      <section className="py-16 sm:py-24 border-t border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="max-w-2xl space-y-3">
             <Reveal>
@@ -351,20 +311,51 @@ function AboutSections() {
             {a.valuesItems.map((item, i) => {
               const Icon = VALUE_ICONS[i % VALUE_ICONS.length];
               return (
-                <Reveal key={item.title} delay={0.04 * i}>
+                <Reveal key={item.title} delay={0.05 * i}>
                   <div className="h-full rounded-2xl border border-border bg-card p-5">
                     <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-pulse/12 text-pulse mb-3">
                       <Icon className="w-5 h-5" />
                     </span>
-                    <h3 className="text-[15px] font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                    <h3
+                      className="text-[15px] font-bold tracking-tight"
+                      style={{ fontFamily: 'var(--font-display)' }}
+                    >
                       {item.title}
                     </h3>
-                    <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                    <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
                 </Reveal>
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* ─── Contact nudge ─── */}
+      <section className="py-10 sm:py-14 border-t border-border bg-muted/20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <Reveal>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 rounded-2xl border border-border bg-card px-6 py-5">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-pulse/12 text-pulse shrink-0">
+                  <Mail className="w-5 h-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-bold">Have a question?</p>
+                  <p className="text-xs text-muted-foreground">We reply within 24 hours on weekdays.</p>
+                </div>
+              </div>
+              <a
+                href={href('contact')}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-bold hover:border-pulse/40 hover:text-pulse transition-colors shrink-0"
+              >
+                Contact us
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -396,7 +387,7 @@ function AboutSections() {
                     <ArrowRight className="w-4 h-4" />
                   </a>
                   <a
-                    href={`${href()}#categories`}
+                    href={`${href()}#courses`}
                     className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-bold hover:border-pulse/40 hover:text-pulse transition-colors"
                   >
                     {a.ctaSecondary}

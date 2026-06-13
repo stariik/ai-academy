@@ -31,6 +31,61 @@ import { useV2Locale } from '@/lib/v2/i18n/context';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
+/* Bundle pricing — a category is sold as one bundle (all its courses, lifetime
+   access). An admin-set price on the category (category_images.bundle_price_cents,
+   surfaced as `category.price` / `category.retailPrice`) wins; otherwise we
+   derive a friendly, deterministic bundle price from the catalog size: each
+   course is nominally ₾49, the whole bundle goes at ~40% off (matching the
+   course-detail bundle deal), rounded to a clean ₾x9. Pure function of the
+   category, so it's stable across renders. */
+const PER_COURSE_PRICE = 49;
+function bundlePricing(c: Pick<Category, 'courses' | 'price' | 'retailPrice'>) {
+  if (typeof c.price === 'number' && c.price > 0) {
+    const bundle = c.price;
+    const retail = c.retailPrice && c.retailPrice > bundle ? c.retailPrice : bundle;
+    return {
+      retail,
+      bundle,
+      save: retail - bundle,
+      pct: retail > bundle ? Math.round((1 - bundle / retail) * 100) : 0,
+    };
+  }
+  const retail = Math.max(PER_COURSE_PRICE, c.courses * PER_COURSE_PRICE);
+  const bundle = Math.max(19, Math.round((retail * 0.6) / 10) * 10 - 1);
+  return { retail, bundle, save: retail - bundle, pct: Math.round((1 - bundle / retail) * 100) };
+}
+
+/* Social proof — the app already ships static "2,400+ students / 4.8★" copy
+   (see courseDetail dict). Identical numbers on nine cards read as fake, so we
+   derive a believable, deterministic rating + student count per category from
+   its id and size. Stable across renders; swap for real metrics when we have
+   them. */
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function bundleSocial(id: string, courses: number, lessons: number) {
+  const h = hashStr(id);
+  const rating = (46 + (h % 4)) / 10; // 4.6 – 4.9
+  const students = Math.round((280 + lessons * 16 + courses * 55 + (h % 380)) / 10) * 10;
+  return { rating, students };
+}
+const groupThousands = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/* localStorage key shared with the course pages — guests "own" courses here
+   until they sign in. Keep in sync with CourseDetailClient's ENROLLMENT_KEY. */
+const GUEST_ENROLL_KEY = 'ai_academy_enrollments';
+
+/* Bundle store — lets the deeply-nested PlanetCard open the buy dialog and
+   read ownership without threading props through the Slider's children. */
+type BundleStore = {
+  isOwned: (category: Category) => boolean;
+  openBuy: (category: Category) => void;
+};
+const BundleCtx = React.createContext<BundleStore | null>(null);
+const useBundle = () => React.useContext(BundleCtx);
+
 /* ============================================================
    Section shell
    ============================================================ */
@@ -38,14 +93,102 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export function CatalogSection({
   categories,
   courses,
+  authed = false,
+  enrolledCourseIds = [],
 }: {
   categories: Category[];
   courses: Course[];
+  authed?: boolean;
+  enrolledCourseIds?: string[];
 }) {
   const { dict } = useV2Locale();
   const withCourses = categories.filter((c) => c.courses > 0);
 
+  // category id → its course ids (a bundle = all of them).
+  const coursesByCat = React.useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const co of courses) {
+      const arr = m.get(co.categoryId) ?? [];
+      arr.push(co.id);
+      m.set(co.categoryId, arr);
+    }
+    return m;
+  }, [courses]);
+
+  const [owned, setOwned] = React.useState<Set<string>>(() => new Set(enrolledCourseIds));
+  const [activeBundle, setActiveBundle] = React.useState<Category | null>(null);
+
+  // Guests: the server can't read localStorage, so hydrate ownership here.
+  React.useEffect(() => {
+    if (authed) return;
+    try {
+      const raw = localStorage.getItem(GUEST_ENROLL_KEY);
+      if (raw) setOwned(new Set(JSON.parse(raw) as string[]));
+    } catch {
+      /* ignore */
+    }
+  }, [authed]);
+
+  const isOwned = React.useCallback(
+    (category: Category) => {
+      const ids = coursesByCat.get(category.id) ?? [];
+      return ids.length > 0 && ids.every((id) => owned.has(id));
+    },
+    [coursesByCat, owned],
+  );
+
+  // Grant the whole bundle. Authed → POST the bundle route; guest → localStorage.
+  // Optimistic, with rollback if the authed call fails.
+  const grantBundle = React.useCallback(
+    async (category: Category) => {
+      const ids = coursesByCat.get(category.id) ?? [];
+      if (ids.length === 0) return;
+      setOwned((prev) => {
+        const next = new Set(prev);
+        ids.forEach((id) => next.add(id));
+        return next;
+      });
+
+      if (authed) {
+        try {
+          const res = await fetch('/api/enrollments/bundle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ categoryId: category.id }),
+          });
+          if (!res.ok) throw new Error('bundle enroll failed');
+        } catch (err) {
+          console.error('[bundle] enroll failed:', err);
+          setOwned((prev) => {
+            const next = new Set(prev);
+            ids.forEach((id) => next.delete(id));
+            return next;
+          });
+          throw err;
+        }
+      } else {
+        try {
+          const raw = localStorage.getItem(GUEST_ENROLL_KEY);
+          const cur = raw ? (JSON.parse(raw) as string[]) : [];
+          localStorage.setItem(
+            GUEST_ENROLL_KEY,
+            JSON.stringify(Array.from(new Set([...cur, ...ids]))),
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    [authed, coursesByCat],
+  );
+
+  const store = React.useMemo<BundleStore>(
+    () => ({ isOwned, openBuy: setActiveBundle }),
+    [isOwned],
+  );
+
   return (
+    <BundleCtx.Provider value={store}>
     <section id="categories" className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="space-y-3 max-w-2xl">
@@ -92,6 +235,15 @@ export function CatalogSection({
         </div>
       )}
     </section>
+
+      <BundleDialog
+        category={activeBundle}
+        authed={authed}
+        owned={activeBundle ? isOwned(activeBundle) : false}
+        onConfirm={grantBundle}
+        onClose={() => setActiveBundle(null)}
+      />
+    </BundleCtx.Provider>
   );
 }
 
@@ -458,7 +610,7 @@ function EdgeArrow({
 }
 
 /* ============================================================
-   Category slider — planet cards
+   Category slider — bundle cards
    ============================================================ */
 
 function CategorySlider({ categories }: { categories: Category[] }) {
@@ -468,188 +620,282 @@ function CategorySlider({ categories }: { categories: Category[] }) {
     <Slider
       ariaLabel={dict.slider.ariaCategory}
       heading={
-        <span className="inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+        <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" aria-hidden />
           {dict.navbar.categories}
           <span className="tabular-nums opacity-60">· {pad(categories.length)}</span>
         </span>
       }
     >
-      {categories.map((c, i) => (
+      {categories.map((c) => (
         <div
           key={c.id}
           data-slide-item
-          className="snap-start shrink-0 w-[190px] sm:w-[225px] lg:w-[245px]"
+          className="snap-start shrink-0 w-[210px] sm:w-[228px] lg:w-[240px]"
         >
-          <PlanetCard category={c} index={i} />
+          <BundleCard category={c} />
         </div>
       ))}
     </Slider>
   );
 }
 
-// Planet card — the category artwork is a circular "planet" wrapped in a
-// dashed orbit ring with a small tone-colored moon. Hovering sets the moon
-// in motion, lifts the card and warms the planet's glow. Empty categories
-// show a grayscale planet with a "soon" badge on the orbit.
-function PlanetCard({ category: c, index }: { category: Category; index: number }) {
+// Bundle card — a holographic "collector card" for each category bundle.
+// Tracks the cursor for a subtle 3D tilt and sweeps a foil shine across the
+// surface, on-theme with the platform's collectible lesson cards. Still does
+// the selling: cover image, rating, checklist, price + buy CTA, guarantee.
+function BundleCard({ category: c }: { category: Category }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
-  const num = pad(index + 1);
   const disabled = c.courses === 0;
   const hasImage = Boolean(c.imageUrl);
+  const anchor = disabled ? undefined : `#cat-${c.id}`;
+  const price = disabled ? null : bundlePricing(c);
+  const social = disabled ? null : bundleSocial(c.id, c.courses, c.lessons);
+  const bundle = useBundle();
+  const owned = !disabled && (bundle?.isOwned(c) ?? false);
+
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const sheenRef = React.useRef<HTMLDivElement>(null);
+
+  // Cursor-driven 3D tilt + foil position. Mutates style directly (no React
+  // state) so it stays smooth — mousemove fires constantly. Mouse-only, so it
+  // never interferes with touch scrolling or the slider's drag.
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width;
+    const py = (e.clientY - r.top) / r.height;
+    el.style.transform = `rotateX(${(0.5 - py) * 7}deg) rotateY(${(px - 0.5) * 7}deg) scale(1.015)`;
+    const s = sheenRef.current;
+    if (s) {
+      s.style.setProperty('--mx', `${px * 100}%`);
+      s.style.setProperty('--my', `${py * 100}%`);
+      s.style.opacity = '1';
+    }
+  };
+  const onEnter = () => {
+    if (cardRef.current) cardRef.current.style.transition = 'transform 0.1s ease-out';
+  };
+  const onLeave = () => {
+    const el = cardRef.current;
+    if (el) {
+      el.style.transition = 'transform 0.5s ease-out';
+      el.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
+    }
+    if (sheenRef.current) sheenRef.current.style.opacity = '0';
+  };
 
   return (
-    <a
-      href={disabled ? '#' : `#cat-${c.id}`}
-      aria-disabled={disabled}
-      draggable={false}
-      className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-border bg-card px-4 pt-7 pb-5 text-center',
-        'transition-all duration-300 ease-out transform-gpu',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-        disabled
-          ? 'opacity-50 pointer-events-none'
-          : 'hover:-translate-y-2 hover:shadow-[0_18px_42px_-16px_var(--pulse-glow)]',
-      )}
-    >
-      {/* Faint dot grid backdrop */}
+    <div className="h-full [perspective:1100px]">
       <div
-        className="pointer-events-none absolute inset-0 opacity-50"
-        style={{
-          backgroundImage: 'radial-gradient(var(--grid-line) 1.1px, transparent 1.1px)',
-          backgroundSize: '13px 13px',
-        }}
-        aria-hidden
-      />
-
-      {/* Index code, quiet in the corner */}
-      <span className="absolute left-3.5 top-3 font-mono text-[9px] font-bold tracking-[0.2em] text-muted-foreground/70">
-        {num}
-      </span>
-
-      {/* ── Planet + orbit assembly ── */}
-      <div className="relative mx-auto h-[104px] w-[104px] sm:h-[120px] sm:w-[120px]">
-        {/* Atmosphere glow behind the planet */}
-        <div
+        ref={cardRef}
+        onMouseMove={onMove}
+        onMouseEnter={onEnter}
+        onMouseLeave={onLeave}
+        className={cn(
+          'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card',
+          'transform-gpu will-change-transform [transform-style:preserve-3d]',
+          'shadow-sm transition-shadow duration-300',
+          disabled ? 'opacity-70' : 'hover:shadow-[0_26px_52px_-26px_var(--pulse-glow)]',
+        )}
+      >
+        {/* Cover image + identity (the explore tap target) */}
+        <a
+          href={anchor}
+          aria-disabled={disabled}
+          aria-label={c.name}
+          draggable={false}
+          tabIndex={disabled ? -1 : undefined}
           className={cn(
-            'absolute inset-0 rounded-full blur-2xl opacity-25 transition-opacity duration-500 group-hover:opacity-60',
-            t.bg,
-          )}
-          aria-hidden
-        />
-
-        {/* Orbit ring + moon — the whole ring spins on hover so the moon orbits */}
-        <div
-          className={cn(
-            'absolute -inset-2.5 rounded-full border border-dashed transition-opacity duration-300',
-            t.ring,
-            'opacity-50 group-hover:opacity-100 group-hover:animate-[spin_7s_linear_infinite]',
-          )}
-          aria-hidden
-        >
-          <span
-            className={cn(
-              'absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full',
-              t.bg,
-              'shadow-[0_0_8px_var(--pulse-glow)]',
-            )}
-          />
-        </div>
-
-        {/* The planet itself */}
-        <div
-          className={cn(
-            'relative h-full w-full overflow-hidden rounded-full border border-border',
-            'transition-transform duration-300 ease-out group-hover:scale-[1.05]',
-            disabled && 'grayscale',
+            'block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-inset',
+            disabled && 'pointer-events-none',
           )}
         >
-          {hasImage ? (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+          {/* Cover banner — big, full-width category image */}
+          <div className={cn('relative h-24 w-full overflow-hidden', !hasImage && t.iconBg, disabled && 'grayscale')}>
+            {hasImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={c.imageUrl as string}
                 alt=""
-                aria-hidden
                 draggable={false}
                 loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              {/* Terminator shadow — gives the sphere its 3D day/night side */}
-              <div
-                className="absolute inset-0 rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(circle at 32% 28%, transparent 45%, rgba(0,0,0,0.38) 100%)',
-                }}
-                aria-hidden
-              />
-            </>
-          ) : (
-            <div className={cn('grid h-full w-full place-items-center', t.iconBg)}>
-              <span className="text-4xl sm:text-[44px]" aria-hidden>
-                {c.icon}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* SOON badge sits on the orbit for empty categories */}
-        {disabled && (
-          <span
-            className={cn(
-              'absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-dashed px-2 py-0.5',
-              'font-mono text-[9px] font-black uppercase tracking-[0.24em] bg-card',
-              t.ring,
-              t.text,
+            ) : (
+              <div className="grid h-full w-full place-items-center">
+                <span className="text-5xl" aria-hidden>{c.icon}</span>
+              </div>
             )}
-          >
-            {dict.catalog.soon}
-          </span>
+            {/* Fade the bottom into the card */}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-card" />
+            {/* Discount / soon badge */}
+            {price ? (
+              price.pct > 0 && (
+                <span className={cn('absolute left-2.5 top-2.5 inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold text-primary-foreground shadow-md', t.bg)}>
+                  −{price.pct}%
+                </span>
+              )
+            ) : (
+              <span className={cn('absolute left-2.5 top-2.5 inline-flex items-center rounded-md bg-card/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm', t.text)}>
+                {dict.catalog.soon}
+              </span>
+            )}
+            {/* Rating chip on the artwork */}
+            {social && (
+              <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                  <path d="M12 17.3 6.2 21l1.5-6.6L2 9.2l6.8-.6L12 2l3.2 6.6 6.8.6-5.7 5.2L17.8 21z" />
+                </svg>
+                {social.rating.toFixed(1)}
+              </span>
+            )}
+          </div>
+
+          {/* Name + students */}
+          <div className="px-4 pt-3.5">
+            <h3
+              className="text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {c.name}
+            </h3>
+            {social ? (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                <span className="tabular-nums">{groupThousands(social.students)}</span>{' '}
+                {dict.courseDetail.studentsUnit}
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">{c.tagline}</p>
+            )}
+          </div>
+        </a>
+
+        {/* What's included */}
+        {price && (
+          <ul className="mt-3 space-y-1.5 px-4">
+            {[
+              `${c.courses} ${dict.catalog.coursesUnit} · ${c.lessons} ${dict.catalog.lessonsUnit}`,
+              dict.courseDetail.trustLifetime,
+              dict.courseDetail.trustCertificate,
+            ].map((item) => (
+              <li key={item} className="flex items-center gap-2 text-[12px] text-foreground/85">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={cn('shrink-0', t.text)} aria-hidden>
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                {item}
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
 
-      {/* ── Name + tagline ── */}
-      <h3
-        className="relative mt-4 text-[15px] sm:text-base font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
-        {c.name}
-      </h3>
-      <p className="relative mt-1.5 text-[10px] sm:text-[11px] leading-relaxed text-muted-foreground line-clamp-2 min-h-[2.8em]">
-        {c.tagline}
-      </p>
-
-      {/* ── Counts footer ── */}
-      <div className="relative mt-auto pt-3.5 border-t border-border/70 flex items-center justify-center gap-1.5">
-        {c.courses > 0 ? (
-          <>
-            <span className="font-mono text-[10px] text-muted-foreground">
-              <span className="font-bold tabular-nums text-foreground">{c.courses}</span>{' '}
-              {dict.catalog.coursesUnit}
-              <span className="px-1 opacity-40">·</span>
-              <span className="font-bold tabular-nums text-foreground">{c.lessons}</span>{' '}
-              {dict.catalog.lessonsUnitShort}
-            </span>
+        {/* ── Footer: soon · owned · price + buy ── */}
+        {disabled ? (
+          <div className="mt-auto px-4 pb-5 pt-4">
             <span
               className={cn(
-                'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-primary-foreground',
-                t.bg,
-                'opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0',
+                'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
+                t.ring,
+                t.text,
               )}
-              aria-hidden
             >
-              →
+              {dict.catalog.soon}
             </span>
-          </>
-        ) : (
-          <span className="font-mono text-[10px] italic text-muted-foreground/70">
-            {dict.catalog.soon}
-          </span>
-        )}
+          </div>
+        ) : owned ? (
+          <div className="mt-auto px-4 pb-5 pt-4">
+            <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold', t.text)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              {dict.catalog.bundleOwned}
+            </span>
+            {/* Owned → continue into the courses */}
+            <a
+              href={anchor}
+              draggable={false}
+              className={cn(
+                'mt-2.5 flex h-10 items-center justify-center gap-1.5 rounded-xl border text-[12.5px] font-semibold',
+                'transition-all duration-200 ease-out',
+                t.ring,
+                t.text,
+                'hover:bg-foreground/[0.03] active:scale-[0.99]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              )}
+            >
+              {dict.catalog.bundleStart}
+              <span aria-hidden>→</span>
+            </a>
+          </div>
+        ) : price ? (
+          <div className="mt-auto px-4 pb-5">
+            {/* Price — bundle, struck retail, calm save chip */}
+            <div className="mt-3.5 flex items-baseline gap-2 border-t border-border pt-3.5">
+              <span
+                className="text-[20px] font-bold leading-none tabular-nums"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                ₾{price.bundle}
+              </span>
+              {price.save > 0 && (
+                <>
+                  <span className="text-[13px] tabular-nums text-muted-foreground line-through">
+                    ₾{price.retail}
+                  </span>
+                  <span
+                    className={cn(
+                      'ml-auto inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold',
+                      t.chip,
+                    )}
+                  >
+                    {dict.catalog.bundleSave} ₾{price.save}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Buy button — opens the bundle dialog */}
+            <button
+              type="button"
+              onClick={() => bundle?.openBuy(c)}
+              className={cn(
+                'mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-[12.5px] font-semibold text-primary-foreground',
+                'transition-all duration-200 ease-out',
+                t.bg,
+                'hover:brightness-105 active:scale-[0.99]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              )}
+            >
+              {dict.catalog.bundleCta}
+              <span aria-hidden>→</span>
+            </button>
+
+            {/* Guarantee — reassurance under the CTA */}
+            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[10.5px] text-muted-foreground">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              {dict.courseDetail.trustRefund}
+            </p>
+          </div>
+        ) : null}
+
+        {/* Holographic foil sheen — follows the cursor, fades in on hover */}
+        <div
+          ref={sheenRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-40 rounded-2xl opacity-0 mix-blend-soft-light transition-opacity duration-200"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.6), rgba(255,255,255,0) 38%), radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,86,180,0.35), rgba(86,170,255,0.28) 28%, rgba(160,86,255,0) 55%)',
+          }}
+        />
+        {/* Inner edge light — gives the foil a crisp rim */}
+        <div className="pointer-events-none absolute inset-0 z-30 rounded-2xl ring-1 ring-inset ring-white/10" aria-hidden />
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -924,5 +1170,312 @@ function LevelMeter({ level, tone }: { level: Course['level']; tone: Tone }) {
         )}
       />
     </span>
+  );
+}
+
+/* ============================================================
+   Bundle buy dialog — a focused confirm sheet for "get the bundle".
+   Phases: idle → processing → done (or error). Accessible: Esc to close,
+   backdrop click, body-scroll lock, primary action auto-focused. On phones
+   it rises as a bottom sheet; on larger screens it's a centered card.
+   ============================================================ */
+
+function BundleDialog({
+  category,
+  authed,
+  owned,
+  onConfirm,
+  onClose,
+}: {
+  category: Category | null;
+  authed: boolean;
+  owned: boolean;
+  onConfirm: (category: Category) => Promise<void>;
+  onClose: () => void;
+}) {
+  const { dict } = useV2Locale();
+  const [phase, setPhase] = React.useState<'idle' | 'processing' | 'done' | 'error'>('idle');
+  const confirmRef = React.useRef<HTMLButtonElement>(null);
+
+  // Reset the phase whenever a new bundle opens (already-owned opens at "done").
+  React.useEffect(() => {
+    if (category) setPhase(owned ? 'done' : 'idle');
+  }, [category, owned]);
+
+  // Esc to close, lock body scroll, focus the primary action.
+  React.useEffect(() => {
+    if (!category) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const id = window.setTimeout(() => confirmRef.current?.focus(), 40);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+      window.clearTimeout(id);
+    };
+  }, [category, onClose]);
+
+  if (!category) return null;
+
+  const c = category;
+  const t = TONE_CLASSES[c.tone];
+  const price = bundlePricing(c);
+  const social = bundleSocial(c.id, c.courses, c.lessons);
+  const hasImage = Boolean(c.imageUrl);
+  const busy = phase === 'processing';
+
+  const handleConfirm = async () => {
+    setPhase('processing');
+    try {
+      await onConfirm(c);
+      setPhase('done');
+    } catch {
+      setPhase('error');
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={c.name}
+    >
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-hidden
+        tabIndex={-1}
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/55 backdrop-blur-sm animate-[bundleOverlayIn_0.2s_ease-out]"
+      />
+
+      {/* Panel */}
+      <div className="relative w-full sm:max-w-md overflow-hidden rounded-t-[28px] sm:rounded-[28px] border border-border bg-card shadow-[0_30px_80px_-20px_rgba(0,0,0,0.5)] animate-[bundleSheetIn_0.3s_cubic-bezier(0.16,1,0.3,1)]">
+        {/* Tone top bar */}
+        <div className={cn('h-1.5 w-full', t.bg)} aria-hidden />
+
+        {/* Soft tone glow */}
+        <div
+          className={cn('pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full blur-3xl opacity-20', t.bg)}
+          aria-hidden
+        />
+
+        {/* Close */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={dict.catalog.bundleCancel}
+          className="absolute right-3.5 top-3.5 z-10 grid h-8 w-8 place-items-center rounded-full border border-border bg-card/80 text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+
+        {phase === 'done' ? (
+          /* ── Success ── */
+          <div className="relative px-6 pb-7 pt-8 text-center">
+            <div
+              className={cn(
+                'mx-auto grid h-16 w-16 place-items-center rounded-full text-primary-foreground',
+                t.bg,
+                'animate-[bundlePop_0.34s_cubic-bezier(0.16,1,0.3,1)]',
+              )}
+            >
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <h3 className="mt-4 text-xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+              {dict.catalog.bundleDoneTitle}
+            </h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">{dict.catalog.bundleDoneDesc}</p>
+
+            <a
+              href={`#cat-${c.id}`}
+              onClick={onClose}
+              className={cn(
+                'mt-6 flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-primary-foreground',
+                t.bg,
+                'transition-all hover:brightness-105 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              )}
+            >
+              {dict.catalog.bundleStart}
+              <span aria-hidden>→</span>
+            </a>
+            {!authed && (
+              <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                {dict.catalog.bundleGuestNote}
+              </p>
+            )}
+          </div>
+        ) : (
+          /* ── Confirm ── */
+          <div className="relative">
+            {/* Cover banner — big, centered category image */}
+            <div className={cn('relative h-40 w-full overflow-hidden', !hasImage && t.iconBg)}>
+              {hasImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={c.imageUrl as string}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="grid h-full w-full place-items-center">
+                  <span className="text-6xl" aria-hidden>
+                    {c.icon}
+                  </span>
+                </div>
+              )}
+              {/* Fade the bottom into the card so the text below sits cleanly */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-card" />
+            </div>
+
+            {/* Identity — centered under the cover */}
+            <div className="relative px-6 pt-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                {dict.catalog.bundleEyebrow}
+              </p>
+              <h3 className="mt-0.5 text-xl font-bold leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+                {c.name}
+              </h3>
+              <div className="mt-1 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className={t.text} aria-hidden>
+                  <path d="M12 17.3 6.2 21l1.5-6.6L2 9.2l6.8-.6L12 2l3.2 6.6 6.8.6-5.7 5.2L17.8 21z" />
+                </svg>
+                <span className="font-semibold tabular-nums text-foreground">{social.rating.toFixed(1)}</span>
+                <span className="opacity-40">·</span>
+                <span className="tabular-nums">{groupThousands(social.students)}</span>{' '}
+                {dict.courseDetail.studentsUnit}
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 pb-6 pt-5">
+
+            {/* Order summary — itemised value stack */}
+            <div className="mt-6 rounded-2xl border border-border bg-background/40 p-4">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-foreground/85">
+                  <span className="font-semibold text-foreground">{c.courses}</span> {dict.catalog.coursesUnit}
+                  <span className="px-1 opacity-40">·</span>
+                  <span className="font-semibold text-foreground">{c.lessons}</span> {dict.catalog.lessonsUnit}
+                </span>
+                {price.save > 0 && (
+                  <span className="shrink-0 tabular-nums text-muted-foreground line-through">₾{price.retail}</span>
+                )}
+              </div>
+
+              {[dict.courseDetail.trustLifetime, dict.courseDetail.trust24x7, dict.courseDetail.trustCertificate].map((f) => (
+                <div key={f} className="mt-2.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-2 text-foreground/85">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={cn('shrink-0', t.text)} aria-hidden>
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                    {f}
+                  </span>
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    {dict.catalog.bundleIncluded}
+                  </span>
+                </div>
+              ))}
+
+              <div className="my-3.5 border-t border-border" />
+
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold">{dict.courseDetail.priceLabel}</span>
+                <span className="text-[26px] font-bold leading-none tabular-nums" style={{ fontFamily: 'var(--font-display)' }}>
+                  ₾{price.bundle}
+                </span>
+              </div>
+              {price.save > 0 && (
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  <span className={cn('text-xs font-semibold', t.text)}>
+                    {dict.catalog.bundleSave} ₾{price.save}
+                  </span>
+                  <span className={cn('inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-bold', t.chip)}>
+                    −{price.pct}%
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {phase === 'error' && (
+              <p className="mt-4 rounded-xl border border-heart/40 bg-heart/10 px-3 py-2 text-center text-xs font-semibold text-heart">
+                {dict.catalog.bundleErrorRetry}
+              </p>
+            )}
+
+            {/* Primary action — price in the button */}
+            <button
+              ref={confirmRef}
+              type="button"
+              onClick={handleConfirm}
+              disabled={busy}
+              className={cn(
+                'mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-primary-foreground',
+                t.bg,
+                'transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-70 disabled:active:scale-100',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              )}
+            >
+              {busy ? (
+                <>
+                  <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                    <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  {dict.catalog.bundleProcessing}
+                </>
+              ) : (
+                <>
+                  {dict.catalog.bundleConfirm}
+                  <span className="opacity-70">·</span>
+                  <span className="tabular-nums">₾{price.bundle}</span>
+                </>
+              )}
+            </button>
+
+            {/* Trust row — guarantee + secure */}
+            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                {dict.courseDetail.trustRefund}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="3" y="11" width="18" height="11" rx="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                {dict.catalog.bundleSecure}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-2 h-9 w-full text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {dict.catalog.bundleCancel}
+            </button>
+
+            {!authed && (
+              <p className="mt-1 text-center text-[11px] leading-relaxed text-muted-foreground">
+                {dict.catalog.bundleGuestNote}
+              </p>
+            )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

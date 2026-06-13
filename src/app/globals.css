@@ -354,6 +354,21 @@ body {
   }
 }
 
+/* Bundle buy dialog — overlay fade, sheet rise, success pop. */
+@keyframes bundleOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bundleSheetIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bundlePop {
+  0% { opacity: 0; transform: scale(0.4); }
+  60% { transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 /* ============================================================
    Lesson Content Prose — used in ContentBlockRenderer
    ============================================================ */

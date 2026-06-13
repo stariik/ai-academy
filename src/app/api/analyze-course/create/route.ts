@@ -8,8 +8,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createCourse } from '@/lib/supabase/db';
+import { isAdmin } from '@/lib/admin-auth';
 
 export async function POST(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
   try {
     const body = await request.json();
     const { courseName, sections, tags } = body;
