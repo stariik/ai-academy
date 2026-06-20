@@ -41,7 +41,8 @@ export type Course = {
   audience: AudienceTag; // inherited from category
   lessons: number;       // derived count
   hours: number;         // derived: ceil(sum(estimatedDurationMinutes) / 60)
-  price?: number;        // not in real data
+  price?: number;        // admin-set (courses.price_cents)
+  retailPrice?: number;  // admin-set "was" price (courses.retail_price_cents) — struck through
   level: Level;          // most common difficulty across lessons
   icon: string;          // inherited from category
 };

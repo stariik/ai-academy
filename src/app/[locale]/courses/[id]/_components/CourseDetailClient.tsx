@@ -20,7 +20,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Check, ChevronDown, ChevronRight, Clock, Lock, Play, Sparkles,
+  Check, ChevronRight, Clock, Lock, Play, Sparkles,
   Star, ArrowRight, ArrowLeft, Heart, BookOpen, Users,
   CircleDot, Trophy, Eye, X, Zap,
   ShieldCheck, Award, Infinity as InfinityIcon, MessageCircle, GraduationCap,
@@ -32,7 +32,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import {
   LEVEL_DOTS, TONE_CLASSES,
-  type Course, type Category, type CourseDetail, type Module, type Lesson,
+  type Course, type Category, type CourseDetail, type Lesson,
 } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import { LanguageSwitcher } from '../../../_components/LandingClient';
@@ -683,7 +683,11 @@ function OutcomesSection({ detail, category }: { detail: CourseDetail; category:
         </h2>
       </div>
 
-      <div className="grid gap-2.5 sm:gap-3 grid-cols-2 lg:grid-cols-4 items-start">
+      {/* Each chip is an absolutely-positioned card laid over an invisible
+          placeholder of the compact size. When it grows on hover it overlays
+          its neighbours instead of reflowing the page, so the curriculum below
+          never jumps up and down. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-4">
         {detail.outcomes.map((o, i) => (
           <motion.div
             key={o.title}
@@ -691,43 +695,62 @@ function OutcomesSection({ detail, category }: { detail: CourseDetail; category:
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-40px' }}
             transition={{ duration: 0.35, delay: i * 0.05, ease: 'easeOut' }}
-            className="group relative"
+            className="group relative z-0 self-start hover:z-30"
           >
-            {/* Static card — always occupies the grid cell so the row never grows on hover. */}
-            <div className="rounded-xl border border-border bg-card p-3 sm:p-3.5 transition-opacity duration-200 group-hover:opacity-0">
-              <div className={cn('inline-flex items-center justify-center w-7 h-7 rounded-lg mb-2', t.iconBg, t.text)}>
-                <Check className="w-3.5 h-3.5" strokeWidth={2.8} />
+            {/* Placeholder — reserves the compact height; never changes size. */}
+            <div aria-hidden className="invisible">
+              <div className="flex items-center gap-2 p-2.5 sm:p-3">
+                <span className="h-6 w-6 shrink-0 rounded-md" />
+                <span
+                  className="text-[11px] font-bold leading-snug line-clamp-2 sm:text-xs"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  {o.title}
+                </span>
               </div>
-              <h3
-                className="text-xs sm:text-sm font-bold leading-snug line-clamp-2"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {o.title}
-              </h3>
-              {o.description && (
-                <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                  {o.description}
-                </p>
-              )}
             </div>
 
-            {/* Expanded overlay — absolute, doesn't affect the grid; appears on hover. */}
+            {/* Visible card — absolutely positioned, grows over the placeholder. */}
             <div
-              className="pointer-events-none absolute top-0 left-0 right-0 rounded-xl border border-pulse/40 bg-card p-3.5 sm:p-4 opacity-0 scale-95 origin-top shadow-[0_18px_50px_rgba(0,0,0,0.14)] transition-all duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-hover:scale-[1.12] group-hover:z-20"
+              className={cn(
+                'absolute inset-x-0 top-0 flex flex-col rounded-xl border border-border bg-card p-2.5 sm:p-3',
+                'transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform',
+                'group-hover:-translate-y-1 group-hover:scale-[1.05] group-hover:border-transparent group-hover:shadow-[0_22px_48px_-18px_var(--pulse-glow)]',
+              )}
             >
-              <div className={cn('inline-flex items-center justify-center w-8 h-8 rounded-lg mb-2.5', t.iconBg, t.text)}>
-                <Check className="w-4 h-4" strokeWidth={2.8} />
+              {/* Tone accent ring fades in on hover */}
+              <div
+                className={cn(
+                  'pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+                  t.ring,
+                )}
+                aria-hidden
+              />
+              <div className="relative flex items-center gap-2">
+                <span
+                  className={cn(
+                    'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-transform duration-300 group-hover:scale-110',
+                    t.iconBg,
+                    t.text,
+                  )}
+                >
+                  <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
+                </span>
+                <h3
+                  className="text-[11px] font-bold leading-snug line-clamp-2 group-hover:line-clamp-none sm:text-xs"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  {o.title}
+                </h3>
               </div>
-              <h3
-                className="text-sm font-bold leading-snug"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {o.title}
-              </h3>
               {o.description && (
-                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                  {o.description}
-                </p>
+                <div className="relative grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:grid-rows-[1fr]">
+                  <div className="overflow-hidden">
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                      {o.description}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </motion.div>
@@ -797,7 +820,7 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
               className="absolute -left-1 -top-2 text-3xl text-pulse/30 leading-none select-none"
               aria-hidden
             >
-              "
+              &ldquo;
             </span>
             <span className="relative">{detail.walliQuote}</span>
           </blockquote>
@@ -816,12 +839,32 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
    Curriculum
    ============================================================ */
 
+// Roman numerals for chapter labels (the path is capped at three chapters).
+const PATH_ROMAN = ['I', 'II', 'III'] as const;
+
+// Split the flat lesson list into up to three contiguous chapters, front-loading
+// any remainder. The course narrative is always foundations → practice → project
+// (see curriculumDescription), so e.g. 4 lessons becomes [2,1,1].
+function splitIntoPhases<T>(items: T[]): T[][] {
+  const n = items.length;
+  if (n === 0) return [];
+  const groups = Math.min(3, n);
+  const base = Math.floor(n / groups);
+  const rem = n % groups;
+  const out: T[][] = [];
+  let idx = 0;
+  for (let g = 0; g < groups; g++) {
+    const size = base + (g < rem ? 1 : 0);
+    out.push(items.slice(idx, idx + size));
+    idx += size;
+  }
+  return out;
+}
+
 function CurriculumSection({
-  course,
   category,
   detail,
   isEnrolled,
-  isLoggedIn,
   progress,
   onToggleLesson,
 }: {
@@ -834,231 +877,407 @@ function CurriculumSection({
   onToggleLesson: (lessonId: string) => void;
 }) {
   const { dict } = useV2Locale();
-  const [openModuleId, setOpenModuleId] = React.useState<string | null>(detail.modules[0]?.id ?? null);
+  const t = TONE_CLASSES[category.tone];
+
+  // One module holds all lessons (see lessonsAsModule in db.ts). Instead of a
+  // flat list, we present them as a guided "learning path" broken into chapters.
+  const lessons = detail.modules.flatMap((m) => m.lessons);
+  const totalLessons = lessons.length;
+  const totalMin = lessons.reduce((acc, l) => acc + l.durationMin, 0);
+  const totalHours = Math.round((totalMin / 60) * 10) / 10;
+  const freeCount = lessons.filter((l) => l.isFree).length;
+  const completed = lessons.filter((l) => progress.has(l.id)).length;
+  const pct = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
+  const finished = totalLessons > 0 && completed === totalLessons;
+
+  // The next actionable lesson — the first one the viewer can open and hasn't
+  // completed. For guests that's the first free preview; for enrolled students
+  // it's where they left off. Drives the pulsing "Next up" marker.
+  const nextUpId = React.useMemo(() => {
+    for (const l of lessons) {
+      if ((isEnrolled || l.isFree) && !progress.has(l.id)) return l.id;
+    }
+    return null;
+  }, [lessons, isEnrolled, progress]);
+
+  // Pair the real lesson chunks with the foundations → practice → project
+  // narrative, keeping a running global lesson number across chapters.
+  const phaseMeta = [
+    { Icon: BookOpen, title: dict.courseDetail.pathFoundationsTitle, tagline: dict.courseDetail.pathFoundationsTagline },
+    { Icon: Zap, title: dict.courseDetail.pathPracticeTitle, tagline: dict.courseDetail.pathPracticeTagline },
+    { Icon: GraduationCap, title: dict.courseDetail.pathProjectTitle, tagline: dict.courseDetail.pathProjectTagline },
+  ];
+  const chunks = splitIntoPhases(lessons);
+  const meta =
+    chunks.length <= 1 ? [phaseMeta[0]]
+    : chunks.length === 2 ? [phaseMeta[0], phaseMeta[2]]
+    : phaseMeta;
+  const phases = chunks.map((chunkLessons, i) => {
+    // Global lesson number continues across chapters → prefix-sum of prior chunks.
+    const startNumber = chunks.slice(0, i).reduce((acc, c) => acc + c.length, 0);
+    return { meta: meta[i], roman: PATH_ROMAN[i], lessons: chunkLessons, startNumber };
+  });
 
   return (
     <section id="curriculum" className="scroll-mt-24">
       <SectionHeader
         eyebrow={dict.courseDetail.curriculumEyebrow}
-        title={`${detail.modules.length} ${dict.courseDetail.modulesLabel}, ${course.lessons} ${dict.courseDetail.lessonsLabel}`}
+        title={dict.courseDetail.curriculumTitle}
         description={dict.courseDetail.curriculumDescription}
       />
 
-      <div className="mt-8 sm:mt-10 space-y-3 sm:space-y-4">
-        {detail.modules.map((m, i) => (
-          <ModuleCard
-            key={m.id}
-            module={m}
-            index={i}
+      {/* Overview ribbon — totals on the left, live progress on the right */}
+      <div className="mt-8 sm:mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-border bg-card/60 px-5 py-4 sm:px-6">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold">
+          <BookOpen className={cn('h-4 w-4', t.text)} />
+          <span className="tabular-nums">{totalLessons}</span>
+          <span className="font-normal text-muted-foreground">{dict.courseDetail.lessonsLabel}</span>
+        </span>
+        <span className="inline-flex items-center gap-2 text-sm font-semibold">
+          <Clock className={cn('h-4 w-4', t.text)} />
+          <span className="tabular-nums">~{totalHours}</span>
+          <span className="font-normal text-muted-foreground">{dict.courseDetail.hoursLabel}</span>
+        </span>
+        {freeCount > 0 && (
+          <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest', t.chip)}>
+            <Eye className="h-3 w-3" />
+            {freeCount} {dict.courseDetail.freeLessonBadge}
+          </span>
+        )}
+        {isEnrolled && totalLessons > 0 && (
+          <div className="ml-auto flex items-center gap-3">
+            <div className="text-right leading-tight">
+              <p className={cn('text-sm font-bold tabular-nums', t.text)}>
+                {completed}/{totalLessons}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{dict.courseDetail.yourProgress}</p>
+            </div>
+            <CurriculumRing pct={pct} tone={category.tone} />
+          </div>
+        )}
+      </div>
+
+      {/* Chapters */}
+      <div className="mt-7 space-y-8 sm:space-y-10">
+        {phases.map((phase) => (
+          <PhaseBlock
+            key={phase.roman}
+            roman={phase.roman}
+            meta={phase.meta}
+            lessons={phase.lessons}
+            startNumber={phase.startNumber}
             category={category}
-            open={openModuleId === m.id}
-            onToggle={() => setOpenModuleId(openModuleId === m.id ? null : m.id)}
             isEnrolled={isEnrolled}
-            isLoggedIn={isLoggedIn}
             progress={progress}
+            nextUpId={nextUpId}
             onToggleLesson={onToggleLesson}
           />
         ))}
+
+        <FinishCap category={category} finished={finished} />
       </div>
     </section>
   );
 }
 
-function ModuleCard({
-  module,
-  index,
+// Animated, tone-aware progress ring with a centered % label, used in the
+// curriculum overview ribbon. (Distinct from the pulse-only rail ProgressRing.)
+function CurriculumRing({
+  pct,
+  tone,
+  size = 50,
+  stroke = 5,
+}: {
+  pct: number;
+  tone: keyof typeof TONE_CLASSES;
+  size?: number;
+  stroke?: number;
+}) {
+  const t = TONE_CLASSES[tone];
+  const reduced = useReducedMotion();
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+  return (
+    <span className="relative inline-grid shrink-0 place-items-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-muted" />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          className={t.text}
+          initial={{ strokeDashoffset: c }}
+          whileInView={{ strokeDashoffset: offset }}
+          viewport={{ once: true }}
+          transition={reduced ? { duration: 0 } : { duration: 1, ease: 'easeOut' }}
+        />
+      </svg>
+      <span className={cn('absolute text-[11px] font-bold tabular-nums', t.text)}>{pct}%</span>
+    </span>
+  );
+}
+
+// One chapter of the learning path: a header (icon node, label, tagline, totals,
+// optional progress) followed by its lessons rendered along a connecting spine.
+function PhaseBlock({
+  roman,
+  meta,
+  lessons,
+  startNumber,
   category,
-  open,
-  onToggle,
   isEnrolled,
-  isLoggedIn,
   progress,
+  nextUpId,
   onToggleLesson,
 }: {
-  module: Module;
-  index: number;
+  roman: string;
+  meta: { Icon: typeof BookOpen; title: string; tagline: string };
+  lessons: Lesson[];
+  startNumber: number;
   category: Category;
-  open: boolean;
-  onToggle: () => void;
   isEnrolled: boolean;
-  isLoggedIn: boolean;
   progress: Set<string>;
+  nextUpId: string | null;
   onToggleLesson: (lessonId: string) => void;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
-  const totalMin = module.lessons.reduce((acc, l) => acc + l.durationMin, 0);
-  const completedInModule = module.lessons.filter((l) => progress.has(l.id)).length;
-  const allComplete = completedInModule === module.lessons.length && module.lessons.length > 0;
+  const { Icon } = meta;
+  const phaseMin = lessons.reduce((acc, l) => acc + l.durationMin, 0);
+  const phaseDone = lessons.filter((l) => progress.has(l.id)).length;
+  const allDone = lessons.length > 0 && phaseDone === lessons.length;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
-      className={cn(
-        'overflow-hidden rounded-2xl border bg-card transition-colors',
-        open ? 'border-pulse/40' : 'border-border hover:border-pulse/25',
-      )}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full text-left p-4 sm:p-5 flex items-center gap-4"
-        aria-expanded={open}
-      >
-        <div
+    <div>
+      {/* Chapter header */}
+      <div className="flex items-center gap-3.5">
+        <span
           className={cn(
-            'flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl text-base font-bold tabular-nums',
-            allComplete && isEnrolled ? 'bg-pulse text-primary-foreground' : cn(t.iconBg, t.text),
+            'grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition-colors',
+            allDone ? cn(t.bg, 'text-primary-foreground') : cn(t.iconBg, t.text),
           )}
         >
-          {allComplete && isEnrolled ? <Check className="w-5 h-5" strokeWidth={2.6} /> : (index + 1).toString().padStart(2, '0')}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-bold leading-tight truncate" style={{ fontFamily: 'var(--font-display)' }}>
-            {module.title}
+          {allDone ? <Check className="h-5 w-5" strokeWidth={2.6} /> : <Icon className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className={cn('text-[10px] font-bold uppercase tracking-[0.22em]', t.text)}>
+            {dict.courseDetail.pathPhaseLabel} {roman}
+          </p>
+          <h3 className="text-lg font-bold leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+            {meta.title}
           </h3>
-          <div className="mt-1 flex items-center gap-2.5 text-xs text-muted-foreground flex-wrap">
-            <span>{module.lessons.length} {dict.courseDetail.lessonsLabel}</span>
-            <span className="opacity-50">·</span>
-            <span>~{Math.round(totalMin / 60 * 10) / 10} {dict.courseDetail.hoursLabel}</span>
-            {isEnrolled && (
-              <>
-                <span className="opacity-50">·</span>
-                <span className="font-bold text-pulse tabular-nums">
-                  {completedInModule}/{module.lessons.length}
-                </span>
-              </>
-            )}
-          </div>
         </div>
+        <span className="hidden shrink-0 text-right text-[11px] text-muted-foreground sm:block">
+          <span className="font-semibold tabular-nums text-foreground/80">{lessons.length}</span>{' '}
+          {dict.courseDetail.lessonsLabel}
+          <span className="px-1 opacity-40">·</span>~
+          <span className="font-semibold tabular-nums text-foreground/80">{phaseMin}</span>{' '}
+          {dict.courseDetail.durationMinutes}
+        </span>
+      </div>
+      <p className="mt-1.5 pl-[3.625rem] text-sm text-muted-foreground">{meta.tagline}</p>
 
-        <ChevronDown
-          className={cn(
-            'flex-shrink-0 w-5 h-5 text-muted-foreground transition-transform',
-            open && 'rotate-180',
-          )}
-        />
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="content"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-1 border-t border-border">
-              {module.tagline && (
-                <p className="text-xs text-muted-foreground italic mb-3 mt-3">{module.tagline}</p>
-              )}
-              <ul className="divide-y divide-border/60">
-                {module.lessons.map((l) => (
-                  <LessonRow
-                    key={l.id}
-                    lesson={l}
-                    category={category}
-                    isEnrolled={isEnrolled}
-                    isLoggedIn={isLoggedIn}
-                    isCompleted={progress.has(l.id)}
-                    onToggleComplete={() => onToggleLesson(l.id)}
-                  />
-                ))}
-              </ul>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+      {/* Lessons along the spine */}
+      <ol className="mt-3">
+        {lessons.map((l, i) => (
+          <LessonCard
+            key={l.id}
+            lesson={l}
+            number={startNumber + i + 1}
+            isFirst={i === 0}
+            isLast={i === lessons.length - 1}
+            category={category}
+            isEnrolled={isEnrolled}
+            isCompleted={progress.has(l.id)}
+            isNextUp={l.id === nextUpId}
+            onToggleComplete={() => onToggleLesson(l.id)}
+          />
+        ))}
+      </ol>
+    </div>
   );
 }
 
-function LessonRow({
+// A single lesson on the path: spine node (number / check / lock / next-up play)
+// plus a card that surfaces the lesson description and its start/review CTA.
+function LessonCard({
   lesson,
+  number,
+  isFirst,
+  isLast,
   category,
   isEnrolled,
-  isLoggedIn,
   isCompleted,
+  isNextUp,
   onToggleComplete,
 }: {
   lesson: Lesson;
+  number: number;
+  isFirst: boolean;
+  isLast: boolean;
   category: Category;
   isEnrolled: boolean;
-  isLoggedIn: boolean;
   isCompleted: boolean;
+  isNextUp: boolean;
   onToggleComplete: () => void;
 }) {
   const { href, dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const isLocked = !isEnrolled && !lesson.isFree;
+  const accessible = isEnrolled || lesson.isFree;
+  const isPreview = lesson.isFree && !isEnrolled;
 
-  return (
-    <li className="group relative flex items-center gap-3 py-3 px-1">
-      {/* Number / status */}
-      <button
-        type="button"
-        onClick={isEnrolled ? onToggleComplete : undefined}
-        aria-label={isCompleted ? dict.courseDetail.markIncomplete : dict.courseDetail.markComplete}
-        disabled={!isEnrolled}
-        className={cn(
-          'flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold tabular-nums transition-all',
-          isCompleted
-            ? 'bg-pulse text-primary-foreground'
-            : isLocked
-              ? 'bg-muted text-muted-foreground/70'
-              : cn('bg-muted text-foreground', isEnrolled && 'group-hover:bg-pulse/20 group-hover:text-pulse cursor-pointer'),
-        )}
-      >
-        {isCompleted ? <Check className="w-4 h-4" strokeWidth={2.6} /> : isLocked ? <Lock className="w-3.5 h-3.5" /> : lesson.numberLabel}
-      </button>
-
-      <div className="flex-1 min-w-0">
-        <p className={cn(
-          'text-sm sm:text-[0.95rem] font-semibold leading-snug truncate',
-          isCompleted && 'text-muted-foreground line-through decoration-1 decoration-pulse/40',
-        )}>
-          {lesson.title}
-        </p>
-        <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {lesson.durationMin} {dict.courseDetail.durationMinutes}
-          </span>
-          {lesson.isFree && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className={cn('inline-flex items-center gap-1 font-bold rounded-full px-2 py-0.5 text-[10px] uppercase tracking-widest', t.chip, 'border')}>
-                <Eye className="w-3 h-3" />
-                {dict.courseDetail.freeLessonBadge}
-              </span>
-            </>
+  const card = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {isNextUp && (
+            <span className={cn('mb-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-primary-foreground', t.bg)}>
+              <Sparkles className="h-2.5 w-2.5" />
+              {dict.courseDetail.pathNextUp}
+            </span>
           )}
-        </p>
+          <p className={cn('text-sm font-bold leading-snug sm:text-[0.95rem]', isCompleted && 'text-muted-foreground line-through decoration-1')}>
+            {lesson.title}
+          </p>
+        </div>
+        {accessible ? (
+          <span
+            className={cn(
+              'grid h-8 w-8 shrink-0 place-items-center rounded-full transition-all duration-300 group-hover:scale-110 group-hover:brightness-105',
+              isNextUp ? cn(t.bg, 'text-primary-foreground') : cn(t.iconBg, t.text),
+            )}
+            aria-hidden
+          >
+            {isPreview ? (
+              <Play className="h-3.5 w-3.5 fill-current" />
+            ) : (
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            )}
+          </span>
+        ) : (
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground/50" aria-hidden>
+            <Lock className="h-3.5 w-3.5" />
+          </span>
+        )}
       </div>
 
-      {(isEnrolled || lesson.isFree) ? (
+      {lesson.description && (
+        <p className={cn('mt-1.5 text-xs leading-relaxed text-muted-foreground', isLocked ? 'line-clamp-1' : 'line-clamp-2')}>
+          {lesson.description}
+        </p>
+      )}
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {lesson.durationMin} {dict.courseDetail.durationMinutes}
+        </span>
+        {lesson.isFree && (
+          <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', t.chip)}>
+            <Eye className="h-3 w-3" />
+            {dict.courseDetail.freeLessonBadge}
+          </span>
+        )}
+        {accessible && (
+          <span className={cn('ml-auto inline-flex items-center gap-1 font-bold transition-all group-hover:gap-1.5', isCompleted ? t.text : 'text-foreground')}>
+            {isCompleted ? dict.courseDetail.lessonReview : dict.courseDetail.lessonStart}
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <li className="relative flex gap-3.5 sm:gap-4">
+      {/* Spine node + connector */}
+      <div className="relative flex w-11 shrink-0 items-center justify-center">
+        <span
+          aria-hidden
+          className={cn(
+            'absolute left-1/2 w-px -translate-x-1/2',
+            isFirst ? 'top-1/2' : 'top-0',
+            isLast ? 'bottom-1/2' : 'bottom-0',
+            isCompleted ? t.bg : 'bg-border',
+          )}
+        />
+        <button
+          type="button"
+          onClick={isEnrolled ? onToggleComplete : undefined}
+          aria-label={isCompleted ? dict.courseDetail.markIncomplete : dict.courseDetail.markComplete}
+          disabled={!isEnrolled}
+          className={cn(
+            'relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold tabular-nums transition-all',
+            isCompleted
+              ? cn(t.bg, 'text-primary-foreground')
+              : isLocked
+                ? 'bg-muted text-muted-foreground/70'
+                : isNextUp
+                  ? cn(t.bg, 'text-primary-foreground shadow-[0_0_0_4px_var(--pulse-glow)]')
+                  : cn(t.iconBg, t.text, isEnrolled && 'cursor-pointer hover:brightness-95'),
+          )}
+        >
+          {isCompleted ? (
+            <Check className="h-4 w-4" strokeWidth={2.6} />
+          ) : isLocked ? (
+            <Lock className="h-3.5 w-3.5" />
+          ) : isNextUp ? (
+            <Play className="h-3.5 w-3.5 fill-current" />
+          ) : (
+            number.toString().padStart(2, '0')
+          )}
+        </button>
+      </div>
+
+      {/* Card */}
+      {accessible ? (
         <a
           href={href(`lessons/${lesson.id}`)}
           className={cn(
-            'flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold rounded-full px-2.5 py-1 transition-all',
-            isCompleted
-              ? 'text-pulse hover:gap-1.5'
-              : 'text-foreground hover:text-pulse hover:gap-1.5',
+            'group my-1.5 flex-1 rounded-2xl border bg-card p-3.5 transition-all duration-300 sm:p-4',
+            isNextUp ? cn(t.ring, 'shadow-[0_10px_30px_-18px_var(--pulse-glow)]') : 'border-border',
+            'hover:-translate-y-0.5 hover:border-transparent hover:shadow-[0_16px_36px_-22px_var(--pulse-glow)]',
           )}
         >
-          {isCompleted ? dict.courseDetail.lessonReview : dict.courseDetail.lessonStart}
-          <ChevronRight className="w-3.5 h-3.5" />
+          {card}
         </a>
       ) : (
-        <span className="flex-shrink-0 text-[11px] font-semibold text-muted-foreground">—</span>
+        <div className="my-1.5 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3.5 sm:p-4">
+          {card}
+        </div>
       )}
     </li>
+  );
+}
+
+// Goal marker at the end of the path — turns celebratory once every lesson is done.
+function FinishCap({ category, finished }: { category: Category; finished: boolean }) {
+  const { dict } = useV2Locale();
+  const t = TONE_CLASSES[category.tone];
+  return (
+    <div className="flex items-center gap-3.5">
+      <span
+        className={cn(
+          'grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition-colors',
+          finished ? cn(t.bg, 'text-primary-foreground') : cn('border-2 border-dashed bg-card', t.ring, t.text),
+        )}
+      >
+        {finished ? <Trophy className="h-5 w-5" /> : <Award className="h-5 w-5" />}
+      </span>
+      <div className="min-w-0">
+        <h3 className="text-base font-bold leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          {dict.courseDetail.pathFinishTitle}
+        </h3>
+        <p className="text-xs text-muted-foreground">{dict.courseDetail.pathFinishDesc}</p>
+      </div>
+    </div>
   );
 }
 
@@ -1067,7 +1286,7 @@ function LessonRow({
    ============================================================ */
 
 function RelatedCoursesSection({ related, category: cat }: { related: Course[]; category: Category }) {
-  const { href, dict } = useV2Locale();
+  const { dict } = useV2Locale();
   if (related.length === 0) return null;
   return (
     <section>
@@ -1077,40 +1296,184 @@ function RelatedCoursesSection({ related, category: cat }: { related: Course[]; 
       />
 
       <div className="mt-8 sm:mt-10 -mx-4 sm:mx-0 px-4 sm:px-0 flex sm:grid gap-4 sm:gap-5 overflow-x-auto sm:overflow-visible sm:grid-cols-2 pb-2 sm:pb-0 snap-x">
-        {related.map((co, i) => {
-          const t = TONE_CLASSES[cat.tone];
-          return (
-            <motion.a
-              key={co.id}
-              href={href(`courses/${co.id}`)}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.45, delay: i * 0.06 }}
-              className="group flex-shrink-0 sm:flex-shrink w-[280px] sm:w-auto rounded-2xl border border-border bg-card overflow-hidden hover:-translate-y-1 hover:border-pulse/40 hover:shadow-[0_12px_40px_var(--pulse-glow)] transition-all snap-start"
-            >
-              <div className={cn('relative aspect-[5/4] overflow-hidden', t.iconBg)}>
-                <div className={cn('absolute inset-0 -z-10', t.gradient)} aria-hidden />
-                <EveCover
-                  icon={co.icon}
-                  className="absolute inset-0 p-5 transition-transform duration-500 ease-out group-hover:scale-[1.05]"
-                  iconClassName="text-3xl sm:text-4xl"
-                />
-              </div>
-              <div className="p-4 sm:p-5">
-                <h4 className="text-base font-bold leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
-                  {co.title}
-                </h4>
-                <div className="mt-2.5 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{co.lessons} {dict.courseDetail.lessonsLabel} · ~{co.hours} {dict.courseCard.hoursShort}</span>
-                  <span className="font-bold tabular-nums">₾{co.price}</span>
-                </div>
-              </div>
-            </motion.a>
-          );
-        })}
+        {related.map((co, i) => (
+          <RelatedCourseCard key={co.id} course={co} category={cat} index={i} />
+        ))}
       </div>
     </section>
+  );
+}
+
+// Related course card — mirrors the catalog's clean, price-forward CourseCard so
+// the whole site speaks one visual language: tone icon chip + discount badge,
+// title/description, audience·level·pace chips, and an always-visible price next
+// to a round tone CTA. Same lift + tone glow + accent-ring hover.
+function RelatedCourseCard({
+  course: co,
+  category: c,
+  index,
+}: {
+  course: Course;
+  category: Category;
+  index: number;
+}) {
+  const { dict, href } = useV2Locale();
+  const t = TONE_CLASSES[c.tone];
+  const isFree = !(typeof co.price === 'number' && co.price > 0);
+  const hasRetail =
+    !isFree &&
+    typeof co.retailPrice === 'number' &&
+    typeof co.price === 'number' &&
+    co.retailPrice > co.price;
+  const discount = hasRetail
+    ? Math.round(((co.retailPrice! - co.price!) / co.retailPrice!) * 100)
+    : 0;
+  const save = hasRetail ? co.retailPrice! - co.price! : 0;
+  const minPerLesson = co.lessons > 0 ? Math.max(1, Math.round((co.hours * 60) / co.lessons)) : 0;
+
+  return (
+    <motion.a
+      href={href(`courses/${co.id}`)}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.45, delay: index * 0.06 }}
+      className={cn(
+        'group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-card p-4 sm:p-5',
+        'w-[260px] flex-shrink-0 snap-start sm:w-auto sm:flex-shrink',
+        'transition-all duration-300 ease-out transform-gpu',
+        'hover:-translate-y-2 hover:border-transparent hover:shadow-[0_26px_52px_-22px_var(--pulse-glow)]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      )}
+    >
+      {/* Soft tone glow + accent ring — same as the catalog card */}
+      <div
+        className={cn(
+          'pointer-events-none absolute -top-14 -right-14 h-40 w-40 rounded-full blur-3xl opacity-[0.13] transition-opacity duration-500 group-hover:opacity-30',
+          t.bg,
+        )}
+        aria-hidden
+      />
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+          t.ring,
+        )}
+        aria-hidden
+      />
+
+      {/* Top — icon chip · discount */}
+      <div className="relative flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+            t.iconBg,
+          )}
+          aria-hidden
+        >
+          {co.icon}
+        </span>
+        {discount > 0 && (
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
+              t.bg,
+            )}
+          >
+            −{discount}%
+          </span>
+        )}
+      </div>
+
+      {/* Title */}
+      <h4
+        className="relative mt-3.5 text-[16px] sm:text-[17px] font-bold leading-snug tracking-tight line-clamp-2"
+        style={{ fontFamily: 'var(--font-display)' }}
+      >
+        {co.title}
+      </h4>
+
+      {/* Description */}
+      {co.description && (
+        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+          {co.description}
+        </p>
+      )}
+
+      {/* Meta chips — audience · level · pace */}
+      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+          <span className={cn('h-1.5 w-1.5 rounded-full', t.bg)} aria-hidden />
+          {dict.audienceTag[co.audience]}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+          <LevelDots level={co.level} tone={c.tone} />
+          {dict.level[co.level]}
+        </span>
+        {minPerLesson > 0 && (
+          <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+            ~{minPerLesson} {dict.courseCard.minPerLesson}
+          </span>
+        )}
+      </div>
+
+      {/* Footer — always-visible, price-forward */}
+      <div className="relative mt-auto pt-3.5">
+        <div className="border-t border-dashed border-border/80 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[10.5px] text-muted-foreground">
+              <span className="font-bold tabular-nums text-foreground">{co.lessons}</span>
+              {' '}{dict.courseCard.lessonsShort}
+              <span className="px-1 opacity-40">·</span>
+              ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
+              {dict.courseCard.hoursShort}
+            </span>
+            {save > 0 && (
+              <span className={cn('inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold', t.chip)}>
+                {dict.catalog.bundleSave} ₾{save}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 flex items-end justify-between gap-3">
+            {isFree ? (
+              <span
+                className={cn('text-[20px] font-bold leading-none tracking-tight', t.text)}
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {dict.courseCard.free}
+              </span>
+            ) : (
+              <span className="inline-flex items-baseline gap-1.5">
+                <span
+                  className="text-[22px] font-bold leading-none tabular-nums"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  ₾{co.price}
+                </span>
+                {hasRetail && (
+                  <span className="text-[12px] tabular-nums text-muted-foreground line-through">
+                    ₾{co.retailPrice}
+                  </span>
+                )}
+              </span>
+            )}
+
+            <span
+              className={cn(
+                'grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary-foreground shadow-sm',
+                'transition-all duration-300 ease-out',
+                t.bg,
+                'group-hover:scale-110 group-hover:brightness-105 group-hover:shadow-[0_8px_20px_-4px_var(--pulse-glow)]',
+              )}
+              aria-hidden
+            >
+              <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.a>
   );
 }
 
@@ -1266,9 +1629,9 @@ function BundleCrossSell({ category }: { category: Category }) {
     <a
       href={`${href()}#cat-${category.id}`}
       className={cn(
-        'group block mx-5 sm:mx-6 mb-5 sm:mb-6 rounded-2xl border-2 border-dashed p-4 transition-all',
+        'group block mx-5 sm:mx-6 mb-5 sm:mb-6 rounded-2xl border-2 border-dashed p-4 transition-all duration-300 ease-out',
         t.ring,
-        'hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)]',
+        'hover:-translate-y-1 hover:shadow-[0_14px_32px_-16px_var(--pulse-glow)]',
       )}
     >
       <div className="flex items-center gap-3">

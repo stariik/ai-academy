@@ -1,17 +1,14 @@
 'use client';
 
 /* ============================================================
-   CatalogSection — "Expedition Terminal"
+   CatalogSection — the storefront catalog
 
-   The catalog rebuilt as Walli's departure hall:
-   · Categories are planet cards — the cover art is a circular
-     "planet" in a dashed orbit ring; a tone-colored moon orbits
-     it on hover.
-   · Each course row is a mission console — patch thumbnail,
-     mono position readout, floating edge arrows.
-   · Courses are mission dossiers — corner viewfinder brackets,
-     telemetry strip, level meter, and a tone-colored launch bar
-     that slides up on hover.
+   A clean, conversion-focused catalog (no themed chrome):
+   · CategorySlider — one bundle card per category: cover art,
+     rating, what's-included checklist, prominent price + buy CTA.
+   · CourseSliderRow — a labelled row per category; each course is
+     a CourseCard with audience/level/pace chips and an
+     always-visible, price-forward footer + tone CTA.
 
    One Slider primitive powers every row: pointer drag with click
    suppression, scroll-snap, keyboard arrows, a segmented tick
@@ -667,7 +664,7 @@ function BundleCard({ category: c }: { category: Category }) {
     const r = el.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width;
     const py = (e.clientY - r.top) / r.height;
-    el.style.transform = `rotateX(${(0.5 - py) * 7}deg) rotateY(${(px - 0.5) * 7}deg) scale(1.015)`;
+    el.style.transform = `rotateX(${(0.5 - py) * 5}deg) rotateY(${(px - 0.5) * 5}deg) scale(1.01)`;
     const s = sheenRef.current;
     if (s) {
       s.style.setProperty('--mx', `${px * 100}%`);
@@ -889,7 +886,7 @@ function BundleCard({ category: c }: { category: Category }) {
           className="pointer-events-none absolute inset-0 z-40 rounded-2xl opacity-0 mix-blend-soft-light transition-opacity duration-200"
           style={{
             backgroundImage:
-              'radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.6), rgba(255,255,255,0) 38%), radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,86,180,0.35), rgba(86,170,255,0.28) 28%, rgba(160,86,255,0) 55%)',
+              'radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.4), rgba(255,255,255,0) 38%), radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,86,180,0.22), rgba(86,170,255,0.18) 28%, rgba(160,86,255,0) 55%)',
           }}
         />
         {/* Inner edge light — gives the foil a crisp rim */}
@@ -900,7 +897,7 @@ function BundleCard({ category: c }: { category: Category }) {
 }
 
 /* ============================================================
-   Course rows — mission console + dossier cards
+   Course rows — labelled category row + course cards
    ============================================================ */
 
 function CourseSliderRow({
@@ -973,13 +970,13 @@ function CourseSliderRow({
           </div>
         }
       >
-        {courses.map((co, i) => (
+        {courses.map((co) => (
           <div
             key={co.id}
             data-slide-item
-            className="snap-start shrink-0 w-[240px] sm:w-[270px] lg:w-[295px]"
+            className="snap-start shrink-0 w-[220px] sm:w-[248px] lg:w-[268px]"
           >
-            <DossierCard course={co} category={c} index={i} />
+            <CourseCard course={co} category={c} />
           </div>
         ))}
       </Slider>
@@ -987,22 +984,32 @@ function CourseSliderRow({
   );
 }
 
-// Mission dossier — telemetry strip up top (index, level meter), display-font
-// title, audience + pace chips, mono stats, and a tone launch bar that slides
-// up over the footer on hover. Corner viewfinder brackets lock in on hover.
-function DossierCard({
+// Course card — a clean, price-forward product card. Tone icon chip + a bold
+// discount badge up top, display-font title and description, audience/level/pace
+// chips, then an always-visible footer that puts the price front and centre
+// (never hidden on hover) next to a round tone CTA. The only decoration is a
+// soft tone glow + an accent ring that warm up on hover. Tokens only.
+function CourseCard({
   course: co,
   category: c,
-  index,
 }: {
   course: Course;
   category: Category;
-  index: number;
 }) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
-  const code = pad(index + 1);
   const isFree = !(typeof co.price === 'number' && co.price > 0);
+  // Admin-set "was" price → struck retail + discount %, mirroring the course
+  // detail page. Only shown when a retail price genuinely exceeds the current one.
+  const hasRetail =
+    !isFree &&
+    typeof co.retailPrice === 'number' &&
+    typeof co.price === 'number' &&
+    co.retailPrice > co.price;
+  const discount = hasRetail
+    ? Math.round(((co.retailPrice! - co.price!) / co.retailPrice!) * 100)
+    : 0;
+  const save = hasRetail ? co.retailPrice! - co.price! : 0;
   // Approximate pace — hours is a ceil'd total, hence the "~".
   const minPerLesson = co.lessons > 0 ? Math.max(1, Math.round((co.hours * 60) / co.lessons)) : 0;
 
@@ -1011,79 +1018,55 @@ function DossierCard({
       href={href(`courses/${co.id}`)}
       draggable={false}
       className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-card p-5',
+        'group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-card p-4',
         'transition-all duration-300 ease-out transform-gpu',
-        'hover:-translate-y-1.5 hover:shadow-[0_18px_42px_-16px_var(--pulse-glow)]',
+        'hover:-translate-y-2 hover:border-transparent hover:shadow-[0_26px_52px_-22px_var(--pulse-glow)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       )}
     >
-      {/* Corner viewfinder brackets — lock outward on hover */}
-      {(['left-3 top-3 border-l-2 border-t-2 rounded-tl group-hover:left-2 group-hover:top-2',
-         'right-3 top-3 border-r-2 border-t-2 rounded-tr group-hover:right-2 group-hover:top-2',
-         'left-3 bottom-3 border-l-2 border-b-2 rounded-bl group-hover:left-2 group-hover:bottom-2',
-         'right-3 bottom-3 border-r-2 border-b-2 rounded-br group-hover:right-2 group-hover:bottom-2',
-      ] as const).map((pos) => (
-        <span
-          key={pos}
-          className={cn(
-            'pointer-events-none absolute h-3.5 w-3.5 transition-all duration-300',
-            t.ring,
-            'opacity-35 group-hover:opacity-100',
-            pos,
-          )}
-          aria-hidden
-        />
-      ))}
-
-      {/* Soft tone glow, top-right */}
+      {/* Soft tone glow, top-right — intensifies on hover */}
       <div
         className={cn(
-          'pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full blur-3xl opacity-20 transition-opacity duration-500 group-hover:opacity-45',
+          'pointer-events-none absolute -top-14 -right-14 h-40 w-40 rounded-full blur-3xl opacity-[0.13] transition-opacity duration-500 group-hover:opacity-30',
           t.bg,
         )}
         aria-hidden
       />
-
-      {/* Faint dot grid */}
+      {/* Tone accent ring — fades in on hover for a premium edge */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-50"
-        style={{
-          backgroundImage: 'radial-gradient(var(--grid-line) 1.1px, transparent 1.1px)',
-          backgroundSize: '13px 13px',
-        }}
+        className={cn(
+          'pointer-events-none absolute inset-0 rounded-[20px] ring-1 ring-inset opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+          t.ring,
+        )}
         aria-hidden
       />
 
-      {/* Scanline sweep on hover */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -inset-y-12 -left-1/3 w-1/3 rotate-12 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 transition-all duration-700 ease-out group-hover:left-[130%] group-hover:opacity-100" />
-      </div>
-
-      {/* Watermark index */}
-      <span
-        className={cn(
-          'pointer-events-none absolute right-4 top-2 select-none font-mono text-[54px] font-black leading-none tabular-nums opacity-[0.07] transition-opacity duration-300 group-hover:opacity-[0.14]',
-          t.text,
+      {/* Top row — category icon chip · discount badge */}
+      <div className="relative flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+            t.iconBg,
+          )}
+          aria-hidden
+        >
+          {c.icon}
+        </span>
+        {discount > 0 && (
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
+              t.bg,
+            )}
+          >
+            −{discount}%
+          </span>
         )}
-        aria-hidden
-      >
-        {code}
-      </span>
-
-      {/* Telemetry strip */}
-      <div className="relative flex items-center justify-between gap-2">
-        <span className="font-mono text-[10px] font-semibold tracking-[0.22em] text-muted-foreground">
-          №{code}
-        </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/40 px-2 py-1 text-[8.5px] font-bold uppercase tracking-widest backdrop-blur-sm">
-          <LevelMeter level={co.level} tone={c.tone} />
-          <span className="text-foreground/70">{dict.level[co.level]}</span>
-        </span>
       </div>
 
       {/* Title */}
       <h4
-        className="relative mt-4 text-[17px] sm:text-lg font-bold leading-snug tracking-tight line-clamp-2"
+        className="relative mt-3.5 text-[16px] sm:text-[17px] font-bold leading-snug tracking-tight line-clamp-2"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {co.title}
@@ -1091,16 +1074,20 @@ function DossierCard({
 
       {/* Description */}
       {co.description && (
-        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-3">
+        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
           {co.description}
         </p>
       )}
 
-      {/* Audience + pace chips */}
-      <div className="relative mt-3.5 flex flex-wrap items-center gap-1.5">
+      {/* Meta chips — audience · level · pace */}
+      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
           <span className={cn('h-1.5 w-1.5 rounded-full', t.bg)} aria-hidden />
           {dict.audienceTag[co.audience]}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+          <LevelMeter level={co.level} tone={c.tone} />
+          {dict.level[co.level]}
         </span>
         {minPerLesson > 0 && (
           <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
@@ -1109,41 +1096,74 @@ function DossierCard({
         )}
       </div>
 
-      {/* Footer — mono stats + price; fades as the launch bar slides over it */}
-      <div className="relative mt-auto flex items-center justify-between gap-2 border-t border-dashed border-border/80 pt-3.5 transition-opacity duration-200 group-hover:opacity-0">
-        <span className="font-mono text-[10.5px] text-muted-foreground">
-          <span className="font-bold tabular-nums text-foreground">{co.lessons}</span>
-          {' '}{dict.courseCard.lessonsShort}
-          <span className="px-1 opacity-40">·</span>
-          ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
-          {dict.courseCard.hoursShort}
-        </span>
-        {isFree ? (
-          <span className={cn('text-[10px] font-bold uppercase tracking-widest', t.text)}>
-            {dict.courseCard.free}
-          </span>
-        ) : (
-          <span className="text-sm font-bold tabular-nums">₾{co.price}</span>
-        )}
-      </div>
+      {/* Footer — always visible, price-forward */}
+      <div className="relative mt-auto pt-3.5">
+        <div className="border-t border-dashed border-border/80 pt-3">
+          {/* stats · save chip */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[10.5px] text-muted-foreground">
+              <span className="font-bold tabular-nums text-foreground">{co.lessons}</span>
+              {' '}{dict.courseCard.lessonsShort}
+              <span className="px-1 opacity-40">·</span>
+              ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
+              {dict.courseCard.hoursShort}
+            </span>
+            {save > 0 && (
+              <span className={cn('inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold', t.chip)}>
+                {dict.catalog.bundleSave} ₾{save}
+              </span>
+            )}
+          </div>
 
-      {/* Launch bar — slides up from the bottom edge on hover/focus */}
-      <div
-        className={cn(
-          'pointer-events-none absolute inset-x-0 bottom-0 z-10',
-          'translate-y-full transition-transform duration-300 ease-out',
-          'group-hover:translate-y-0 group-focus-visible:translate-y-0',
-        )}
-        aria-hidden
-      >
-        <div
-          className={cn(
-            'flex h-[44px] items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-primary-foreground',
-            t.bg,
-          )}
-        >
-          {dict.courseCard.open}
-          <span>→</span>
+          {/* price · CTA */}
+          <div className="mt-2 flex items-end justify-between gap-3">
+            {isFree ? (
+              <span
+                className={cn('text-[20px] font-bold leading-none tracking-tight', t.text)}
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {dict.courseCard.free}
+              </span>
+            ) : (
+              <span className="inline-flex items-baseline gap-1.5">
+                <span
+                  className="text-[22px] font-bold leading-none tabular-nums"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  ₾{co.price}
+                </span>
+                {hasRetail && (
+                  <span className="text-[12px] tabular-nums text-muted-foreground line-through">
+                    ₾{co.retailPrice}
+                  </span>
+                )}
+              </span>
+            )}
+
+            <span
+              className={cn(
+                'grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary-foreground shadow-sm',
+                'transition-all duration-300 ease-out',
+                t.bg,
+                'group-hover:scale-110 group-hover:brightness-105 group-hover:shadow-[0_8px_20px_-4px_var(--pulse-glow)]',
+              )}
+              aria-hidden
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="transition-transform duration-300 group-hover:translate-x-0.5"
+              >
+                <path d="M5 12h14M13 5l7 7-7 7" />
+              </svg>
+            </span>
+          </div>
         </div>
       </div>
     </a>

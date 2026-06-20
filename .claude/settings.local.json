@@ -89,7 +89,28 @@
       "Bash(grep -Hm1 '^description:' .claude/skills/*/SKILL.md)",
       "Bash(ls .env*)",
       "Bash(command -v chromium-cli)",
-      "PowerShell(git diff -- \"src/app/[locale]/_components/LandingClient.tsx\" | Select-Object -First 60; \\(Get-Content \"src/app/[locale]/_components/CatalogSection.tsx\" | Measure-Object -Line\\).Lines)"
+      "PowerShell(git diff -- \"src/app/[locale]/_components/LandingClient.tsx\" | Select-Object -First 60; \\(Get-Content \"src/app/[locale]/_components/CatalogSection.tsx\" | Measure-Object -Line\\).Lines)",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\Admin\\\\Documents\\\\GitHub\\\\ai-academy\\\\src\\\\app\\\\[locale]\\\\contact\\\\_components\")",
+      "Bash(Out-Null)",
+      "Bash(mkdir -p \"C:/Users/Admin/Documents/GitHub/ai-academy/src/app/[locale]/terms/_components\")",
+      "Bash(mkdir -p \"C:/Users/Admin/Documents/GitHub/ai-academy/src/app/[locale]/privacy/_components\")",
+      "Skill(claude-api)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 30)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 20)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx tsc --noEmit -p tsconfig.json 2>&1 | Select-Object -First 30)",
+      "PowerShell(npx eslint \"src/app/[locale]/courses/[id]/_components/CourseDetailClient.tsx\" \"src/app/[locale]/_components/CatalogSection.tsx\" 2>&1 | Select-Object -First 50)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 40)",
+      "PowerShell(npx eslint \"src/app/[locale]/courses/[id]/_components/CourseDetailClient.tsx\" \"src/lib/v2/i18n/en.ts\" \"src/lib/v2/i18n/ka.ts\" \"src/lib/v2/i18n/schema.ts\" 2>&1 | Select-Object -First 40)",
+      "Bash(grep -rniE \"id:\\\\s*'[a-z0-9-]{6,}'\" src/lib/v2/data.ts)",
+      "Read(//c/Users/Admin/AppData/Local/Temp/claude/C--Users-Admin-Documents-GitHub-ai-academy/7ea1c436-ae2a-45ff-acfe-8c40d6909553/tasks/**)",
+      "Bash(/c/Users/Admin/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --virtual-time-budget=4000 --window-size=1440,3800 --screenshot=/tmp/course.png http://localhost:3000/ka/courses/0c25caf6-ff30-4950-8d5b-f71c7a7eed9c)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(/c/Users/Admin/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --virtual-time-budget=4000 --window-size=1100,1500 --screenshot=/tmp/course_top.png http://localhost:3000/ka/courses/0c25caf6-ff30-4950-8d5b-f71c7a7eed9c)",
+      "Bash(/c/Users/Admin/AppData/Local/ms-playwright/chromium-1223/chrome-win64/chrome.exe --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --virtual-time-budget=4000 --window-size=1100,1200 --screenshot=/tmp/outcomes.png http://localhost:3000/ka/courses/0c25caf6-ff30-4950-8d5b-f71c7a7eed9c)",
+      "Bash(echo \"exit-of-tail:$?\")",
+      "PowerShell(Get-CimInstance *)"
     ]
   }
 }

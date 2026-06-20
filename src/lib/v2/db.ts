@@ -111,6 +111,8 @@ function buildCourse(
     lessons: lessonsForCourse.length,
     hours: Math.max(1, Math.round(totalMinutes(lessonsForCourse) / 60)),
     price: real.priceCents != null ? real.priceCents / 100 : undefined,
+    retailPrice:
+      real.retailPriceCents != null ? real.retailPriceCents / 100 : undefined,
     level: inferLevel(lessonsForCourse),
     icon: visual.icon,
   };

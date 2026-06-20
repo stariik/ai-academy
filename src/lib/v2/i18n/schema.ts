@@ -184,6 +184,16 @@ export type Dict = {
     lessonStart: string;
     markComplete: string;
     markIncomplete: string;
+    pathPhaseLabel: string;
+    pathNextUp: string;
+    pathFoundationsTitle: string;
+    pathFoundationsTagline: string;
+    pathPracticeTitle: string;
+    pathPracticeTagline: string;
+    pathProjectTitle: string;
+    pathProjectTagline: string;
+    pathFinishTitle: string;
+    pathFinishDesc: string;
     relatedEyebrowContinue: string;
     bundleLabel: string;
     bundleWholeCategory: string;
