@@ -175,7 +175,28 @@ function CoursePage({
     // The UI rail only renders the enroll button when isEnrolled=false.
     if (enrollments.includes(course.id)) return;
 
-    // Optimistic add, then call the API. Rollback on failure.
+    // Paid course → Bank of Georgia checkout. Access is granted by the
+    // payment callback, so we don't touch local enrollment state here.
+    if (course.price && course.price > 0) {
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseId: course.id, returnPath: localeHref(`courses/${course.id}`) }),
+        });
+        const data = await res.json();
+        if (res.ok && data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+        } else {
+          console.error('[checkout] failed:', data);
+        }
+      } catch (err) {
+        console.error('[checkout] failed:', err);
+      }
+      return;
+    }
+
+    // Free course — optimistic add, then call the API. Rollback on failure.
     setEnrollments((prev) => (prev.includes(course.id) ? prev : [...prev, course.id]));
     try {
       const res = await fetch('/api/enrollments', {
@@ -188,7 +209,7 @@ function CoursePage({
       console.error('[enroll] failed:', err);
       setEnrollments((prev) => prev.filter((x) => x !== course.id));
     }
-  }, [authed, course.id, enrollments]);
+  }, [authed, course.id, course.price, enrollments, localeHref]);
 
   const toggleLessonComplete = React.useCallback(
     (lessonId: string) => {
@@ -1839,10 +1860,10 @@ function BuyRailContent({
         className="group/cta mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-pulse text-primary-foreground h-14 text-base font-bold shadow-[0_12px_30px_var(--pulse-glow)] hover:shadow-[0_18px_45px_var(--pulse-glow)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
       >
         <span>
-          {isLoggedIn
-            ? dict.courseDetail.ctaStartLearning
-            : hasPrice
-              ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}`
+          {hasPrice
+            ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}`
+            : isLoggedIn
+              ? dict.courseDetail.ctaStartLearning
               : dict.courseDetail.ctaStartFree}
         </span>
         <ArrowRight className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
