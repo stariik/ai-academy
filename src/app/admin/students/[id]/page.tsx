@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { adminDb, getStudentDetail } from '@/lib/admin/queries';
 import EnrollmentManager from './_components/EnrollmentManager';
+import PaymentsPanel, { type PaymentRow } from './_components/PaymentsPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,32 @@ export default async function AdminStudentDetailPage({
     .select('id, title')
     .order('title');
   const courses = (courseRows ?? []) as { id: string; title: string }[];
+
+  // Payment history (only exists for account-linked students).
+  let payments: PaymentRow[] = [];
+  if (student.userId) {
+    const { data: paymentRows } = await adminDb()
+      .from('payments')
+      .select('id, course_id, amount_cents, currency, status, created_at')
+      .eq('user_id', student.userId)
+      .order('created_at', { ascending: false });
+    const titleById = new Map(courses.map((c) => [c.id, c.title]));
+    payments = ((paymentRows ?? []) as {
+      id: string;
+      course_id: string;
+      amount_cents: number;
+      currency: string;
+      status: string;
+      created_at: string;
+    }[]).map((r) => ({
+      id: r.id,
+      courseTitle: titleById.get(r.course_id) ?? r.course_id,
+      amountCents: r.amount_cents,
+      currency: r.currency,
+      status: r.status,
+      createdAt: r.created_at,
+    }));
+  }
 
   const p = student.profile;
 
@@ -152,6 +179,9 @@ export default async function AdminStudentDetailPage({
         enrollments={student.enrollments}
         courses={courses}
       />
+
+      {/* Payments + refunds */}
+      <PaymentsPanel payments={payments} />
 
       {/* Lesson progress */}
       <section className="rounded-xl border border-gray-200 bg-white">

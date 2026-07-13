@@ -98,6 +98,26 @@ export async function createOrder(
 }
 
 /**
+ * Refund a completed order (full refund when amountGel matches the charge).
+ * Per https://api.bog.ge/docs/en/payments — POST /payment/refund/:order_id.
+ * Throws on any BOG error; caller must not touch local state if this throws.
+ */
+export async function refundOrder(orderId: string, amountGel: number): Promise<void> {
+  const token = await getToken();
+  const res = await fetch(`https://api.bog.ge/payments/v1/payment/refund/${orderId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ amount: amountGel }),
+  });
+  if (!res.ok) {
+    throw new Error(`BOG refund failed: ${res.status} ${await res.text()}`);
+  }
+}
+
+/**
  * Verify the `Callback-Signature` header against the raw (unparsed) request
  * body. Must run before JSON.parse so the byte order is exactly what BOG
  * signed. Returns false on any error — caller rejects unverified callbacks.

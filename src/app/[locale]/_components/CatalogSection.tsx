@@ -78,6 +78,7 @@ const GUEST_ENROLL_KEY = 'ai_academy_enrollments';
    read ownership without threading props through the Slider's children. */
 type BundleStore = {
   isOwned: (category: Category) => boolean;
+  isCourseOwned: (courseId: string) => boolean;
   openBuy: (category: Category) => void;
 };
 const BundleCtx = React.createContext<BundleStore | null>(null);
@@ -180,8 +181,8 @@ export function CatalogSection({
   );
 
   const store = React.useMemo<BundleStore>(
-    () => ({ isOwned, openBuy: setActiveBundle }),
-    [isOwned],
+    () => ({ isOwned, isCourseOwned: (id) => owned.has(id), openBuy: setActiveBundle }),
+    [isOwned, owned],
   );
 
   return (
@@ -998,6 +999,7 @@ function CourseCard({
 }) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
+  const owned = useBundle()?.isCourseOwned(co.id) ?? false;
   const isFree = !(typeof co.price === 'number' && co.price > 0);
   // Admin-set "was" price → struck retail + discount %, mirroring the course
   // detail page. Only shown when a retail price genuinely exceeds the current one.
@@ -1052,7 +1054,7 @@ function CourseCard({
         >
           {c.icon}
         </span>
-        {discount > 0 && (
+        {!owned && discount > 0 && (
           <span
             className={cn(
               'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
@@ -1108,7 +1110,7 @@ function CourseCard({
               ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
               {dict.courseCard.hoursShort}
             </span>
-            {save > 0 && (
+            {!owned && save > 0 && (
               <span className={cn('inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold', t.chip)}>
                 {dict.catalog.bundleSave} ₾{save}
               </span>
@@ -1117,7 +1119,14 @@ function CourseCard({
 
           {/* price · CTA */}
           <div className="mt-2 flex items-end justify-between gap-3">
-            {isFree ? (
+            {owned ? (
+              <span className={cn('inline-flex items-center gap-1.5 text-[15px] font-bold', t.text)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                {dict.catalog.bundleOwned}
+              </span>
+            ) : isFree ? (
               <span
                 className={cn('text-[20px] font-bold leading-none tracking-tight', t.text)}
                 style={{ fontFamily: 'var(--font-display)' }}

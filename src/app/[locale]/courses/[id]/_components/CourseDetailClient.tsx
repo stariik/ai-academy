@@ -35,7 +35,8 @@ import {
   type Course, type Category, type CourseDetail, type Lesson,
 } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
-import { LanguageSwitcher } from '../../../_components/LandingClient';
+import { LanguageSwitcher, UserMenu } from '../../../_components/LandingClient';
+import type { AuthUser } from '@/lib/auth';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import {
   redeemPromoCode,
@@ -86,7 +87,9 @@ export default function CourseDetailClient({
   dict,
   locale,
   authed,
+  authUser,
   enrolledCourseIds,
+  completedLessonIds,
 }: {
   course: Course;
   category: Category;
@@ -95,7 +98,9 @@ export default function CourseDetailClient({
   dict: Dict;
   locale: Locale;
   authed: boolean;
+  authUser: AuthUser | null;
   enrolledCourseIds: string[];
+  completedLessonIds: string[];
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
@@ -105,7 +110,9 @@ export default function CourseDetailClient({
         detail={detail}
         related={related}
         authed={authed}
+        authUser={authUser}
         enrolledCourseIds={enrolledCourseIds}
+        completedLessonIds={completedLessonIds}
       />
     </V2LocaleProvider>
   );
@@ -123,28 +130,35 @@ function CoursePage({
   detail,
   related,
   authed,
+  authUser,
   enrolledCourseIds,
+  completedLessonIds,
 }: {
   course: Course;
   category: Category;
   detail: CourseDetail;
   related: Course[];
   authed: boolean;
+  authUser: AuthUser | null;
   enrolledCourseIds: string[];
+  completedLessonIds: string[];
 }) {
   const { dict, href: localeHref } = useV2Locale();
   // --- view state -----------------------------------------------------------
   const [viewAs, setViewAs] = React.useState<ViewAs | null>(null);
   const [enrollments, setEnrollments] = React.useState<string[]>(enrolledCourseIds);
-  const [progress, setProgress] = React.useState<Set<string>>(new Set());
+  // Authed: server progress (account-wide, cross-device). Guests: localStorage.
+  const [progress, setProgress] = React.useState<Set<string>>(
+    () => new Set(authed ? completedLessonIds : []),
+  );
 
   React.useEffect(() => {
     if (!authed) {
       setEnrollments(readGuestEnrollments());
+      setProgress(readProgress(course.id));
     }
-    setProgress(readProgress(course.id));
     const stored = localStorage.getItem(VIEW_AS_KEY) as ViewAs | null;
-    setViewAs(stored ?? (authed ? 'logged-in' : 'guest'));
+    setViewAs(stored ?? (authed ? (enrolledCourseIds.includes(course.id) ? 'enrolled' : 'logged-in') : 'guest'));
   }, [course.id, authed]);
 
   const effectiveState: ViewAs =
@@ -160,7 +174,13 @@ function CoursePage({
   }, []);
 
   const toggleEnrollment = React.useCallback(async () => {
-    // Guests (no auth) — keep the localStorage demo behaviour.
+    // Guests can't buy — send them to login first (paid courses only).
+    if (!authed && course.price && course.price > 0) {
+      window.location.href = localeHref('login');
+      return;
+    }
+
+    // Guests (no auth) — keep the localStorage demo behaviour for free courses.
     if (!authed) {
       setEnrollments((prev) => {
         const already = prev.includes(course.id);
@@ -184,11 +204,11 @@ function CoursePage({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ courseId: course.id, returnPath: localeHref(`courses/${course.id}`) }),
         });
-        const data = await res.json();
+        const data = (await res.json().catch(() => ({}))) as { redirectUrl?: string };
         if (res.ok && data.redirectUrl) {
           window.location.href = data.redirectUrl;
         } else {
-          console.error('[checkout] failed:', data);
+          console.error('[checkout] failed:', res.status);
         }
       } catch (err) {
         console.error('[checkout] failed:', err);
@@ -213,18 +233,28 @@ function CoursePage({
 
   const toggleLessonComplete = React.useCallback(
     (lessonId: string) => {
-      setProgress((prev) => {
-        const next = new Set(prev);
-        if (next.has(lessonId)) next.delete(lessonId);
-        else next.add(lessonId);
+      const nowDone = !progress.has(lessonId);
+      const next = new Set(progress);
+      if (nowDone) next.add(lessonId);
+      else next.delete(lessonId);
+      setProgress(next);
+
+      if (authed) {
+        // Persist to the account (same endpoint the lesson player uses),
+        // so the checkmark survives devices and browsers.
+        void fetch('/api/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lessonId, status: nowDone ? 'completed' : 'in_progress' }),
+        }).catch((err) => console.error('[progress] save failed:', err));
+      } else {
         localStorage.setItem(
           `${ENROLLMENT_KEY}:${course.id}:progress`,
           JSON.stringify(Array.from(next)),
         );
-        return next;
-      });
+      }
     },
-    [course.id],
+    [authed, course.id, progress],
   );
 
   const totalLessons = detail.modules.reduce((acc, m) => acc + m.lessons.length, 0);
@@ -246,7 +276,7 @@ function CoursePage({
   // --- render ---------------------------------------------------------------
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-      <Navbar />
+      <Navbar authUser={authUser} />
 
       <main className="relative">
         <Hero
@@ -345,7 +375,7 @@ function CoursePage({
    Navbar — minimal, mirrors /v2 visual shell
    ============================================================ */
 
-function Navbar() {
+function Navbar({ authUser }: { authUser: AuthUser | null }) {
   const { dict, href } = useV2Locale();
   const [scrolled, setScrolled] = React.useState(false);
   React.useEffect(() => {
@@ -376,18 +406,24 @@ function Navbar() {
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
           <ThemeToggle />
-          <a
-            href={href('login')}
-            className="hidden sm:inline-flex text-sm font-semibold px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {dict.navbar.signIn}
-          </a>
-          <a
-            href={href('register')}
-            className="inline-flex text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
-          >
-            {dict.navbar.signUp}
-          </a>
+          {authUser ? (
+            <UserMenu authUser={authUser} />
+          ) : (
+            <>
+              <a
+                href={href('login')}
+                className="hidden sm:inline-flex text-sm font-semibold px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {dict.navbar.signIn}
+              </a>
+              <a
+                href={href('register')}
+                className="inline-flex text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+              >
+                {dict.navbar.signUp}
+              </a>
+            </>
+          )}
         </div>
       </div>
     </header>
