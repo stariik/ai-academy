@@ -14,6 +14,7 @@
 import 'server-only';
 import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js';
 import { getPaymentDetails } from '@/lib/bog';
+import { CATEGORY_VISUALS } from '@/lib/v2/data';
 
 export function serviceClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,12 +27,52 @@ export function serviceClient(): SupabaseClient {
   });
 }
 
+// A payment targets exactly one of these (enforced by payments_target_ck).
 export type PaymentRow = {
   id: string;
   user_id: string;
-  course_id: string;
+  course_id: string | null;
+  category_slug: string | null;
   status: string;
 };
+
+/** Canonical KA category name for a storefront slug, or null if unknown. */
+export function categoryNameForSlug(slug: string): string | null {
+  for (const [nameKa, visual] of Object.entries(CATEGORY_VISUALS)) {
+    if (visual.slug === slug) return nameKa;
+  }
+  return null;
+}
+
+/** Every course tagged with a category, by storefront slug. */
+export async function categoryCourseIds(
+  svc: SupabaseClient,
+  slug: string,
+): Promise<string[]> {
+  const nameKa = categoryNameForSlug(slug);
+  if (!nameKa) return [];
+  const { data, error } = await svc.from('courses').select('id').contains('tags', [nameKa]);
+  if (error) {
+    console.error('[fulfill] category course lookup failed:', error);
+    return [];
+  }
+  return (data ?? []).map((r) => r.id as string);
+}
+
+/**
+ * The courses a payment grants: one for a single-course buy, the whole
+ * category for a bundle. A bundle is a bulk course purchase — the set is
+ * resolved at fulfillment time, so it's whatever the category holds when the
+ * money lands, and courses added later are not retroactively included.
+ */
+export async function paymentCourseIds(
+  svc: SupabaseClient,
+  payment: PaymentRow,
+): Promise<string[]> {
+  if (payment.course_id) return [payment.course_id];
+  if (payment.category_slug) return categoryCourseIds(svc, payment.category_slug);
+  return [];
+}
 
 /**
  * Apply a resolved BOG order status to our records. Idempotent.
@@ -48,13 +89,24 @@ export async function fulfillOrder(
   if (statusKey === 'completed') {
     if (payment.status === 'paid') return { ok: true, granted: true };
 
-    const ins = await svc
-      .from('enrollments')
-      .insert({ user_id: payment.user_id, course_id: payment.course_id, source: 'purchase' });
-    // 23505 = already enrolled (retried callback / earlier reconcile). Success.
-    if (ins.error && ins.error.code !== '23505') {
+    const courseIds = await paymentCourseIds(svc, payment);
+    if (courseIds.length === 0) {
+      // Paid for something we can't resolve to courses (unknown slug, emptied
+      // category). Don't mark it paid — a retry can still grant once fixed.
+      console.error('[fulfill] payment grants no courses:', payment.id);
+      return { ok: false, granted: false };
+    }
+
+    // ignoreDuplicates so a retried callback, an earlier reconcile, or a
+    // bundle overlapping a course the user already owns all no-op cleanly
+    // instead of failing the whole grant on one conflict.
+    const ins = await svc.from('enrollments').upsert(
+      courseIds.map((course_id) => ({ user_id: payment.user_id, course_id, source: 'purchase' })),
+      { onConflict: 'user_id,course_id', ignoreDuplicates: true },
+    );
+    if (ins.error) {
       // Grant genuinely failed — leave status untouched so a retry can grant.
-      console.error('[fulfill] enrollment insert failed:', ins.error);
+      console.error('[fulfill] enrollment upsert failed:', ins.error);
       return { ok: false, granted: false };
     }
     await svc
@@ -76,16 +128,21 @@ export async function fulfillOrder(
 
   // Refund observed on the order — most importantly refunds issued from BOG's
   // own Business Manager, which never touch our admin refund route. Keep access
-  // in sync by revoking the purchase enrollment.
-  // ponytail: 'refunded_partially' treated like a full refund — our product is
-  // one all-or-nothing course, so a partial refund of it isn't a real case.
+  // in sync by revoking the purchase enrollments this payment granted.
+  // ponytail: 'refunded_partially' revokes the whole payment. A part-refunded
+  // bundle is the only real case, and BOG's payload doesn't say which course
+  // the money came off — so we revoke it all rather than guess. Revisit if
+  // per-course bundle refunds ever become a thing we offer.
   if (statusKey === 'refunded' || statusKey === 'refunded_partially') {
-    await svc
-      .from('enrollments')
-      .delete()
-      .eq('user_id', payment.user_id)
-      .eq('course_id', payment.course_id)
-      .eq('source', 'purchase');
+    const courseIds = await paymentCourseIds(svc, payment);
+    if (courseIds.length > 0) {
+      await svc
+        .from('enrollments')
+        .delete()
+        .eq('user_id', payment.user_id)
+        .in('course_id', courseIds)
+        .eq('source', 'purchase');
+    }
     await svc
       .from('payments')
       .update({ status: 'refunded', updated_at: new Date().toISOString() })
@@ -99,23 +156,27 @@ export async function fulfillOrder(
 
 /**
  * Fallback used when the browser returns from BOG with ?payment=success.
- * Finds the user's most recent not-yet-paid payment for this course, asks BOG
+ * Finds the user's most recent not-yet-paid payment for this target, asks BOG
  * for the real status, and grants access if it completed. No-op (returns the
  * webhook's result) if the webhook already handled it. Never throws.
  */
-export async function reconcileCoursePurchase(
+async function reconcile(
   userId: string,
-  courseId: string,
+  target: { courseId: string } | { categorySlug: string },
 ): Promise<boolean> {
   try {
     const svc = serviceClient();
-    const { data: payment } = await svc
+    const base = svc
       .from('payments')
-      .select('id, user_id, course_id, status, bog_order_id')
+      .select('id, user_id, course_id, category_slug, status, bog_order_id')
       .eq('user_id', userId)
-      .eq('course_id', courseId)
       .neq('status', 'paid')
-      .not('bog_order_id', 'is', null)
+      .not('bog_order_id', 'is', null);
+
+    const { data: payment } = await ('courseId' in target
+      ? base.eq('course_id', target.courseId)
+      : base.eq('category_slug', target.categorySlug)
+    )
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -132,4 +193,14 @@ export async function reconcileCoursePurchase(
     console.error('[reconcile] failed:', err);
     return false;
   }
+}
+
+/** Reconcile a single-course purchase on return from BOG. */
+export function reconcileCoursePurchase(userId: string, courseId: string): Promise<boolean> {
+  return reconcile(userId, { courseId });
+}
+
+/** Reconcile a category bundle purchase on return from BOG. */
+export function reconcileBundlePurchase(userId: string, categorySlug: string): Promise<boolean> {
+  return reconcile(userId, { categorySlug });
 }

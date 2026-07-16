@@ -99,7 +99,7 @@ export function CatalogSection({
   authed?: boolean;
   enrolledCourseIds?: string[];
 }) {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   const withCourses = categories.filter((c) => c.courses > 0);
 
   // category id → its course ids (a bundle = all of them).
@@ -135,12 +135,46 @@ export function CatalogSection({
     [coursesByCat, owned],
   );
 
-  // Grant the whole bundle. Authed → POST the bundle route; guest → localStorage.
-  // Optimistic, with rollback if the authed call fails.
+  // Buy / grant the whole bundle:
+  //   paid + guest  → login first (they can't buy signed out)
+  //   paid + authed → BOG checkout; access is granted by the payment callback,
+  //                   so we don't touch local ownership here
+  //   free + authed → POST the bundle route (optimistic, rollback on failure)
+  //   free + guest  → localStorage demo behaviour
   const grantBundle = React.useCallback(
     async (category: Category) => {
       const ids = coursesByCat.get(category.id) ?? [];
       if (ids.length === 0) return;
+
+      // Paid == an admin-set bundle price, which is exactly what the server
+      // will charge. The derived fallback price is display-only and never sold.
+      const paid = (category.price ?? 0) > 0;
+
+      if (paid && !authed) {
+        window.location.href = href('login');
+        return;
+      }
+
+      if (paid) {
+        // Throw on failure: the dialog turns that into its error state. If we
+        // swallowed it, it would show "purchased" for a buy that never happened.
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoryId: category.id, returnPath: href() }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          redirectUrl?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.redirectUrl) {
+          console.error('[bundle] checkout failed:', res.status, data.error);
+          throw new Error(data.error ?? 'checkout_failed');
+        }
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
       setOwned((prev) => {
         const next = new Set(prev);
         ids.forEach((id) => next.add(id));
@@ -177,7 +211,7 @@ export function CatalogSection({
         }
       }
     },
-    [authed, coursesByCat],
+    [authed, coursesByCat, href],
   );
 
   const store = React.useMemo<BundleStore>(

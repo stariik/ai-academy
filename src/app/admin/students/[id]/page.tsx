@@ -58,20 +58,24 @@ export default async function AdminStudentDetailPage({
   if (student.userId) {
     const { data: paymentRows } = await adminDb()
       .from('payments')
-      .select('id, course_id, amount_cents, currency, status, created_at')
+      .select('id, course_id, category_slug, amount_cents, currency, status, created_at')
       .eq('user_id', student.userId)
       .order('created_at', { ascending: false });
     const titleById = new Map(courses.map((c) => [c.id, c.title]));
     payments = ((paymentRows ?? []) as {
       id: string;
-      course_id: string;
+      course_id: string | null;
+      category_slug: string | null;
       amount_cents: number;
       currency: string;
       status: string;
       created_at: string;
     }[]).map((r) => ({
       id: r.id,
-      courseTitle: titleById.get(r.course_id) ?? r.course_id,
+      // Exactly one of course_id / category_slug is set (payments_target_ck).
+      courseTitle: r.course_id
+        ? titleById.get(r.course_id) ?? r.course_id
+        : `${r.category_slug} — full bundle`,
       amountCents: r.amount_cents,
       currency: r.currency,
       status: r.status,

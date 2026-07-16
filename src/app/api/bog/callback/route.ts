@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   const svc = serviceClient();
   const { data: payment } = await svc
     .from('payments')
-    .select('id, user_id, course_id, status')
+    .select('id, user_id, course_id, category_slug, status')
     .eq('bog_order_id', orderId)
     .maybeSingle();
 

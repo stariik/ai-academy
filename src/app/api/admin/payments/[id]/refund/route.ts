@@ -4,7 +4,8 @@
 // Keeps money and access in sync in one action:
 //   1. refund the full amount at Bank of Georgia
 //   2. mark the payment status='refunded'
-//   3. revoke the matching source='purchase' enrollment
+//   3. revoke the source='purchase' enrollments this payment granted —
+//      one course, or every course of a category bundle
 //
 // BOG is called first: if the money can't move, nothing local changes.
 // If a local step fails AFTER the BOG refund succeeded, we return 500
@@ -16,6 +17,7 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/admin-auth';
 import { adminDb } from '@/lib/admin/queries';
 import { refundOrder } from '@/lib/bog';
+import { paymentCourseIds, type PaymentRow } from '@/lib/payments-fulfill';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -28,7 +30,7 @@ export async function POST(_req: Request, context: RouteContext) {
 
   const { data: payment } = await db
     .from('payments')
-    .select('id, user_id, course_id, bog_order_id, amount_cents, status')
+    .select('id, user_id, course_id, category_slug, bog_order_id, amount_cents, status')
     .eq('id', id)
     .maybeSingle();
 
@@ -38,6 +40,13 @@ export async function POST(_req: Request, context: RouteContext) {
   }
   if (!payment.bog_order_id) {
     return NextResponse.json({ error: 'no_bog_order' }, { status: 409 });
+  }
+
+  // Work out what to revoke BEFORE moving money: if we can't resolve what this
+  // payment granted, refuse outright rather than refund and leave access behind.
+  const courseIds = await paymentCourseIds(db, payment as PaymentRow);
+  if (courseIds.length === 0) {
+    return NextResponse.json({ error: 'nothing_to_revoke' }, { status: 409 });
   }
 
   try {
@@ -60,12 +69,12 @@ export async function POST(_req: Request, context: RouteContext) {
     );
   }
 
-  // Only pull a purchase enrollment — never an admin/promo/free grant.
+  // Only pull purchase enrollments — never an admin/promo/free grant.
   const del = await db
     .from('enrollments')
     .delete()
     .eq('user_id', payment.user_id)
-    .eq('course_id', payment.course_id)
+    .in('course_id', courseIds)
     .eq('source', 'purchase');
   if (del.error) {
     console.error('[admin/refund] refunded but enrollment revoke failed:', del.error);
