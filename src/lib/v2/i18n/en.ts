@@ -257,12 +257,6 @@ export const en: Dict = {
     footerCourses: 'Courses',
     continueShort: 'Continue',
     startShort: 'Start',
-    viewAsGuest: 'Guest',
-    viewAsLoggedIn: 'Logged in',
-    viewAsEnrolled: 'Enrolled',
-    demoMode: 'Demo mode',
-    demoModeNote: 'Temporary only — until real auth is wired up.',
-    viewLabel: 'View:',
   },
 
   lesson: {

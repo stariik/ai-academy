@@ -224,12 +224,6 @@ export type Dict = {
     footerCourses: string;
     continueShort: string;
     startShort: string;
-    viewAsGuest: string;
-    viewAsLoggedIn: string;
-    viewAsEnrolled: string;
-    demoMode: string;
-    demoModeNote: string;
-    viewLabel: string;
   };
   lesson: {
     backToCourse: string;

@@ -18,11 +18,11 @@
  */
 
 import * as React from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, ChevronRight, Clock, Lock, Play, Sparkles,
   Star, ArrowRight, ArrowLeft, Heart, BookOpen, Users,
-  CircleDot, Trophy, Eye, X, Zap,
+  CircleDot, Trophy, Eye, Zap,
   ShieldCheck, Award, Infinity as InfinityIcon, MessageCircle, GraduationCap,
 } from 'lucide-react';
 
@@ -50,12 +50,10 @@ import {
      Clicking "Enroll" POSTs to /api/enrollments (source='free' for now;
      promo flow uses /api/promo/redeem which creates its own enrollment).
    • Guests: localStorage stub kept so the marketing demo flows still work.
-   • ViewAsToggle (dev tool) overrides client state only — never writes the DB.
    ============================================================ */
 
 const ENROLLMENT_KEY = 'ai_academy_enrollments';
-const VIEW_AS_KEY = 'ai_academy_view_as';
-type ViewAs = 'guest' | 'logged-in' | 'enrolled';
+type ViewerState = 'guest' | 'logged-in' | 'enrolled';
 
 function readGuestEnrollments(): string[] {
   try {
@@ -145,7 +143,6 @@ function CoursePage({
 }) {
   const { dict, href: localeHref } = useV2Locale();
   // --- view state -----------------------------------------------------------
-  const [viewAs, setViewAs] = React.useState<ViewAs | null>(null);
   const [enrollments, setEnrollments] = React.useState<string[]>(enrolledCourseIds);
   // Authed: server progress (account-wide, cross-device). Guests: localStorage.
   const [progress, setProgress] = React.useState<Set<string>>(
@@ -157,12 +154,13 @@ function CoursePage({
       setEnrollments(readGuestEnrollments());
       setProgress(readProgress(course.id));
     }
-    const stored = localStorage.getItem(VIEW_AS_KEY) as ViewAs | null;
-    setViewAs(stored ?? (authed ? (enrolledCourseIds.includes(course.id) ? 'enrolled' : 'logged-in') : 'guest'));
   }, [course.id, authed]);
 
-  const effectiveState: ViewAs =
-    viewAs ?? (authed ? (enrollments.includes(course.id) ? 'enrolled' : 'logged-in') : 'guest');
+  const effectiveState: ViewerState = authed
+    ? enrollments.includes(course.id)
+      ? 'enrolled'
+      : 'logged-in'
+    : 'guest';
 
   const isEnrolled = effectiveState === 'enrolled';
   const isLoggedIn = effectiveState !== 'guest';
@@ -346,27 +344,6 @@ function CoursePage({
         onEnroll={toggleEnrollment}
       />
 
-      <ViewAsToggle
-        viewAs={effectiveState}
-        onChange={(v) => {
-          setViewAs(v);
-          localStorage.setItem(VIEW_AS_KEY, v);
-          // Dev tool only fakes the visual state — it never writes the DB.
-          // Real enrollment goes through the Enroll button → /api/enrollments.
-          if (!authed) {
-            if (v === 'enrolled' && !enrollments.includes(course.id)) {
-              const next = [...enrollments, course.id];
-              setEnrollments(next);
-              writeGuestEnrollments(next);
-            }
-            if (v !== 'enrolled' && enrollments.includes(course.id)) {
-              const next = enrollments.filter((x) => x !== course.id);
-              setEnrollments(next);
-              writeGuestEnrollments(next);
-            }
-          }
-        }}
-      />
     </div>
   );
 }
@@ -2189,78 +2166,6 @@ function Footer() {
         </div>
       </div>
     </footer>
-  );
-}
-
-/* ============================================================
-   View-as toggle (dev tool)
-   ============================================================ */
-
-function ViewAsToggle({
-  viewAs,
-  onChange,
-}: {
-  viewAs: ViewAs;
-  onChange: (v: ViewAs) => void;
-}) {
-  const { dict } = useV2Locale();
-  const [open, setOpen] = React.useState(false);
-
-  const labels: Record<ViewAs, string> = {
-    guest: dict.courseDetail.viewAsGuest,
-    'logged-in': dict.courseDetail.viewAsLoggedIn,
-    enrolled: dict.courseDetail.viewAsEnrolled,
-  };
-
-  return (
-    <div className="fixed left-3 bottom-3 z-40">
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.18 }}
-            className="mb-2 rounded-2xl border border-border bg-card shadow-[0_12px_40px_rgba(0,0,0,0.10)] p-2 w-52"
-          >
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold px-2 pt-1 pb-2">
-              {dict.courseDetail.demoMode}
-            </p>
-            {(['guest', 'logged-in', 'enrolled'] as ViewAs[]).map((v) => (
-              <button
-                key={v}
-                onClick={() => {
-                  onChange(v);
-                  setOpen(false);
-                }}
-                className={cn(
-                  'w-full text-left flex items-center justify-between px-2 py-2 rounded-lg text-sm transition-colors',
-                  viewAs === v ? 'bg-pulse/10 text-pulse font-bold' : 'hover:bg-muted',
-                )}
-              >
-                <span>{labels[v]}</span>
-                {viewAs === v && <Check className="w-4 h-4" strokeWidth={2.6} />}
-              </button>
-            ))}
-            <p className="text-[10px] text-muted-foreground px-2 pt-2 pb-1">
-              {dict.courseDetail.demoModeNote}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={cn(
-          'rounded-full bg-card/95 backdrop-blur-md border border-border shadow-[0_8px_24px_rgba(0,0,0,0.10)] px-3.5 py-2 text-xs font-bold inline-flex items-center gap-2 hover:border-pulse/40 transition-colors',
-        )}
-      >
-        {open ? <X className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-        <span className="hidden sm:inline">{dict.courseDetail.viewLabel}</span>
-        <span className="text-pulse">{labels[viewAs]}</span>
-      </button>
-    </div>
   );
 }
 

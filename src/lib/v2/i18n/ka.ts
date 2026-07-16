@@ -256,12 +256,6 @@ export const ka: Dict = {
     footerCourses: 'კურსები',
     continueShort: 'გააგრძელე',
     startShort: 'დაიწყე',
-    viewAsGuest: 'სტუმარი',
-    viewAsLoggedIn: 'შესული',
-    viewAsEnrolled: 'ჩარიცხული',
-    demoMode: 'დემო რეჟიმი',
-    demoModeNote: 'მხოლოდ დროებითი — სანამ ნამდვილი auth ჩაირთვება.',
-    viewLabel: 'ხედი:',
   },
 
   lesson: {
