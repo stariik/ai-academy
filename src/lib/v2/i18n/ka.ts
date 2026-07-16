@@ -59,6 +59,8 @@ export const ka: Dict = {
     bundleIncludes: 'რა შედის პაკეტში',
     bundleConfirm: 'დადასტურება და გახსნა',
     bundleProcessing: 'იხსნება…',
+    bundleBuy: 'პაკეტის შეძენა',
+    bundleRedirecting: 'გადახდაზე გადამისამართება…',
     bundleDoneTitle: 'პაკეტი შენია',
     bundleDoneDesc: 'ყველა კურსი გახსნილია. შემოდი მაშინ, როცა მოგინდება.',
     bundleStart: 'დაიწყე სწავლა',

@@ -1290,12 +1290,18 @@ function BundleDialog({
   const social = bundleSocial(c.id, c.courses, c.lessons);
   const hasImage = Boolean(c.imageUrl);
   const busy = phase === 'processing';
+  // An admin-set bundle price means this is a real purchase: the button buys,
+  // and onConfirm hands off to BOG (or to login) rather than granting anything.
+  const paid = (c.price ?? 0) > 0;
 
   const handleConfirm = async () => {
     setPhase('processing');
     try {
       await onConfirm(c);
-      setPhase('done');
+      // A paid bundle is navigating away to the bank right now — nothing is
+      // owned until the payment callback says so, so stay on the spinner
+      // instead of flashing "the bundle is yours" at someone who hasn't paid.
+      if (!paid) setPhase('done');
     } catch {
       setPhase('error');
     }
@@ -1494,11 +1500,11 @@ function BundleDialog({
                     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                     <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   </svg>
-                  {dict.catalog.bundleProcessing}
+                  {paid ? dict.catalog.bundleRedirecting : dict.catalog.bundleProcessing}
                 </>
               ) : (
                 <>
-                  {dict.catalog.bundleConfirm}
+                  {paid ? dict.catalog.bundleBuy : dict.catalog.bundleConfirm}
                   <span className="opacity-70">·</span>
                   <span className="tabular-nums">₾{price.bundle}</span>
                 </>
