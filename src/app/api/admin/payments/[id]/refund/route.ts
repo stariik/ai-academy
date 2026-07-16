@@ -41,7 +41,7 @@ export async function POST(_req: Request, context: RouteContext) {
   }
 
   try {
-    await refundOrder(payment.bog_order_id, payment.amount_cents / 100);
+    await refundOrder(payment.bog_order_id);
   } catch (err) {
     console.error('[admin/refund] BOG refund failed:', err);
     return NextResponse.json({ error: 'bog_refund_failed' }, { status: 502 });

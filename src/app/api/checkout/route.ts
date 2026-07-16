@@ -92,7 +92,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'db_error' }, { status: 500 });
   }
 
-  const origin = new URL(req.url).origin;
+  // BOG rejects non-https callback urls, so localhost can't be used directly:
+  // point PUBLIC_SITE_URL at a tunnel in dev, at the real domain in prod.
+  const origin = process.env.PUBLIC_SITE_URL ?? new URL(req.url).origin;
   const returnPath = safePath(body.returnPath, `/courses/${courseId}`);
 
   try {

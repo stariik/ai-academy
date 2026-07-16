@@ -16,6 +16,7 @@ import { createVerify } from 'node:crypto';
 
 const TOKEN_URL = 'https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token';
 const ORDERS_URL = 'https://api.bog.ge/payments/v1/ecommerce/orders';
+const RECEIPT_URL = 'https://api.bog.ge/payments/v1/receipt'; // GET :order_id
 
 // BOG's published callback-signing public key (SHA256withRSA). Static.
 const BOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
@@ -98,11 +99,37 @@ export async function createOrder(
 }
 
 /**
- * Refund a completed order (full refund when amountGel matches the charge).
- * Per https://api.bog.ge/docs/en/payments — POST /payment/refund/:order_id.
+ * Read the current status of an order. Used to reconcile a payment when the
+ * webhook was missed (BOG's docs recommend this as the callback fallback).
+ * Returns order_status.key ('completed' | 'rejected' | 'refunded' | …) and
+ * external_order_id so the caller can confirm it's the payment it expects.
+ */
+export async function getPaymentDetails(
+  orderId: string,
+): Promise<{ statusKey?: string; externalOrderId?: string }> {
+  const token = await getToken();
+  const res = await fetch(`${RECEIPT_URL}/${orderId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(`BOG get payment details failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as {
+    external_order_id?: string;
+    order_status?: { key?: string };
+  };
+  return { statusKey: data.order_status?.key, externalOrderId: data.external_order_id };
+}
+
+/**
+ * Full refund of a completed order.
+ * Per https://api.bog.ge/docs/payments/refund — POST /payment/refund/:order_id.
+ * We intentionally omit `amount`: the docs require omitting it for a full
+ * refund, and sending our requested amount would exceed transfer_amount (and
+ * be rejected) whenever a bank/network discount reduced what the card paid.
  * Throws on any BOG error; caller must not touch local state if this throws.
  */
-export async function refundOrder(orderId: string, amountGel: number): Promise<void> {
+export async function refundOrder(orderId: string): Promise<void> {
   const token = await getToken();
   const res = await fetch(`https://api.bog.ge/payments/v1/payment/refund/${orderId}`, {
     method: 'POST',
@@ -110,7 +137,7 @@ export async function refundOrder(orderId: string, amountGel: number): Promise<v
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ amount: amountGel }),
+    body: '{}',
   });
   if (!res.ok) {
     throw new Error(`BOG refund failed: ${res.status} ${await res.text()}`);
