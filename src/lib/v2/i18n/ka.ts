@@ -59,6 +59,8 @@ export const ka: Dict = {
     bundleIncludes: 'რა შედის პაკეტში',
     bundleConfirm: 'დადასტურება და გახსნა',
     bundleProcessing: 'იხსნება…',
+    bundleBuy: 'პაკეტის შეძენა',
+    bundleRedirecting: 'გადახდაზე გადამისამართება…',
     bundleDoneTitle: 'პაკეტი შენია',
     bundleDoneDesc: 'ყველა კურსი გახსნილია. შემოდი მაშინ, როცა მოგინდება.',
     bundleStart: 'დაიწყე სწავლა',
@@ -256,12 +258,6 @@ export const ka: Dict = {
     footerCourses: 'კურსები',
     continueShort: 'გააგრძელე',
     startShort: 'დაიწყე',
-    viewAsGuest: 'სტუმარი',
-    viewAsLoggedIn: 'შესული',
-    viewAsEnrolled: 'ჩარიცხული',
-    demoMode: 'დემო რეჟიმი',
-    demoModeNote: 'მხოლოდ დროებითი — სანამ ნამდვილი auth ჩაირთვება.',
-    viewLabel: 'ხედი:',
   },
 
   lesson: {

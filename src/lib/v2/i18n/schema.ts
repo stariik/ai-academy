@@ -58,6 +58,8 @@ export type Dict = {
     bundleIncludes: string;
     bundleConfirm: string;
     bundleProcessing: string;
+    bundleBuy: string;
+    bundleRedirecting: string;
     bundleDoneTitle: string;
     bundleDoneDesc: string;
     bundleStart: string;
@@ -224,12 +226,6 @@ export type Dict = {
     footerCourses: string;
     continueShort: string;
     startShort: string;
-    viewAsGuest: string;
-    viewAsLoggedIn: string;
-    viewAsEnrolled: string;
-    demoMode: string;
-    demoModeNote: string;
-    viewLabel: string;
   };
   lesson: {
     backToCourse: string;

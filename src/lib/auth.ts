@@ -4,6 +4,8 @@
 // ============================================================
 
 import 'server-only';
+import { cache } from 'react';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 
 export type AuthUser = {
@@ -13,8 +15,20 @@ export type AuthUser = {
   displayName: string | null;
 };
 
-/** Returns the currently authenticated Supabase user, or null. */
-export async function getAuthUser(): Promise<AuthUser | null> {
+/**
+ * Returns the currently authenticated Supabase user, or null.
+ * Wrapped in React cache() so repeated calls within one render dedupe to a
+ * single auth round-trip.
+ */
+export const getAuthUser = cache(async (): Promise<AuthUser | null> => {
+  // No auth cookie → definitely logged out. Skip the network round-trip that
+  // auth.getUser() makes to validate the token.
+  const cookieStore = await cookies();
+  const hasAuthCookie = cookieStore
+    .getAll()
+    .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
+  if (!hasAuthCookie) return null;
+
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   const u = data.user;
@@ -24,7 +38,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
     u.email?.split('@')[0] ??
     null;
   return { id: u.id, email: u.email ?? null, displayName };
-}
+});
 
 /** Convenience: throw / redirect-friendly. Throws if not authed. */
 export async function requireAuthUser(): Promise<AuthUser> {

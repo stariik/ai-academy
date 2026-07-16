@@ -1,32 +1,22 @@
 // ============================================================
 // POST /api/bog/callback — Bank of Georgia payment webhook
 //
-// BOG calls this server-to-server after a payment resolves. We:
+// BOG calls this server-to-server after a payment (or refund) resolves. We:
 //   1. verify the RSA-SHA256 `Callback-Signature` over the RAW body
 //   2. look up our payment by BOG's order_id
-//   3. on order_status 'completed' → grant the enrollment (purchase)
+//   3. hand the order_status to fulfillOrder() (grant / fail / revoke)
 //
-// Always returns 200 once the signature checks out, so BOG stops
-// retrying. The enrollment insert is idempotent (unique user+course),
-// so a retried callback is harmless.
+// We ack 200 once handled so BOG stops retrying. The one case we do NOT
+// ack is a 'completed' order whose enrollment grant failed — then we
+// return 500 so BOG retries rather than leaving a paid-but-no-access row.
+// All writes are idempotent, so a retried callback is harmless.
 // ============================================================
 
 import { NextResponse } from 'next/server';
-import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { verifyCallback } from '@/lib/bog';
+import { fulfillOrder, serviceClient, type PaymentRow } from '@/lib/payments-fulfill';
 
 export const dynamic = 'force-dynamic';
-
-function serviceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY missing — required for the BOG callback');
-  }
-  return createServiceClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 export async function POST(req: Request) {
   const raw = await req.text();
@@ -61,7 +51,7 @@ export async function POST(req: Request) {
   const svc = serviceClient();
   const { data: payment } = await svc
     .from('payments')
-    .select('id, user_id, course_id, status')
+    .select('id, user_id, course_id, category_slug, status')
     .eq('bog_order_id', orderId)
     .maybeSingle();
 
@@ -70,25 +60,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  if (statusKey === 'completed' && payment.status !== 'paid') {
-    // Grant access. Amount isn't re-checked here: we set it on the order and
-    // BOG enforces it, and the signature above proves the payload is BOG's.
-    const ins = await svc
-      .from('enrollments')
-      .insert({ user_id: payment.user_id, course_id: payment.course_id, source: 'purchase' });
-    // 23505 = already enrolled (e.g. retried callback); not an error for us.
-    if (ins.error && ins.error.code !== '23505') {
-      console.error('[bog/callback] enrollment insert failed:', ins.error);
-    }
-    await svc
-      .from('payments')
-      .update({ status: 'paid', updated_at: new Date().toISOString() })
-      .eq('id', payment.id);
-  } else if (statusKey === 'rejected') {
-    await svc
-      .from('payments')
-      .update({ status: 'failed', updated_at: new Date().toISOString() })
-      .eq('id', payment.id);
+  // Amount isn't re-checked here: we set it on the order and BOG enforces it,
+  // and the verified signature proves the payload is genuinely BOG's.
+  const { ok } = await fulfillOrder(svc, payment as PaymentRow, statusKey);
+  if (!ok) {
+    // 'completed' but the grant failed — don't ack, so BOG retries.
+    return NextResponse.json({ error: 'grant_failed' }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

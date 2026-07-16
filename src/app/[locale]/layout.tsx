@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { isLocale, LOCALES } from '@/lib/v2/i18n';
+import IpWarnBanner from './_components/IpWarnBanner';
 
 export async function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -17,6 +18,7 @@ export default async function LocaleLayout({
   return (
     <div lang={locale} className="contents">
       {children}
+      <IpWarnBanner locale={locale} />
     </div>
   );
 }

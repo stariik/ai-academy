@@ -177,7 +177,7 @@ export function Navbar({
   );
 }
 
-function UserMenu({ authUser }: { authUser: AuthUser }) {
+export function UserMenu({ authUser }: { authUser: AuthUser }) {
   const { dict, locale, href } = useV2Locale();
   const [open, setOpen] = React.useState(false);
   const tone = toneFromString(authUser.id);

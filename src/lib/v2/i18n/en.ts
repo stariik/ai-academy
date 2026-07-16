@@ -59,6 +59,8 @@ export const en: Dict = {
     bundleIncludes: "What's included",
     bundleConfirm: 'Confirm & unlock',
     bundleProcessing: 'Unlocking…',
+    bundleBuy: 'Buy the bundle',
+    bundleRedirecting: 'Taking you to payment…',
     bundleDoneTitle: 'The bundle is yours',
     bundleDoneDesc: 'Every course is unlocked. Jump in whenever you like.',
     bundleStart: 'Start learning',
@@ -257,12 +259,6 @@ export const en: Dict = {
     footerCourses: 'Courses',
     continueShort: 'Continue',
     startShort: 'Start',
-    viewAsGuest: 'Guest',
-    viewAsLoggedIn: 'Logged in',
-    viewAsEnrolled: 'Enrolled',
-    demoMode: 'Demo mode',
-    demoModeNote: 'Temporary only — until real auth is wired up.',
-    viewLabel: 'View:',
   },
 
   lesson: {

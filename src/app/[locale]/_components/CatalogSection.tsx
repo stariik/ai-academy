@@ -78,6 +78,7 @@ const GUEST_ENROLL_KEY = 'ai_academy_enrollments';
    read ownership without threading props through the Slider's children. */
 type BundleStore = {
   isOwned: (category: Category) => boolean;
+  isCourseOwned: (courseId: string) => boolean;
   openBuy: (category: Category) => void;
 };
 const BundleCtx = React.createContext<BundleStore | null>(null);
@@ -98,7 +99,7 @@ export function CatalogSection({
   authed?: boolean;
   enrolledCourseIds?: string[];
 }) {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   const withCourses = categories.filter((c) => c.courses > 0);
 
   // category id → its course ids (a bundle = all of them).
@@ -134,12 +135,46 @@ export function CatalogSection({
     [coursesByCat, owned],
   );
 
-  // Grant the whole bundle. Authed → POST the bundle route; guest → localStorage.
-  // Optimistic, with rollback if the authed call fails.
+  // Buy / grant the whole bundle:
+  //   paid + guest  → login first (they can't buy signed out)
+  //   paid + authed → BOG checkout; access is granted by the payment callback,
+  //                   so we don't touch local ownership here
+  //   free + authed → POST the bundle route (optimistic, rollback on failure)
+  //   free + guest  → localStorage demo behaviour
   const grantBundle = React.useCallback(
     async (category: Category) => {
       const ids = coursesByCat.get(category.id) ?? [];
       if (ids.length === 0) return;
+
+      // Paid == an admin-set bundle price, which is exactly what the server
+      // will charge. The derived fallback price is display-only and never sold.
+      const paid = (category.price ?? 0) > 0;
+
+      if (paid && !authed) {
+        window.location.href = href('login');
+        return;
+      }
+
+      if (paid) {
+        // Throw on failure: the dialog turns that into its error state. If we
+        // swallowed it, it would show "purchased" for a buy that never happened.
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categoryId: category.id, returnPath: href() }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          redirectUrl?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.redirectUrl) {
+          console.error('[bundle] checkout failed:', res.status, data.error);
+          throw new Error(data.error ?? 'checkout_failed');
+        }
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
       setOwned((prev) => {
         const next = new Set(prev);
         ids.forEach((id) => next.add(id));
@@ -176,12 +211,12 @@ export function CatalogSection({
         }
       }
     },
-    [authed, coursesByCat],
+    [authed, coursesByCat, href],
   );
 
   const store = React.useMemo<BundleStore>(
-    () => ({ isOwned, openBuy: setActiveBundle }),
-    [isOwned],
+    () => ({ isOwned, isCourseOwned: (id) => owned.has(id), openBuy: setActiveBundle }),
+    [isOwned, owned],
   );
 
   return (
@@ -998,6 +1033,7 @@ function CourseCard({
 }) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
+  const owned = useBundle()?.isCourseOwned(co.id) ?? false;
   const isFree = !(typeof co.price === 'number' && co.price > 0);
   // Admin-set "was" price → struck retail + discount %, mirroring the course
   // detail page. Only shown when a retail price genuinely exceeds the current one.
@@ -1052,7 +1088,7 @@ function CourseCard({
         >
           {c.icon}
         </span>
-        {discount > 0 && (
+        {!owned && discount > 0 && (
           <span
             className={cn(
               'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
@@ -1108,7 +1144,7 @@ function CourseCard({
               ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
               {dict.courseCard.hoursShort}
             </span>
-            {save > 0 && (
+            {!owned && save > 0 && (
               <span className={cn('inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold', t.chip)}>
                 {dict.catalog.bundleSave} ₾{save}
               </span>
@@ -1117,7 +1153,14 @@ function CourseCard({
 
           {/* price · CTA */}
           <div className="mt-2 flex items-end justify-between gap-3">
-            {isFree ? (
+            {owned ? (
+              <span className={cn('inline-flex items-center gap-1.5 text-[15px] font-bold', t.text)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+                {dict.catalog.bundleOwned}
+              </span>
+            ) : isFree ? (
               <span
                 className={cn('text-[20px] font-bold leading-none tracking-tight', t.text)}
                 style={{ fontFamily: 'var(--font-display)' }}
@@ -1247,12 +1290,18 @@ function BundleDialog({
   const social = bundleSocial(c.id, c.courses, c.lessons);
   const hasImage = Boolean(c.imageUrl);
   const busy = phase === 'processing';
+  // An admin-set bundle price means this is a real purchase: the button buys,
+  // and onConfirm hands off to BOG (or to login) rather than granting anything.
+  const paid = (c.price ?? 0) > 0;
 
   const handleConfirm = async () => {
     setPhase('processing');
     try {
       await onConfirm(c);
-      setPhase('done');
+      // A paid bundle is navigating away to the bank right now — nothing is
+      // owned until the payment callback says so, so stay on the spinner
+      // instead of flashing "the bundle is yours" at someone who hasn't paid.
+      if (!paid) setPhase('done');
     } catch {
       setPhase('error');
     }
@@ -1451,11 +1500,11 @@ function BundleDialog({
                     <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                     <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   </svg>
-                  {dict.catalog.bundleProcessing}
+                  {paid ? dict.catalog.bundleRedirecting : dict.catalog.bundleProcessing}
                 </>
               ) : (
                 <>
-                  {dict.catalog.bundleConfirm}
+                  {paid ? dict.catalog.bundleBuy : dict.catalog.bundleConfirm}
                   <span className="opacity-70">·</span>
                   <span className="tabular-nums">₾{price.bundle}</span>
                 </>

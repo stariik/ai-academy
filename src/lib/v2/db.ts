@@ -7,7 +7,8 @@
 // ============================================================
 
 import { cache } from 'react';
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
+import { createClient as createAnonClient } from '@supabase/supabase-js';
 import {
   getAllCourses,
   getAllLessonsLite,
@@ -118,15 +119,37 @@ function buildCourse(
   };
 }
 
-// Wrapped in React cache() so getCategories() and getCourses() share a single
-// fetch within one render instead of each hitting Supabase independently.
+// The public catalog (courses, lessons, category meta) is identical for every
+// visitor, so we fetch it with a cookieless anon client and cache the result
+// across requests in the Next data cache. That removes 3 DB round-trips from
+// every storefront page render while the cache is warm.
+//
+// unstable_cache serializes its return, so it can't hand back a Map — it returns
+// plain arrays and loadAll() builds the per-course index on top (React cache()
+// dedupes that within a single render).
+//
+// revalidate: 300s window; admin writes to courses/pricing can call
+// revalidateTag('catalog') to bust it immediately (not wired yet).
+const loadCatalog = unstable_cache(
+  async () => {
+    const supabase = createAnonClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const [courses, lessons, categoryMeta] = await Promise.all([
+      getAllCourses(supabase),
+      getAllLessonsLite(supabase, { status: 'published' }),
+      getCategoryMeta(supabase),
+    ]);
+    return { courses, lessons, categoryMeta };
+  },
+  ['v2-catalog'],
+  { revalidate: 300, tags: ['catalog'] },
+);
+
 const loadAll = cache(async () => {
-  const supabase = await createClient();
-  const [courses, lessons, categoryMeta] = await Promise.all([
-    getAllCourses(supabase),
-    getAllLessonsLite(supabase, { status: 'published' }),
-    getCategoryMeta(supabase),
-  ]);
+  const { courses, lessons, categoryMeta } = await loadCatalog();
   const lessonsByCourse = new Map<string, RealLesson[]>();
   for (const l of lessons) {
     if (!l.courseId) continue;
