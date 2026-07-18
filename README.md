@@ -29,6 +29,7 @@
 5. **Remembers** what each student got wrong and re-surfaces it on an **SM-2 spaced repetition schedule**
 6. **Motivates** learners with XP, daily streaks, badges, and a per-course leaderboard
 7. **Reports** progress to parents / teachers via a revocable share-token dashboard
+8. **Sells** courses and category bundles through Bank of Georgia hosted checkout, with promo codes and one-click admin refunds
 
 The goal: give Georgian students a personalized, patient, always-available teacher — not another video library.
 
@@ -44,8 +45,11 @@ The goal: give Georgian students a personalized, patient, always-available teach
 | 🎮 **Gamification** | XP per lesson + quiz score, daily streak tracking, milestone badges, per-course leaderboard. |
 | 👨‍👩‍👧 **Parent / Teacher View** | Read-only share-token dashboards (`/share/[token]`) with weekly digest. Revocable, no auth required for guardians. |
 | 🎛️ **Adaptive Lesson Controls** | "Explain simpler" / "Go deeper" mid-lesson. Per-lesson `preferred_style` — direct, Socratic, or exploratory. |
+| 💳 **Payments** | Bank of Georgia hosted checkout for single courses and whole-category bundles. Prices always read from the DB, never from the client. Promo codes, payment reconciliation, one-click admin refund (revokes access too). |
+| 🔐 **Auth & Enrollments** | Supabase Auth accounts with an `enrollments` table as the source of truth. Anti-sharing guard: warn at 5 distinct IPs / 30 days, block past 7. |
+| 🛠️ **Admin Panel** | Server-gated `/admin`: students, courses + DB-backed pricing, category bundles, AI usage & cost tracking (per-call token log), leads, promo codes, refunds, analytics. Includes a one-click storefront-wide sale mode with exact price restore. |
 | 📊 **Admin Analytics** | Which lessons have the lowest pass rate? Where do students drop off? Average time-to-complete per course. |
-| 🇬🇪 **Georgian-First** | All prompts, tutor voice, and generated content are natively Georgian — not machine-translated. |
+| 🇬🇪 **Georgian-First, Bilingual** | All content is natively Georgian — not machine-translated. A full English mode ships alongside: locale-routed pages (`/[locale]/…`) with cached on-the-fly AI translation and a hard English-only guard on the EN tutor. |
 
 ---
 
@@ -58,10 +62,12 @@ The goal: give Georgian students a personalized, patient, always-available teach
 - `react-dropzone` for syllabus uploads
 
 **Backend**
-- Next.js Route Handlers as the API layer (24+ endpoints)
+- Next.js Route Handlers as the API layer (30+ endpoints)
 - [Supabase](https://supabase.com/) — Postgres + SSR auth + row-level security
+- [Bank of Georgia](https://api.bog.ge/) payments API — hosted checkout + server callback
 - [Zod](https://zod.dev/) for runtime validation at every LLM boundary
 - `pdf-parse` + `mammoth` for document ingestion
+- [Replicate](https://replicate.com/) for AI category cover images, [Resend](https://resend.com/) for transactional email
 
 **AI Providers**
 - **[Anthropic Claude Sonnet 4.5](https://www.anthropic.com/)** — streaming tutor chat, quiz grading
@@ -107,13 +113,15 @@ Generated lessons are passed through a second LLM review pass before being persi
 # 1. Install
 npm install
 
-# 2. Configure environment
-cp .env.local.example .env.local
-# Fill in: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-#         ANTHROPIC_API_KEY, GEMINI_API_KEY
+# 2. Configure environment — create .env.local with:
+# NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+# ANTHROPIC_API_KEY, GEMINI_API_KEY
+# ADMIN_EMAILS            (comma-separated allowlist for /admin)
+# BOG_CLIENT_ID, BOG_CLIENT_SECRET, PUBLIC_SITE_URL   (payments; BOG needs an https callback)
+# Optional: REPLICATE_API_KEY, RESEND_API_KEY, GOOGLE_TRANSLATE_API_KEY
 
 # 3. Apply the database schema
-# Run supabase-schema.sql against your Supabase project
+# Run supabase-schema.sql, then every migrations/*.sql in date order
 
 # 4. Develop
 npm run dev
@@ -136,25 +144,30 @@ npm run upload-syllabi # Bulk-upload PDFs from course-pdfs/ into the generator
 ```
 src/
 ├── app/
-│   ├── (main)/            # Authenticated app — courses, review, leaderboard, profile, admin
-│   ├── api/               # 24+ route handlers — chat, quiz, analyze-course, review, share…
-│   └── share/[token]/     # Public parent/teacher dashboard
+│   ├── [locale]/          # KA/EN storefront + app — catalog, courses, lessons, profile, about
+│   ├── admin/             # Server-gated admin panel — students, courses, pricing, AI usage, leads
+│   ├── api/               # 30+ route handlers — chat, quiz, checkout, bog, enrollments, admin…
+│   └── ip-limit/          # Anti-sharing block page
 ├── components/
 │   ├── lesson/            # Paged + Conversational lesson views, ChatPanel, LessonControls
 │   └── profile/           # XP / streak / badge UI
 ├── lib/
-│   ├── ai/                # Claude + Gemini clients, syllabus pipeline, prompt library
+│   ├── ai/                # Claude + Gemini clients, syllabus pipeline, prompts, usage tracking
+│   ├── admin/             # Admin data layer (service-role queries)
 │   ├── spaced-repetition/ # SM-2 scheduler
 │   ├── gamification/      # XP and badge rules
+│   ├── bog.ts             # Bank of Georgia payments client
 │   └── supabase/          # Typed DB client + schema types
-└── types/                 # Shared TS types
+├── types/                 # Shared TS types
+└── ...
+migrations/                # Dated SQL migrations — run in order after supabase-schema.sql
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-Active roadmap lives in [`ROADMAP.md`](./ROADMAP.md). Recently shipped: spaced repetition, gamification loop, profile dashboard, admin analytics, parent share tokens. Next up: real Supabase Auth wiring, rate-limit enforcement on AI endpoints, and voice tutor mode (TTS → STT → realtime).
+Active roadmap lives in [`ROADMAP.md`](./ROADMAP.md). Recently shipped: BOG payments with category bundles and refunds, rebuilt admin panel with DB pricing and AI cost tracking, full English mode, account-backed enrollments, IP-sharing limits. Next up: role-based auth (replacing the env allowlist), rate-limit enforcement on AI endpoints, and voice tutor mode (TTS → STT → realtime).
 
 ---
 
