@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { listCoursesWithStats } from '@/lib/admin/queries';
 import CoursesTable from './_components/CoursesTable';
+import SaleModeButton from './_components/SaleModeButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,12 +23,15 @@ export default async function AdminCoursesPage() {
             and pricing. Click one to manage lessons, prices, and translations.
           </p>
         </div>
-        <Link
-          href="/admin/generator"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
-        >
-          + Generate course
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <SaleModeButton />
+          <Link
+            href="/admin/generator"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-teal px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
+          >
+            + Generate course
+          </Link>
+        </div>
       </div>
 
       <CoursesTable courses={courses} />
