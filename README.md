@@ -18,6 +18,14 @@
 
 ---
 
+![Home](docs/screenshots/home.png)
+
+## 📸 Screenshots
+
+| Course page (16 lessons, ₾ pricing) | English mode |
+| --- | --- |
+| ![Course](docs/screenshots/course.png) | ![English mode](docs/screenshots/english.png) |
+
 ## 🌟 What is this?
 
 **AI Academy** is an end-to-end e-learning platform built for the Georgian market. A teacher uploads a syllabus (PDF / DOCX / Markdown), and the system automatically:
