@@ -22,9 +22,9 @@
 
 ## 📸 Screenshots
 
-| Course page (16 lessons, ₾ pricing) | English mode |
+| Course page | Catalog & bundles |
 | --- | --- |
-| ![Course](docs/screenshots/course.png) | ![English mode](docs/screenshots/english.png) |
+| ![Course](docs/screenshots/course.png) | ![Catalog](docs/screenshots/catalog.png) |
 
 ## 🌟 What is this?
 
