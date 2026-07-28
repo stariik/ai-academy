@@ -243,7 +243,7 @@ export default function OnboardingInsightsClient({
                 key={value}
                 type="button"
                 onClick={() => setStatus(value)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                className={`min-h-10 min-w-10 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   status === value ? 'bg-navy text-white' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >

@@ -241,10 +241,9 @@ export default function OnboardingChat({
   }, [messages, pending, phase, reducedMotion]);
 
   React.useEffect(() => {
-    setSelected([]);
-    setFreeText('');
     if (question?.kind === 'text') {
-      window.setTimeout(() => inputRef.current?.focus(), 250);
+      const timer = window.setTimeout(() => inputRef.current?.focus(), 250);
+      return () => window.clearTimeout(timer);
     }
   }, [question?.id, question?.kind]);
 
@@ -328,6 +327,8 @@ export default function OnboardingChat({
         setProfile(result.profile);
         setPhase('complete');
       } else {
+        setSelected([]);
+        setFreeText('');
         setQuestion(result.question);
       }
     } catch {
@@ -379,7 +380,7 @@ export default function OnboardingChat({
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-0 sm:px-5 lg:px-7">
-        <header className="hidden h-20 shrink-0 items-center justify-between sm:flex">
+        <header className="onboarding-page-header hidden h-20 shrink-0 items-center justify-between sm:flex">
           <div className="flex items-center gap-2.5">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-pulse text-sm font-black text-primary-foreground shadow-[0_8px_24px_var(--pulse-glow)]">
               W
@@ -397,11 +398,11 @@ export default function OnboardingChat({
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[330px_minmax(0,1fr)] lg:gap-5 lg:pb-7">
-          <aside className="relative hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#071321] p-7 text-white shadow-2xl shadow-pulse/10 lg:flex lg:flex-col">
+        <div className="onboarding-layout grid min-h-0 flex-1 lg:h-[calc(100dvh-5rem)] lg:flex-none lg:grid-cols-[330px_minmax(0,1fr)] lg:gap-5 lg:pb-7">
+          <aside className="relative hidden min-h-0 overflow-hidden rounded-[2rem] border border-white/10 bg-[#071321] p-7 text-white shadow-2xl shadow-pulse/10 lg:flex lg:flex-col [@media(max-height:760px)]:p-5">
             <div aria-hidden className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-pulse/20 blur-3xl" />
             <div aria-hidden className="absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-heart/15 blur-3xl" />
-            <div className="relative">
+            <div className="relative shrink-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300">
                 {T.guideLabel}
               </p>
@@ -409,16 +410,17 @@ export default function OnboardingChat({
               <p className="mt-3 text-sm leading-relaxed text-white/55">{T.guideBody}</p>
             </div>
 
-            <div className="relative my-auto flex justify-center py-5">
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden py-2">
               <motion.div
                 animate={reducedMotion ? undefined : { y: [0, -7, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="origin-center [@media(max-height:760px)]:scale-75"
               >
                 <Walli state={walliState} size={230} label="WALL-E" />
               </motion.div>
             </div>
 
-            <div className="relative rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+            <div className="relative shrink-0 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.18em]">
                 <span className="text-white/45">
                   {phase === 'complete'
@@ -449,7 +451,7 @@ export default function OnboardingChat({
             </div>
           </aside>
 
-          <section className="flex min-h-dvh min-w-0 flex-col overflow-hidden border-border bg-card/95 shadow-2xl shadow-slate-900/10 backdrop-blur sm:min-h-0 sm:h-[calc(100dvh-7rem)] sm:max-h-[850px] sm:rounded-[2rem] sm:border lg:h-auto lg:max-h-none">
+          <section className="onboarding-chat-shell flex h-dvh min-h-0 min-w-0 flex-col overflow-hidden border-border bg-card/95 shadow-2xl shadow-slate-900/10 backdrop-blur sm:h-[calc(100dvh-7rem)] sm:max-h-[850px] sm:rounded-[2rem] sm:border lg:h-full lg:max-h-none">
             <div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-border bg-card/75 px-4 backdrop-blur sm:px-5">
               <div className="relative shrink-0 lg:hidden">
                 <Walli state={walliState} size={44} noShadow label="WALL-E" />
@@ -733,7 +735,7 @@ function InterviewComposer({
               </span>
             )}
           </div>
-          <div className="grid max-h-[32vh] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 sm:max-h-none">
+          <div className="onboarding-option-grid grid max-h-[32vh] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 sm:max-h-none">
             {question.options.map((option) => {
               const active = selected.includes(option.id);
               return (

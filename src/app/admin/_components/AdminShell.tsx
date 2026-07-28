@@ -62,7 +62,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
+            className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
               active
                 ? 'bg-white/10 text-white'
                 : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -79,7 +79,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/admin/generator"
         onClick={onNavigate}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+        className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition ${
           generatorActive ? 'bg-teal text-white' : 'bg-teal/20 text-teal-100 hover:bg-teal/30'
         }`}
       >
@@ -111,7 +111,7 @@ function SidebarContent({ email, onNavigate }: { email: string | null; onNavigat
         <Link
           href="/"
           target="_blank"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition hover:bg-white/5 hover:text-white"
+          className="flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 transition hover:bg-white/5 hover:text-white"
         >
           <ExternalLink className="h-4 w-4 shrink-0" strokeWidth={2} />
           View site
@@ -152,7 +152,7 @@ export default function AdminShell({
         </div>
         <button
           onClick={() => setMobileOpen(true)}
-          className="rounded-lg p-2 text-white/80 hover:bg-white/10"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-white/80 hover:bg-white/10"
           aria-label="Open navigation"
         >
           <Menu className="h-5 w-5" />
@@ -170,7 +170,7 @@ export default function AdminShell({
           <div className="absolute inset-y-0 left-0 w-72 bg-navy shadow-2xl">
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute right-3 top-5 rounded-lg p-2 text-white/70 hover:bg-white/10"
+              className="absolute right-3 top-4 inline-flex h-11 w-11 items-center justify-center rounded-lg text-white/70 hover:bg-white/10"
               aria-label="Close navigation"
             >
               <X className="h-5 w-5" />
