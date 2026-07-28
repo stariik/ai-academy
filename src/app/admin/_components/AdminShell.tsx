@@ -16,6 +16,7 @@ import {
   Shapes,
   TicketPercent,
   Inbox,
+  MessagesSquare,
   Cpu,
   BarChart3,
   UploadCloud,
@@ -39,6 +40,7 @@ const NAV: NavItem[] = [
   { href: '/admin/categories', label: 'Categories', icon: Shapes },
   { href: '/admin/promo-codes', label: 'Promo codes', icon: TicketPercent },
   { href: '/admin/leads', label: 'Leads', icon: Inbox },
+  { href: '/admin/onboarding', label: 'User insights', icon: MessagesSquare },
   { href: '/admin/ai-usage', label: 'AI usage', icon: Cpu },
   { href: '/admin/analytics', label: 'Learning analytics', icon: BarChart3 },
 ];
