@@ -25,7 +25,7 @@ export const en: Dict = {
     titleBefore: 'AI education and',
     titleHighlight: 'the professions of the future in one place',
     description:
-      'The first AI education ecosystem, giving you the transformational knowledge of the digital age through a hyper-personal, holistic approach.',
+      'The first AI education ecosystem, giving you the transformational knowledge of the digital age through a hyper-personal, holistic approach',
     ctaPrimary: 'Browse categories',
     ctaSecondary: 'Free lesson',
     statStudents: 'students',
