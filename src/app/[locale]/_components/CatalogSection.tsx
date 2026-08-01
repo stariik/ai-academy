@@ -253,13 +253,11 @@ export function CatalogSection({
         </div>
       ) : (
         <div id="courses" className="mt-11 sm:mt-24 space-y-10 sm:space-y-20 scroll-mt-20">
-          {withCourses.map((c, i) => (
+          {withCourses.map((c) => (
             <CourseSliderRow
               key={c.id}
               category={c}
               courses={courses.filter((co) => co.categoryId === c.id)}
-              rowIndex={i}
-              totalRows={withCourses.length}
             />
           ))}
         </div>
@@ -926,19 +924,13 @@ function BundleCard({ category: c }: { category: Category }) {
 function CourseSliderRow({
   category: c,
   courses,
-  rowIndex,
-  totalRows,
 }: {
   category: Category;
   courses: Course[];
-  rowIndex: number;
-  totalRows: number;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
   if (courses.length === 0) return null;
-  const num = pad(rowIndex + 1);
-  const denom = pad(totalRows);
   const hasImage = Boolean(c.imageUrl);
 
   return (
@@ -976,9 +968,6 @@ function CourseSliderRow({
 
             <div className="min-w-0">
               <p className="font-mono text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                <span className={cn('tabular-nums', t.text)}>{num}</span>
-                <span className="opacity-50"> / {denom}</span>
-                <span className="px-1.5 opacity-40">·</span>
                 <span className="tabular-nums text-foreground">{c.courses}</span> {dict.catalog.coursesUnit}
                 <span className="px-1.5 opacity-40">·</span>
                 <span className="tabular-nums text-foreground">{c.lessons}</span> {dict.catalog.lessonsUnit}
