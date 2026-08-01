@@ -776,10 +776,6 @@ function CtaBanner() {
                   {dict.ctaBanner.ctaSecondary}
                 </a>
               </div>
-              <p className="mt-3 text-[11px] text-muted-foreground inline-flex items-center gap-1.5 md:justify-start justify-center w-full">
-                <span className="text-pulse">✓</span>
-                {dict.ctaBanner.trustMicro}
-              </p>
             </div>
             <div className="flex justify-center md:justify-end">
               <Walli size={112} state="wave" className="sm:hidden" />
@@ -802,7 +798,7 @@ export function Footer({ categories }: { categories: Category[] }) {
   return (
     <footer className="border-t border-border bg-muted/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-14 lg:py-16">
-        <div className="grid gap-6 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr]">
+        <div className="grid gap-6 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
             <Link href={href()} className="inline-flex items-center gap-2 mb-3 sm:mb-4">
               <Walli size={32} state="idle" noShadow />
@@ -835,13 +831,6 @@ export function Footer({ categories }: { categories: Category[] }) {
           <FooterColumn
             title={dict.footer.columnCategories}
             links={categories.map((c) => ({ label: c.name, href: `${href()}#cat-${c.id}` }))}
-          />
-          <FooterColumn
-            title={dict.footer.columnProduct}
-            links={[
-              { label: dict.footer.productCourses, href: '#courses' },
-              { label: dict.footer.productFreeSample, href: '#' },
-            ]}
           />
           <FooterColumn
             title={dict.footer.columnCompany}
