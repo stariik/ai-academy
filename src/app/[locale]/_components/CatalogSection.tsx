@@ -1467,30 +1467,7 @@ function BundleDialog({
               )}
             </button>
 
-            {/* Trust row — guarantee + secure */}
-            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                {dict.courseDetail.trustRefund}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <rect x="3" y="11" width="18" height="11" rx="2" />
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                </svg>
-                {dict.catalog.bundleSecure}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-2 h-9 w-full text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {dict.catalog.bundleCancel}
-            </button>
+            {/* Dismissing is the close button top-right, the backdrop, or Esc. */}
 
             {!authed && (
               <p className="mt-1 text-center text-[11px] leading-relaxed text-muted-foreground">
