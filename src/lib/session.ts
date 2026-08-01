@@ -24,6 +24,28 @@ import { getAuthUser } from '@/lib/auth';
 const SESSION_COOKIE = 'ai_academy_session';
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
+// ponytail: Server Components can't write cookies (Next throws). getSession()
+// runs from both RSC and route handlers, so the write is best-effort — the
+// sessionId is resolved from the DB either way, and the next API call (a route
+// handler) persists the cookie. Move this into middleware only if the extra
+// findSessionForUser() lookup per RSC render shows up in profiling.
+function writeSessionCookie(
+  cookieStore: Awaited<ReturnType<typeof cookies>>,
+  id: string,
+) {
+  try {
+    cookieStore.set(SESSION_COOKIE, id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: SESSION_MAX_AGE,
+      path: '/',
+    });
+  } catch {
+    /* read-only cookie store (Server Component render) */
+  }
+}
+
 export async function getSession(): Promise<{ sessionId: string }> {
   const cookieStore = await cookies();
   const cookieId = cookieStore.get(SESSION_COOKIE)?.value;
@@ -37,15 +59,7 @@ export async function getSession(): Promise<{ sessionId: string }> {
     if (linked) {
       // Make sure the cookie points at the canonical row in case the user
       // signed in on a fresh browser with no cookie or a different one.
-      if (cookieId !== linked.id) {
-        cookieStore.set(SESSION_COOKIE, linked.id, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: SESSION_MAX_AGE,
-          path: '/',
-        });
-      }
+      if (cookieId !== linked.id) writeSessionCookie(cookieStore, linked.id);
       return { sessionId: linked.id };
     }
 
@@ -59,39 +73,19 @@ export async function getSession(): Promise<{ sessionId: string }> {
         // browser). Fall back to a new session for this user.
         const fresh = await getOrCreateSession(supabase);
         await linkSessionToUser(supabase, fresh.id, authUser.id);
-        cookieStore.set(SESSION_COOKIE, fresh.id, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: SESSION_MAX_AGE,
-          path: '/',
-        });
+        writeSessionCookie(cookieStore, fresh.id);
         return { sessionId: fresh.id };
       }
     } catch {
       /* link error — fall through and still return anon.id */
     }
-    if (cookieId !== anon.id) {
-      cookieStore.set(SESSION_COOKIE, anon.id, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: SESSION_MAX_AGE,
-        path: '/',
-      });
-    }
+    if (cookieId !== anon.id) writeSessionCookie(cookieStore, anon.id);
     return { sessionId: anon.id };
   }
 
   // Anonymous case: cookie-based.
   const session = await getOrCreateSession(supabase, cookieId);
-  cookieStore.set(SESSION_COOKIE, session.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SESSION_MAX_AGE,
-    path: '/',
-  });
+  writeSessionCookie(cookieStore, session.id);
 
   return { sessionId: session.id };
 }
