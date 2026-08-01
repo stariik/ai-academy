@@ -125,7 +125,7 @@ export const en: Dict = {
     titleBefore: 'Ready to learn at',
     titleHighlight: 'the speed of AI?',
     description: 'Take one WALLE lesson free and pick your direction',
-    ctaPrimary: 'Start free',
+    ctaPrimary: 'Try it free',
     ctaSecondary: 'Browse courses',
     trustMicro: 'No payment · cancel anytime',
   },

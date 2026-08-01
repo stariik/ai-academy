@@ -124,7 +124,7 @@ export const ka: Dict = {
     titleBefore: 'მზად ხარ ისწავლო',
     titleHighlight: 'AI-ის სიჩქარით?',
     description: 'გაიარე WALLE-ს ერთი გაკვეთილი უფასოდ და აირჩიე შენი მიმართულება',
-    ctaPrimary: 'უფასოდ დაწყება',
+    ctaPrimary: 'ცადე უფასოდ',
     ctaSecondary: 'კურსების ნახვა',
     trustMicro: 'გადახდის გარეშე · გაუქმდება ნებისმიერ დროს',
   },
