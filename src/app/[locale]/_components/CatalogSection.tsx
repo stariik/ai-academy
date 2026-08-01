@@ -1042,8 +1042,8 @@ function CourseSliderRow({
 // Course card — a clean, price-forward product card. Tone icon chip + a bold
 // discount badge up top, display-font title and description, audience/level/pace
 // chips, then an always-visible footer that puts the price front and centre
-// (never hidden on hover) next to a round tone CTA. The only decoration is a
-// soft tone glow + an accent ring that warm up on hover. Tokens only.
+// (never hidden on hover) above a single outlined CTA. The only decoration is
+// a soft tone glow + an accent ring that warm up on hover. Tokens only.
 function CourseCard({
   course: co,
   category: c,
@@ -1065,9 +1065,6 @@ function CourseCard({
   const discount = hasRetail
     ? Math.round(((co.retailPrice! - co.price!) / co.retailPrice!) * 100)
     : 0;
-  const save = hasRetail ? co.retailPrice! - co.price! : 0;
-  // Approximate pace — hours is a ceil'd total, hence the "~".
-  const minPerLesson = co.lessons > 0 ? Math.max(1, Math.round((co.hours * 60) / co.lessons)) : 0;
 
   return (
     <a
@@ -1097,32 +1094,27 @@ function CourseCard({
         aria-hidden
       />
 
-      {/* Top row — category icon chip · discount badge */}
-      <div className="relative flex items-start justify-between gap-2">
+      {/* Discount ribbon. Absolute, so a full-price card starts straight at
+          the title instead of reserving an empty row for it. */}
+      {!owned && discount > 0 && (
         <span
           className={cn(
-            'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
-            t.iconBg,
+            'absolute right-3 top-3 z-10 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
+            t.bg,
           )}
-          aria-hidden
         >
-          {c.icon}
+          −{discount}%
         </span>
-        {!owned && discount > 0 && (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
-              t.bg,
-            )}
-          >
-            −{discount}%
-          </span>
-        )}
-      </div>
+      )}
 
-      {/* Title */}
+      {/* Title — the anchor of the card. The category icon chip that used to
+          sit above it is gone: every card in a row is the same category, and
+          the row header already shows it. */}
       <h4
-        className="relative mt-3.5 text-[16px] sm:text-[17px] font-bold leading-snug tracking-tight line-clamp-2"
+        className={cn(
+          'relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight line-clamp-2',
+          !owned && discount > 0 && 'pr-12',
+        )}
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {co.title}
@@ -1130,103 +1122,82 @@ function CourseCard({
 
       {/* Description */}
       {co.description && (
-        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+        <p className="relative mt-2 text-xs sm:text-[12.5px] leading-relaxed text-muted-foreground line-clamp-2">
           {co.description}
         </p>
       )}
 
-      {/* Meta chips — audience · level · pace */}
-      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
-          <span className={cn('h-1.5 w-1.5 rounded-full', t.bg)} aria-hidden />
-          {dict.audienceTag[co.audience]}
+      {/* One readable meta line replaces three 9px uppercase chips. The
+          audience chip is gone with them — it's inherited from the category,
+          so it was identical on every card in the row. */}
+      <div className="relative mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-muted-foreground">
+        <LevelMeter level={co.level} tone={c.tone} />
+        <span className="font-semibold text-foreground/85">{dict.level[co.level]}</span>
+        <span className="opacity-40">·</span>
+        <span>
+          <span className="font-bold tabular-nums text-foreground/85">{co.lessons}</span>{' '}
+          {dict.courseCard.lessonsShort}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
-          <LevelMeter level={co.level} tone={c.tone} />
-          {dict.level[co.level]}
+        <span className="opacity-40">·</span>
+        <span>
+          ~<span className="font-bold tabular-nums text-foreground/85">{co.hours}</span>
+          {dict.courseCard.hoursShort}
         </span>
-        {minPerLesson > 0 && (
-          <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
-            ~{minPerLesson} {dict.courseCard.minPerLesson}
-          </span>
-        )}
       </div>
 
-      {/* Footer — always visible, price-forward */}
+      {/* Footer — price, then one clear action */}
       <div className="relative mt-auto pt-3.5">
         <div className="border-t border-dashed border-border/80 pt-3">
-          {/* stats · save chip */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[10.5px] text-muted-foreground">
-              <span className="font-bold tabular-nums text-foreground">{co.lessons}</span>
-              {' '}{dict.courseCard.lessonsShort}
-              <span className="px-1 opacity-40">·</span>
-              ~<span className="font-bold tabular-nums text-foreground">{co.hours}</span>
-              {dict.courseCard.hoursShort}
+          {owned ? (
+            <span className={cn('flex items-center gap-1.5 text-[15px] font-bold', t.text)}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              {dict.catalog.bundleOwned}
             </span>
-            {!owned && save > 0 && (
-              <span className={cn('inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold', t.chip)}>
-                {dict.catalog.bundleSave} ₾{save}
-              </span>
-            )}
-          </div>
-
-          {/* price · CTA */}
-          <div className="mt-2 flex items-end justify-between gap-3">
-            {owned ? (
-              <span className={cn('inline-flex items-center gap-1.5 text-[15px] font-bold', t.text)}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-                {dict.catalog.bundleOwned}
-              </span>
-            ) : isFree ? (
+          ) : isFree ? (
+            <span
+              className={cn('block text-[21px] font-bold leading-none tracking-tight', t.text)}
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              {dict.courseCard.free}
+            </span>
+          ) : (
+            // Price and struck retail only. The "save ₾40" chip is gone — the
+            // −% ribbon and the struck price already say it twice.
+            <span className="flex items-baseline gap-1.5">
               <span
-                className={cn('text-[20px] font-bold leading-none tracking-tight', t.text)}
+                className="text-[23px] font-bold leading-none tabular-nums"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                {dict.courseCard.free}
+                ₾{co.price}
               </span>
-            ) : (
-              <span className="inline-flex items-baseline gap-1.5">
-                <span
-                  className="text-[22px] font-bold leading-none tabular-nums"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  ₾{co.price}
+              {hasRetail && (
+                <span className="text-[12.5px] tabular-nums text-muted-foreground line-through">
+                  ₾{co.retailPrice}
                 </span>
-                {hasRetail && (
-                  <span className="text-[12px] tabular-nums text-muted-foreground line-through">
-                    ₾{co.retailPrice}
-                  </span>
-                )}
-              </span>
-            )}
-
-            <span
-              className={cn(
-                'grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary-foreground shadow-sm',
-                'transition-all duration-300 ease-out',
-                t.bg,
-                'group-hover:scale-110 group-hover:brightness-105 group-hover:shadow-[0_8px_20px_-4px_var(--pulse-glow)]',
               )}
-              aria-hidden
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="transition-transform duration-300 group-hover:translate-x-0.5"
-              >
-                <path d="M5 12h14M13 5l7 7-7 7" />
-              </svg>
             </span>
-          </div>
+          )}
+
+          {/* Outlined, not filled: this is navigation. The filled tone button
+              stays reserved for "buy" on the bundle cards. */}
+          <span
+            className={cn(
+              'mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border text-[13px] font-bold',
+              'transition-colors duration-200',
+              // Tone tint + tone border/text. Static classes from TONE_CLASSES
+              // only — Tailwind can't see a class built by interpolation.
+              t.iconBg,
+              t.ring,
+              t.text,
+              'group-hover:bg-foreground/[0.06]',
+            )}
+            aria-hidden
+          >
+            {dict.courseCard.open}
+            <span className="transition-transform duration-300 group-hover:translate-x-0.5">→</span>
+          </span>
         </div>
       </div>
     </a>
