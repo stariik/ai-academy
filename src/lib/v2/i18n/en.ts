@@ -45,7 +45,7 @@ export const en: Dict = {
     titleBefore: 'Transformational knowledge and',
     titleHighlight: 'boundless possibilities',
     description:
-      'Look through the categories, pick the direction you want, and master new skills at the speed of AI.',
+      'Look through the categories, pick the direction you want, and master new skills at the speed of AI',
     emptyState: 'No courses yet — coming soon.',
     coursesUnit: 'courses',
     lessonsUnit: 'lessons',
