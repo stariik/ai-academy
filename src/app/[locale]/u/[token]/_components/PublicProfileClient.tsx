@@ -7,6 +7,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import { BADGES, type BadgeCode } from '@/lib/gamification/badges';
 import type { PublicProfilePayload } from '@/lib/v2/profile';
+import Link from 'next/link';
 
 export default function PublicProfileClient({
   payload,
@@ -49,9 +50,9 @@ function PublicInner({ payload }: { payload: PublicProfilePayload }) {
     <div className="relative min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <a href={href()} className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <Link href={href()} className="flex items-center gap-2 text-sm font-semibold tracking-tight">
             ← {dict.meta.brandName}
-          </a>
+          </Link>
           <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
             {dict.profile.publicViewSubtitle}
           </span>
@@ -144,13 +145,13 @@ function PublicInner({ payload }: { payload: PublicProfilePayload }) {
 
         {/* Footer CTA — turn the share page into a soft conversion */}
         <div className="mt-8 text-center">
-          <a
+          <Link
             href={href()}
             className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_24px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
           >
             {dict.meta.brandName}
             <span aria-hidden>→</span>
-          </a>
+          </Link>
         </div>
       </main>
     </div>

@@ -37,6 +37,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import { Navbar } from '../../../_components/LandingClient';
 import type { AuthUser } from '@/lib/auth';
 import type { Dict, Locale } from '@/lib/v2/i18n';
+import Link from 'next/link';
 import {
   redeemPromoCode,
   redeemStatusLabel,
@@ -407,7 +408,7 @@ function Hero({
           transition={{ duration: 0.4 }}
           className="mb-6 sm:mb-8"
         >
-          <a
+          <Link
             href={`${href()}#cat-${category.id}`}
             title={dict.courseDetail.backToCourses}
             className={cn(
@@ -443,7 +444,7 @@ function Hero({
                 aria-hidden
               />
             </span>
-          </a>
+          </Link>
         </motion.div>
 
         <div className="grid gap-10 lg:gap-14 lg:grid-cols-[1.3fr_1fr] lg:items-center">
@@ -497,10 +498,10 @@ function Hero({
                   <ArrowRight className="w-4 h-4" />
                 </a>
               ) : (
-                <a href={previewHref} className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
+                <Link href={previewHref} className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
                   {dict.courseDetail.heroFreePreview}
                   <Play className="w-4 h-4 fill-current" />
-                </a>
+                </Link>
               )}
             </div>
 
@@ -1215,7 +1216,7 @@ function LessonCard({
 
       {/* Card */}
       {accessible ? (
-        <a
+        <Link
           href={href(`lessons/${lesson.id}`)}
           className={cn(
             'group my-1.5 flex-1 rounded-2xl border bg-card p-3.5 transition-all duration-300 sm:p-4',
@@ -1224,7 +1225,7 @@ function LessonCard({
           )}
         >
           {card}
-        </a>
+        </Link>
       ) : (
         <div className="my-1.5 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3.5 sm:p-4">
           {card}
@@ -1603,7 +1604,7 @@ function BundleCrossSell({ category }: { category: Category }) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   return (
-    <a
+    <Link
       href={`${href()}#cat-${category.id}`}
       className={cn(
         'group block mx-5 sm:mx-6 mb-5 sm:mb-6 rounded-2xl border-2 border-dashed p-4 transition-all duration-300 ease-out',
@@ -1638,7 +1639,7 @@ function BundleCrossSell({ category }: { category: Category }) {
         </div>
         <ArrowRight className={cn('flex-shrink-0 w-4 h-4 transition-transform group-hover:translate-x-1', t.text)} />
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -1826,7 +1827,7 @@ function BuyRailContent({
       </button>
 
       {/* Secondary inline CTA — jumps straight into the first free lesson. */}
-      <a
+      <Link
         href={previewHref}
         className="mt-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-pulse transition-colors"
       >
@@ -1834,7 +1835,7 @@ function BuyRailContent({
         <span>
           {dict.courseDetail.previewInlinePrefix}<span className="underline underline-offset-2">{dict.courseDetail.previewInlineLink}</span>
         </span>
-      </a>
+      </Link>
 
       {/* Promo code expandable — only for users who haven't enrolled yet */}
       {isLoggedIn && (
@@ -1996,12 +1997,12 @@ function CtaBanner({
                       {course.price && course.price > 0 ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}` : dict.courseDetail.ctaStartFree}
                       <ArrowRight className="w-4 h-4" />
                     </button>
-                    <a
+                    <Link
                       href={previewHref}
                       className="text-sm font-bold text-pulse hover:underline"
                     >
                       {dict.courseDetail.tryFirst}
-                    </a>
+                    </Link>
                   </>
                 )}
               </div>
@@ -2096,14 +2097,14 @@ function Footer() {
     <footer className="border-t border-border bg-muted/30 mt-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-12">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-          <a href={href()} className="inline-flex items-center gap-2">
+          <Link href={href()} className="inline-flex items-center gap-2">
             <Walli size={32} state="idle" noShadow />
             <span className="text-base font-bold">{dict.meta.brandName}</span>
-          </a>
+          </Link>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <a href={href()} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerHome}</a>
-            <a href={`${href()}#categories`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCategories}</a>
-            <a href={`${href()}#courses`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCourses}</a>
+            <Link href={href()} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerHome}</Link>
+            <Link href={`${href()}#categories`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCategories}</Link>
+            <Link href={`${href()}#courses`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCourses}</Link>
           </nav>
           <p className="text-xs text-muted-foreground">© 2026 {dict.meta.brandName}</p>
         </div>

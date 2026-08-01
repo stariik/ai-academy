@@ -186,6 +186,38 @@ export async function getCourses(locale: Locale): Promise<Course[]> {
     .filter((c): c is Course => c !== null);
 }
 
+export type LessonMetadata = {
+  id: string;
+  title: string;
+  description: string;
+  courseId: string;
+  courseTitle: string;
+};
+
+export async function getLessonMetadata(
+  id: string,
+  locale: Locale,
+): Promise<LessonMetadata | null> {
+  const { courses, lessons } = await loadAll();
+  const lesson = lessons.find((item) => item.id === id);
+  if (!lesson?.courseId) return null;
+  const course = courses.find((item) => item.id === lesson.courseId);
+  if (!course) return null;
+  const title = pickLocale(locale, lesson.title, lesson.titleEn ?? undefined);
+  const courseTitle = pickLocale(locale, course.title, course.titleEn ?? undefined);
+  return {
+    id: lesson.id,
+    title,
+    description:
+      locale === 'en'
+        ? lesson.descriptionEn?.trim() ||
+          `Learn ${title} in the ${courseTitle} course on walle.academy.`
+        : lesson.description,
+    courseId: course.id,
+    courseTitle,
+  };
+}
+
 export type V2CoursePayload = {
   course: Course;
   category: Category;

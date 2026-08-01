@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 
 import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
+import { SITE_URL } from "@/lib/seo";
 
 // MarkGEO — primary Georgian + Latin family.
 // Regular & Bold drive body and display; CAPS handles uppercase labels.
@@ -28,14 +29,25 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "walle.academy — AI lessons that meet you where you are",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "walle.academy — პრაქტიკული AI განათლება",
+    template: "%s | walle.academy",
+  },
   description:
-    "Learn AI tools, build AI agents, and create apps with vibe coding. Personalized lessons for every age, taught by Walli.",
+    "ისწავლე ხელოვნური ინტელექტი, AI ინსტრუმენტები და პროგრამირება პრაქტიკული ონლაინ კურსებით ქართულად და ინგლისურად.",
   openGraph: {
-    title: "walle.academy — AI lessons that meet you where you are",
+    title: "walle.academy — პრაქტიკული AI განათლება",
     description:
-      "Learn AI tools, build AI agents, and create apps with vibe coding. Personalized lessons for every age, taught by Walli.",
+      "პრაქტიკული AI კურსები ქართულად და ინგლისურად — შენი ტემპით, Walli-სთან ერთად.",
+    siteName: "walle.academy",
+    url: SITE_URL,
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "walle.academy — პრაქტიკული AI განათლება",
+    description: "პრაქტიკული AI კურსები ქართულად და ინგლისურად.",
   },
 };
 

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import LandingClient from './_components/LandingClient';
 import { getCategories, getCourses } from '@/lib/v2/db';
@@ -5,8 +6,39 @@ import { getDict, isLocale, type Locale } from '@/lib/v2/i18n';
 import { getAuthUser } from '@/lib/auth';
 import { getCurrentUserEnrollments } from '@/lib/enrollments';
 import { reconcileBundlePurchase } from '@/lib/payments-fulfill';
+import { localizedAlternates, SITE_URL } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: localeParam } = await params;
+  if (!isLocale(localeParam)) return {};
+  const locale: Locale = localeParam;
+  const isEn = locale === 'en';
+  const title = isEn
+    ? 'Practical AI Courses Online | walle.academy'
+    : 'AI კურსები ქართულად | walle.academy';
+  const description = isEn
+    ? 'Learn AI tools, prompt engineering, coding, marketing, and business skills through practical online courses with Walli, your AI tutor.'
+    : 'ისწავლე ხელოვნური ინტელექტი ქართულად: AI ინსტრუმენტები, პრომპტ ინჟინერია, პროგრამირება, მარკეტინგი და ბიზნესი პრაქტიკული ონლაინ კურსებით.';
+  return {
+    title: { absolute: title },
+    description,
+    alternates: localizedAlternates(locale),
+    openGraph: {
+      title,
+      description,
+      url: `${SITE_URL}/${locale}`,
+      locale: isEn ? 'en_US' : 'ka_GE',
+      alternateLocale: isEn ? ['ka_GE'] : ['en_US'],
+      type: 'website',
+    },
+  };
+}
 
 export default async function LandingPage({
   params,
@@ -36,14 +68,57 @@ export default async function LandingPage({
     getAuthUser(),
     getCurrentUserEnrollments(),
   ]);
+  const courseListJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        name: 'walle.academy',
+        url: SITE_URL,
+        inLanguage: locale,
+      },
+      {
+        '@type': 'ItemList',
+        name:
+          locale === 'en'
+            ? 'Practical AI courses'
+            : 'ხელოვნური ინტელექტის პრაქტიკული კურსები',
+        numberOfItems: courses.length,
+        itemListElement: courses.map((course, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          item: {
+            '@type': 'Course',
+            name: course.title,
+            description: course.description,
+            url: `${SITE_URL}/${locale}/courses/${course.id}`,
+            provider: {
+              '@type': 'Organization',
+              name: 'walle.academy',
+              sameAs: SITE_URL,
+            },
+          },
+        })),
+      },
+    ],
+  };
   return (
-    <LandingClient
-      categories={categories}
-      courses={courses}
-      dict={dict}
-      locale={locale}
-      authUser={authUser}
-      enrolledCourseIds={enrolledCourseIds}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(courseListJsonLd).replace(/</g, '\\u003c'),
+        }}
+      />
+      <LandingClient
+        categories={categories}
+        courses={courses}
+        dict={dict}
+        locale={locale}
+        authUser={authUser}
+        enrolledCourseIds={enrolledCourseIds}
+      />
+    </>
   );
 }

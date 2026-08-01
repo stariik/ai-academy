@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local, recoverable catalog rename plans and database snapshots
+/scripts/.catalog-renames/
+
+# graphify knowledge-graph output — generated, regenerate with /graphify
+/graphify-out/
