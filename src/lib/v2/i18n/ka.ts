@@ -123,7 +123,7 @@ export const ka: Dict = {
   ctaBanner: {
     titleBefore: 'მზად ხარ ისწავლო',
     titleHighlight: 'AI-ის სიჩქარით?',
-    description: 'დაიწყე უფასოდ. პირველი გაკვეთილი ჩემგან — შემდეგ შენი არჩევანია.',
+    description: 'გაიარე WALLE-ს ერთი გაკვეთილი უფასოდ და აირჩიე შენი მიმართულება',
     ctaPrimary: 'უფასოდ დაწყება',
     ctaSecondary: 'კურსების ნახვა',
     trustMicro: 'გადახდის გარეშე · გაუქმდება ნებისმიერ დროს',
