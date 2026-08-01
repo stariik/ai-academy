@@ -221,7 +221,7 @@ export function CatalogSection({
 
   return (
     <BundleCtx.Provider value={store}>
-    <section id="categories" className="py-12 sm:py-24">
+    <section id="categories" className="pt-6 pb-12 sm:pt-12 sm:pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="space-y-3 max-w-2xl">
           <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2">
@@ -229,7 +229,7 @@ export function CatalogSection({
             {dict.catalog.eyebrow}
           </p>
           <h2
-            className="text-[26px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
+            className="text-[22px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             {dict.catalog.titleBefore}{' '}

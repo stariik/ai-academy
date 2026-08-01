@@ -49,7 +49,6 @@ export default function LandingClient({
             authed={Boolean(authUser)}
             enrolledCourseIds={enrolledCourseIds}
           />
-          <HowItWorks />
           <CtaBanner />
         </main>
         <Footer categories={categories} />
@@ -89,7 +88,7 @@ export function Navbar({
   // below the header: a section is active while it crosses the upper third.
   React.useEffect(() => {
     if (!homeAnchors || typeof IntersectionObserver === 'undefined') return;
-    const els = ['categories', 'courses', 'how']
+    const els = ['categories', 'courses']
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null);
     if (els.length === 0) return;
@@ -111,7 +110,6 @@ export function Navbar({
   const NAV_LINKS = [
     { label: dict.navbar.categories, href: anchor('categories'), section: 'categories' },
     { label: dict.navbar.courses, href: anchor('courses'), section: 'courses' },
-    { label: dict.navbar.howItWorks, href: anchor('how'), section: 'how' },
     { label: dict.navbar.about, href: href('about') },
     { label: dict.navbar.contact, href: href('contact') },
   ].map((l) => ({
@@ -538,7 +536,7 @@ function Hero() {
   const walliSize = useHeroWalliSize();
 
   return (
-    <section className="relative pt-6 pb-10 sm:pt-14 sm:pb-20 lg:pt-20 lg:pb-28 px-4 sm:px-6 overflow-hidden">
+    <section className="relative pt-6 pb-6 sm:pt-14 sm:pb-10 lg:pt-20 lg:pb-14 px-4 sm:px-6 overflow-hidden">
       <div className="absolute inset-0 -z-10 bg-starfield opacity-40" aria-hidden />
       <div
         className="absolute top-1/3 -right-24 w-[420px] h-[420px] rounded-full bg-pulse/15 blur-3xl -z-10 lg:block hidden"
@@ -730,110 +728,6 @@ function AudiencePill({ children }: { children: React.ReactNode }) {
 }
 
 /* ============================================================
-   How It Works
-   ============================================================ */
-
-function HowItWorks() {
-  const { dict } = useV2Locale();
-  return (
-    <section id="how" className="py-12 sm:py-24 px-4 sm:px-6">
-      <div className="mx-auto max-w-7xl">
-        <SectionHeader eyebrow={dict.howItWorks.eyebrow} title={dict.howItWorks.title} />
-
-        <div className="relative mt-7 sm:mt-14 grid gap-3 sm:gap-5 md:grid-cols-3">
-          <div
-            className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-px -z-10 bg-gradient-to-r from-transparent via-border to-transparent"
-            aria-hidden
-          />
-          <Step
-            number="01"
-            tone="pulse"
-            walliState="idle"
-            title={dict.howItWorks.step1Title}
-            description={dict.howItWorks.step1Description}
-          />
-          <Step
-            number="02"
-            tone="heart"
-            walliState="wave"
-            title={dict.howItWorks.step2Title}
-            description={dict.howItWorks.step2Description}
-          />
-          <Step
-            number="03"
-            tone="amber"
-            walliState="dance"
-            title={dict.howItWorks.step3Title}
-            description={dict.howItWorks.step3Description}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Step({
-  number,
-  walliState,
-  title,
-  description,
-  tone,
-}: {
-  number: string;
-  walliState: 'idle' | 'wave' | 'dance';
-  title: string;
-  description: string;
-  tone: keyof typeof TONE_CLASSES;
-}) {
-  const t = TONE_CLASSES[tone];
-  return (
-    <div
-      className={cn(
-        'group relative rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-7 transition-all duration-300',
-        'hover:-translate-y-1 hover:shadow-[0_12px_40px_-12px_var(--pulse-glow)]',
-        'hover:border-transparent',
-      )}
-    >
-      <div
-        className={cn(
-          'absolute -top-6 -left-6 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500',
-          t.bg,
-        )}
-        aria-hidden
-      />
-      <div
-        className={cn(
-          'absolute inset-0 rounded-3xl ring-2 ring-inset opacity-0 group-hover:opacity-100 transition-opacity duration-300',
-          t.ring,
-        )}
-        aria-hidden
-      />
-
-      <div
-        className={cn(
-          'absolute top-4 sm:top-6 right-4 sm:right-6 text-3xl sm:text-5xl font-black tabular-nums leading-none transition-opacity',
-          t.text,
-          'opacity-20 group-hover:opacity-40',
-        )}
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
-        {number}
-      </div>
-      <div className="relative mb-2.5 sm:mb-4 inline-block">
-        <Walli size={58} state={walliState} noShadow />
-      </div>
-      <h3
-        className="text-base sm:text-xl font-bold mb-1.5 sm:mb-2 leading-tight"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
-        {title}
-      </h3>
-      <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-    </div>
-  );
-}
-
-/* ============================================================
    CTA Banner
    ============================================================ */
 
@@ -856,7 +750,7 @@ function CtaBanner() {
           <div className="relative grid gap-6 sm:gap-8 md:grid-cols-[1fr_auto] md:items-center">
             <div className="text-center md:text-left">
               <h2
-                className="text-[26px] sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
+                className="text-[22px] sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {dict.ctaBanner.titleBefore}{' '}
@@ -1054,48 +948,5 @@ function SocialIcon({
     >
       {children}
     </a>
-  );
-}
-
-/* ============================================================
-   Section Header (shared)
-   ============================================================ */
-
-function SectionHeader({
-  eyebrow,
-  title,
-  description,
-  align = 'left',
-}: {
-  eyebrow: string;
-  title: string;
-  description?: string;
-  align?: 'left' | 'center';
-}) {
-  return (
-    <header
-      className={cn(
-        'space-y-3 max-w-2xl',
-        align === 'center' && 'mx-auto text-center',
-      )}
-    >
-      <p
-        className={cn(
-          'text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2',
-          align === 'left' && 'before:content-[""] before:block before:h-1 before:w-6 before:rounded-full before:bg-pulse',
-        )}
-      >
-        {eyebrow}
-      </p>
-      <h2
-        className="text-[26px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
-        style={{ fontFamily: 'var(--font-display)' }}
-      >
-        {title}
-      </h2>
-      {description && (
-        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{description}</p>
-      )}
-    </header>
   );
 }
