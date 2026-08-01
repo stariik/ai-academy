@@ -9,6 +9,7 @@ import type { Dict, Locale } from '@/lib/v2/i18n';
 import { BADGES, type BadgeCode } from '@/lib/gamification/badges';
 import type { ProfilePayload } from '@/lib/v2/profile';
 import { signOutAction } from '../../(auth)/actions';
+import Link from 'next/link';
 import {
   redeemPromoCode,
   redeemStatusLabel,
@@ -69,7 +70,7 @@ function MiniNav() {
   return (
     <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-border">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-        <a href={href()} className="flex items-center gap-2 group">
+        <Link href={href()} className="flex items-center gap-2 group">
           <span
             aria-hidden
             className="flex items-center justify-center w-7 h-7 rounded-full border border-border bg-card text-muted-foreground group-hover:text-foreground group-hover:border-pulse/40 transition-colors"
@@ -77,7 +78,7 @@ function MiniNav() {
             ←
           </span>
           <span className="text-sm font-semibold tracking-tight">{dict.meta.brandName}</span>
-        </a>
+        </Link>
         <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
           {dict.profile.pageTitle}
         </span>
@@ -332,13 +333,13 @@ function DailyGoalCard({ payload }: { payload: ProfilePayload }) {
             {done ? dict.profile.dailyGoalDone : dict.profile.dailyGoalSubtitle}
           </p>
           {!done && (
-            <a
+            <Link
               href={href()}
               className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-3.5 py-1.5 text-xs font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
               {dict.profile.dailyGoalCta}
               <span aria-hidden>→</span>
-            </a>
+            </Link>
           )}
         </div>
       </div>
@@ -883,13 +884,13 @@ function ProgressTab({ payload }: { payload: ProfilePayload }) {
                 </p>
               )}
             </div>
-            <a
+            <Link
               href={href(`lessons/${payload.recommendedNext.lessonId}`)}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-sm font-bold shadow-[0_8px_24px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all shrink-0"
             >
               {dict.profile.progressContinue}
               <span aria-hidden>→</span>
-            </a>
+            </Link>
           </div>
         </div>
       )}
@@ -902,19 +903,19 @@ function ProgressTab({ payload }: { payload: ProfilePayload }) {
         {payload.courseProgress.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm font-bold mb-2">{dict.profile.progressEmpty}</p>
-            <a
+            <Link
               href={href()}
               className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-4 py-2 text-xs font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
               {dict.profile.progressEmptyCta}
               <span aria-hidden>→</span>
-            </a>
+            </Link>
           </div>
         ) : (
           <ul className="space-y-3">
             {payload.courseProgress.map((c) => (
               <li key={c.courseId}>
-                <a
+                <Link
                   href={href(`courses/${c.courseId}`)}
                   className="group flex items-center gap-4 rounded-xl border border-border bg-background hover:border-pulse/40 hover:bg-pulse/5 p-3 sm:p-4 transition-colors"
                 >
@@ -936,7 +937,7 @@ function ProgressTab({ payload }: { payload: ProfilePayload }) {
                       {c.pct}%
                     </span>
                   </div>
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -1066,12 +1067,12 @@ function PromoRedeemCard() {
         >
           <p className="font-semibold">{redeemStatusLabel(result.status, dict)}</p>
           {success && result.courseId && (
-            <a
+            <Link
               href={`/${locale}/courses/${result.courseId}`}
               className="inline-block mt-2 text-green-700 font-bold hover:underline"
             >
               {result.status === 'ok' ? dict.promo.successCta : dict.promo.alreadyEnrolledCta}
-            </a>
+            </Link>
           )}
         </div>
       )}

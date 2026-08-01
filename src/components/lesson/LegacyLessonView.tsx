@@ -43,9 +43,9 @@ export function LegacyLessonView({
       {/* Top bar */}
       <header className="flex items-center justify-between border-b bg-white px-6 py-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <a href="/" className="text-gray-500 hover:text-gray-700 text-sm" aria-label="მთავარ გვერდზე დაბრუნება">
+          <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm" aria-label="მთავარ გვერდზე დაბრუნება">
             &larr; Back
-          </a>
+          </Link>
           <h1 className="text-lg font-bold text-gray-900">{lesson.title}</h1>
           <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
             {lesson.difficulty}

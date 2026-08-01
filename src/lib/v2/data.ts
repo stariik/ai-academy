@@ -92,20 +92,20 @@ export type CategoryVisual = {
 };
 
 export const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
-  'AI საფუძვლები': {
+  'ხელოვნური ინტელექტის საფუძვლები': {
     slug: 'ai-foundations',
-    nameEn: 'AI Foundations',
-    taglineKa: 'სად დავიწყოთ AI-სთან მუშაობა — ნულიდან მოყოლებული.',
-    taglineEn: 'Where to start with AI — from zero up.',
+    nameEn: 'AI Fundamentals',
+    taglineKa: 'გაიგე, როგორ მუშაობს AI და გამოიყენე ის პრაქტიკაში — ნულიდან.',
+    taglineEn: 'Understand how AI works and put it to practical use — from zero.',
     icon: '🧭',
     tone: 'pulse',
     audience: 'everyone',
   },
-  'AI პრომპტის ინჟინერია': {
+  'პრომპტ ინჟინერია': {
     slug: 'prompt-engineering',
     nameEn: 'Prompt Engineering',
-    taglineKa: 'როგორ ვითხოვ AI-სგან ზუსტ შედეგს — ხელოვნება და მეცნიერება.',
-    taglineEn: 'How to ask AI for precise results — art and science.',
+    taglineKa: 'დაწერე მკაფიო პრომპტები და მიიღე უფრო სასარგებლო შედეგები.',
+    taglineEn: 'Write clearer prompts and get more useful AI outputs.',
     icon: '🎯',
     tone: 'indigo',
     audience: 'everyone',
@@ -113,8 +113,8 @@ export const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
   'AI მარკეტინგი': {
     slug: 'ai-marketing',
     nameEn: 'AI Marketing',
-    taglineKa: 'მარკეტინგი, შინაარსი, კამპანიები — AI-ის დახმარებით.',
-    taglineEn: 'Marketing, content, and campaigns — with AI on your side.',
+    taglineKa: 'შექმენი კონტენტი, კამპანიები და ანალიზი AI-ის დახმარებით.',
+    taglineEn: 'Create content, campaigns, and analysis with AI.',
     icon: '📈',
     tone: 'heart',
     audience: 'adults',
@@ -122,17 +122,17 @@ export const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
   'AI და კიბერუსაფრთხოება': {
     slug: 'ai-security',
     nameEn: 'AI & Cybersecurity',
-    taglineKa: 'უსაფრთხო მუშაობა AI-ის ეპოქაში.',
-    taglineEn: 'Working safely in the age of AI.',
+    taglineKa: 'დაიცავი მონაცემები, სისტემები და მომხმარებლები AI-ის ეპოქაში.',
+    taglineEn: 'Protect data, systems, and users in the age of AI.',
     icon: '🛡️',
     tone: 'violet',
     audience: 'adults',
   },
-  'AI კოდინგი და პროგრამირება': {
+  'პროგრამირება AI-ით': {
     slug: 'ai-coding',
-    nameEn: 'AI Coding',
-    taglineKa: 'შექმენი აპლიკაციები AI-სთან ერთად — Cursor, Claude Code.',
-    taglineEn: 'Build apps alongside AI — Cursor, Claude Code.',
+    nameEn: 'AI Coding & Development',
+    taglineKa: 'შექმენი ვებსაიტები, აპები და ავტომატიზაციები AI-სთან ერთად.',
+    taglineEn: 'Build websites, apps, and automations alongside AI.',
     icon: '⚡',
     tone: 'violet',
     audience: 'teens',
@@ -140,35 +140,35 @@ export const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
   'AI ბავშვებისთვის': {
     slug: 'ai-for-kids',
     nameEn: 'AI for Kids',
-    taglineKa: 'სათამაშო გაკვეთილები 6-12 წლის ბავშვებისთვის.',
-    taglineEn: 'Playful lessons for kids 6-12.',
+    taglineKa: 'უსაფრთხო და სახალისო AI სწავლება 6–14 წლისთვის.',
+    taglineEn: 'Safe, playful AI learning for ages 6–14.',
     icon: '🎈',
     tone: 'amber',
     audience: 'kids',
   },
-  'AI შემოქმედებისთვის და დიზაინი': {
+  'AI შემოქმედება და დიზაინი': {
     slug: 'ai-creative',
-    nameEn: 'AI for Creators',
-    taglineKa: 'AI ხელოვნება, ვიდეო, მუსიკა — შენი იდეებისთვის.',
-    taglineEn: 'AI art, video, music — for your ideas.',
+    nameEn: 'AI Creativity & Design',
+    taglineKa: 'შექმენი სურათები, დიზაინი, მუსიკა და ისტორიები AI-ით.',
+    taglineEn: 'Create images, designs, music, and stories with AI.',
     icon: '🎨',
     tone: 'heart',
     audience: 'everyone',
   },
-  'AI აგენტები და ჩატბოტების არქიტექტურა': {
+  'AI აგენტები და ჩატბოტები': {
     slug: 'ai-agents',
     nameEn: 'AI Agents & Chatbots',
-    taglineKa: 'ააწყვე საკუთარი AI აგენტი — არქიტექტურა და პრაქტიკა.',
-    taglineEn: 'Build your own AI agent — architecture and practice.',
+    taglineKa: 'ააწყვე სასარგებლო AI აგენტები და ჩატბოტები — იდეიდან ინტეგრაციამდე.',
+    taglineEn: 'Build useful AI agents and chatbots — from idea to integration.',
     icon: '🤖',
     tone: 'indigo',
     audience: 'adults',
   },
-  'AI ბიზნეს-სტრატეგია და სამუშაო პროცესები': {
+  'AI ბიზნესისა და პროდუქტიულობისთვის': {
     slug: 'ai-business',
-    nameEn: 'AI Business',
-    taglineKa: 'AI ბიზნეს-პროცესებში — სტრატეგია, ROI, შესრულება.',
-    taglineEn: 'AI in business processes — strategy, ROI, execution.',
+    nameEn: 'AI for Business & Productivity',
+    taglineKa: 'დანერგე AI სამუშაო პროცესებში, გუნდებსა და გადაწყვეტილებებში.',
+    taglineEn: 'Put AI to work across workflows, teams, and decisions.',
     icon: '💼',
     tone: 'pulse',
     audience: 'adults',
