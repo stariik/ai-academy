@@ -507,6 +507,8 @@ export const en: Dict = {
       },
     ],
 
+    contactNudgeTitle: 'Have a question?',
+    contactNudgeBody: 'We reply within 24 hours on weekdays.',
     ctaTitle: 'Ready to start?',
     ctaSubtitle: 'The first lesson is free. No account, no card, no commitment.',
     ctaPrimary: 'Try a free lesson',
