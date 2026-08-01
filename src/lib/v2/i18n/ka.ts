@@ -121,8 +121,8 @@ export const ka: Dict = {
   },
 
   ctaBanner: {
-    titleBefore: 'მზად ხარ',
-    titleHighlight: 'AI-ს სამყაროსთვის?',
+    titleBefore: 'მზად ხარ ისწავლო',
+    titleHighlight: 'AI-ის სიჩქარით?',
     description: 'დაიწყე უფასოდ. პირველი გაკვეთილი ჩემგან — შემდეგ შენი არჩევანია.',
     ctaPrimary: 'უფასოდ დაწყება',
     ctaSecondary: 'კურსების ნახვა',
