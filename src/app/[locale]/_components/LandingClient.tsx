@@ -558,15 +558,31 @@ function Hero() {
             />
             <Walli size={walliSize} state="wave" />
 
-            <FloatingChip className="-top-1 -left-2 sm:-left-10 lg:-left-14" delay="0s" tone="pulse">
+            {/* On phones the chips sit fully outside Walli — right-full and
+                left-full put their edge against his, so no offset guessing and
+                no overlap whatever the label says. From sm up there's room to
+                float them over him again, as before. */}
+            <FloatingChip
+              className="top-0 right-full mr-1.5 sm:right-auto sm:mr-0 sm:-top-1 sm:-left-10 lg:-left-14"
+              delay="0s"
+              tone="pulse"
+            >
               <span>🧭</span>
               <span>{dict.hero.chipFoundations}</span>
             </FloatingChip>
-            <FloatingChip className="top-14 -right-1 sm:-right-10 lg:-right-14" delay="0.6s" tone="heart">
+            <FloatingChip
+              className="top-1/2 left-full ml-1.5 sm:left-auto sm:ml-0 sm:top-14 sm:-right-10 lg:-right-14"
+              delay="0.6s"
+              tone="heart"
+            >
               <span>🎨</span>
               <span>{dict.hero.chipCreative}</span>
             </FloatingChip>
-            <FloatingChip className="-bottom-1 left-4 sm:left-0 lg:-left-4" delay="1.2s" tone="amber">
+            <FloatingChip
+              className="bottom-2 right-full mr-1.5 sm:right-auto sm:mr-0 sm:-bottom-1 sm:left-0 lg:-left-4"
+              delay="1.2s"
+              tone="amber"
+            >
               <span>🎈</span>
               <span>{dict.hero.chipForKids}</span>
             </FloatingChip>
@@ -691,7 +707,8 @@ function FloatingChip({
     <div className={cn('absolute float', className)} style={{ animationDelay: delay }}>
       <div
         className={cn(
-          'rounded-full bg-card border px-2.5 py-1 sm:px-3 sm:py-1.5 text-[9px] sm:text-xs font-bold flex items-center gap-1.5 whitespace-nowrap',
+          // Narrow on phones so the chip clears Walli in the ~95px beside him.
+          'rounded-full bg-card border px-1.5 py-0.5 sm:px-3 sm:py-1.5 text-[9px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 whitespace-nowrap',
           ring,
           glow,
         )}
