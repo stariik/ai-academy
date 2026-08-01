@@ -558,12 +558,14 @@ function Hero() {
             />
             <Walli size={walliSize} state="wave" />
 
-            {/* On phones the chips sit fully outside Walli — right-full and
-                left-full put their edge against his, so no offset guessing and
-                no overlap whatever the label says. From sm up there's room to
-                float them over him again, as before. */}
+            {/* On phones the chips anchor to Walli's box edge with right-full
+                / left-full, then pull back 20px into it. His 240-wide viewBox
+                carries ~30px of transparent padding each side at this scale,
+                so that tightens the gap without touching the robot — and it
+                holds however long the label is. From sm up the old offsets
+                that float them over him are restored. */}
             <FloatingChip
-              className="top-0 right-full mr-1.5 sm:right-auto sm:mr-0 sm:-top-1 sm:-left-10 lg:-left-14"
+              className="top-0 right-full -mr-5 sm:right-auto sm:mr-0 sm:-top-1 sm:-left-10 lg:-left-14"
               delay="0s"
               tone="pulse"
             >
@@ -571,7 +573,7 @@ function Hero() {
               <span>{dict.hero.chipFoundations}</span>
             </FloatingChip>
             <FloatingChip
-              className="top-1/2 left-full ml-1.5 sm:left-auto sm:ml-0 sm:top-14 sm:-right-10 lg:-right-14"
+              className="top-1/2 left-full -ml-5 sm:left-auto sm:ml-0 sm:top-14 sm:-right-10 lg:-right-14"
               delay="0.6s"
               tone="heart"
             >
@@ -579,7 +581,7 @@ function Hero() {
               <span>{dict.hero.chipCreative}</span>
             </FloatingChip>
             <FloatingChip
-              className="bottom-2 right-full mr-1.5 sm:right-auto sm:mr-0 sm:-bottom-1 sm:left-0 lg:-left-4"
+              className="bottom-2 right-full -mr-5 sm:right-auto sm:mr-0 sm:-bottom-1 sm:left-0 lg:-left-4"
               delay="1.2s"
               tone="amber"
             >
