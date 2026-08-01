@@ -750,7 +750,7 @@ function CtaBanner() {
           <div className="relative grid gap-6 sm:gap-8 md:grid-cols-[1fr_auto] md:items-center">
             <div className="text-center md:text-left">
               <h2
-                className="text-[22px] sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
+                className="text-[20px] sm:text-4xl lg:text-5xl font-bold leading-[1.12] text-balance tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {dict.ctaBanner.titleBefore}{' '}
