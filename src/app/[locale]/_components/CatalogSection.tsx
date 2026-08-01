@@ -229,7 +229,7 @@ export function CatalogSection({
             {dict.catalog.eyebrow}
           </p>
           <h2
-            className="text-[22px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
+            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12] text-balance"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             {dict.catalog.titleBefore}{' '}
