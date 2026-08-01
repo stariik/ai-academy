@@ -42,7 +42,7 @@ export const en: Dict = {
 
   catalog: {
     eyebrow: 'Catalog',
-    titleBefore: 'The professions of the future and',
+    titleBefore: 'Transformational knowledge and',
     titleHighlight: 'boundless possibilities',
     description:
       'Look through the categories, pick the direction you want, and master new skills at the speed of AI.',
