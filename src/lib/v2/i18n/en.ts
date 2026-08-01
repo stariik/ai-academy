@@ -124,7 +124,7 @@ export const en: Dict = {
   ctaBanner: {
     titleBefore: 'Ready to learn at',
     titleHighlight: 'the speed of AI?',
-    description: 'Start free. First lesson on me — what happens next is up to you.',
+    description: 'Take one WALLE lesson free and pick your direction',
     ctaPrimary: 'Start free',
     ctaSecondary: 'Browse courses',
     trustMicro: 'No payment · cancel anytime',
