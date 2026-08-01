@@ -42,10 +42,10 @@ export const en: Dict = {
 
   catalog: {
     eyebrow: 'Catalog',
-    titleBefore: 'Nine paths,',
-    titleHighlight: 'one teacher',
+    titleBefore: 'The professions of the future and',
+    titleHighlight: 'boundless possibilities',
     description:
-      'Start anywhere. Scroll through the categories, discover courses — everything in one feed.',
+      'Look through the categories, pick the direction you want, and master new skills at the speed of AI.',
     emptyState: 'No courses yet — coming soon.',
     coursesUnit: 'courses',
     lessonsUnit: 'lessons',
