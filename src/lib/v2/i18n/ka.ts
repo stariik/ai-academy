@@ -42,8 +42,8 @@ export const ka: Dict = {
 
   catalog: {
     eyebrow: 'კატალოგი',
-    titleBefore: 'ტრანსფორმაციული ცოდნა და',
-    titleHighlight: 'უსაზღვრო შესაძლებლობები',
+    titleBefore: 'მიიღე',
+    titleHighlight: 'ტრანსფორმაციული ცოდნა',
     description:
       'გადახედე კატეგორიებს, აირჩიე შენთვის სასურველი მიმართულება და დაეუფლე ახალ უნარებს AI-ის სიჩქარით',
     emptyState: 'ჯერ კურსები არ არის — მალე გამოჩნდება.',
@@ -52,7 +52,7 @@ export const ka: Dict = {
     lessonsUnitShort: 'გაკ.',
     soon: 'მალე',
     bundleEyebrow: 'პაკეტი',
-    bundleCta: 'აიღე პაკეტი',
+    bundleCta: 'შეიძინე პაკეტი',
     bundleSave: 'დაზოგავ',
     bundleForever: 'სამუდამო წვდომა',
     bundleDialogTitle: 'გახსენი მთელი პაკეტი',
