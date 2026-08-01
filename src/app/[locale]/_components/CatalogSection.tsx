@@ -221,7 +221,7 @@ export function CatalogSection({
 
   return (
     <BundleCtx.Provider value={store}>
-    <section id="categories" className="py-16 sm:py-24">
+    <section id="categories" className="py-12 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="space-y-3 max-w-2xl">
           <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2">
@@ -229,7 +229,7 @@ export function CatalogSection({
             {dict.catalog.eyebrow}
           </p>
           <h2
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
+            className="text-[26px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             {dict.catalog.titleBefore}{' '}
@@ -243,7 +243,7 @@ export function CatalogSection({
         </div>
       </div>
 
-      <div className="mt-10 sm:mt-12">
+      <div className="mt-7 sm:mt-12">
         <CategorySlider categories={categories} />
       </div>
 
@@ -254,7 +254,7 @@ export function CatalogSection({
           </div>
         </div>
       ) : (
-        <div id="courses" className="mt-16 sm:mt-24 space-y-14 sm:space-y-20 scroll-mt-20">
+        <div id="courses" className="mt-11 sm:mt-24 space-y-10 sm:space-y-20 scroll-mt-20">
           {withCourses.map((c, i) => (
             <CourseSliderRow
               key={c.id}
@@ -527,7 +527,7 @@ function Slider({
           )}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <div className={cn('flex gap-4 sm:gap-5 reveal-row', shown && 'is-shown')}>
+          <div className={cn('flex gap-3 sm:gap-5 reveal-row', shown && 'is-shown')}>
             {children}
           </div>
         </div>
@@ -606,7 +606,7 @@ function EdgeArrow({
       disabled={disabled}
       className={cn(
         'absolute top-1/2 -translate-y-1/2 z-20',
-        'flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-full',
+        'flex items-center justify-center h-9 w-9 sm:h-12 sm:w-12 rounded-full',
         'bg-card/95 backdrop-blur-md border border-border',
         'shadow-[0_10px_30px_rgba(0,0,0,0.14)]',
         'text-foreground transition-all duration-200 ease-out',
@@ -663,7 +663,7 @@ function CategorySlider({ categories }: { categories: Category[] }) {
         <div
           key={c.id}
           data-slide-item
-          className="snap-start shrink-0 w-[210px] sm:w-[228px] lg:w-[240px]"
+          className="snap-start shrink-0 w-[176px] sm:w-[228px] lg:w-[240px]"
         >
           <BundleCard category={c} />
         </div>
@@ -746,7 +746,7 @@ function BundleCard({ category: c }: { category: Category }) {
           )}
         >
           {/* Cover banner — big, full-width category image */}
-          <div className={cn('relative h-24 w-full overflow-hidden', !hasImage && t.iconBg, disabled && 'grayscale')}>
+          <div className={cn('relative h-20 sm:h-24 w-full overflow-hidden', !hasImage && t.iconBg, disabled && 'grayscale')}>
             {hasImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -787,9 +787,9 @@ function BundleCard({ category: c }: { category: Category }) {
           </div>
 
           {/* Name + students */}
-          <div className="px-4 pt-3.5">
+          <div className="px-3.5 pt-3 sm:px-4 sm:pt-3.5">
             <h3
-              className="text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
+              className="text-[13px] sm:text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
               style={{ fontFamily: 'var(--font-display)' }}
             >
               {c.name}
@@ -807,13 +807,13 @@ function BundleCard({ category: c }: { category: Category }) {
 
         {/* What's included */}
         {price && (
-          <ul className="mt-3 space-y-1.5 px-4">
+          <ul className="mt-2.5 sm:mt-3 space-y-1 sm:space-y-1.5 px-3.5 sm:px-4">
             {[
               `${c.courses} ${dict.catalog.coursesUnit} · ${c.lessons} ${dict.catalog.lessonsUnit}`,
               dict.courseDetail.trustLifetime,
               dict.courseDetail.trustCertificate,
             ].map((item) => (
-              <li key={item} className="flex items-center gap-2 text-[12px] text-foreground/85">
+              <li key={item} className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-[12px] text-foreground/85">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" className={cn('shrink-0', t.text)} aria-hidden>
                   <path d="M20 6 9 17l-5-5" />
                 </svg>
@@ -825,7 +825,7 @@ function BundleCard({ category: c }: { category: Category }) {
 
         {/* ── Footer: soon · owned · price + buy ── */}
         {disabled ? (
-          <div className="mt-auto px-4 pb-5 pt-4">
+          <div className="mt-auto px-3.5 pb-4 pt-3.5 sm:px-4 sm:pb-5 sm:pt-4">
             <span
               className={cn(
                 'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
@@ -837,7 +837,7 @@ function BundleCard({ category: c }: { category: Category }) {
             </span>
           </div>
         ) : owned ? (
-          <div className="mt-auto px-4 pb-5 pt-4">
+          <div className="mt-auto px-3.5 pb-4 pt-3.5 sm:px-4 sm:pb-5 sm:pt-4">
             <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold', t.text)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M20 6 9 17l-5-5" />
@@ -849,7 +849,7 @@ function BundleCard({ category: c }: { category: Category }) {
               href={anchor}
               draggable={false}
               className={cn(
-                'mt-2.5 flex h-10 items-center justify-center gap-1.5 rounded-xl border text-[12.5px] font-semibold',
+                'mt-2.5 flex h-9 sm:h-10 items-center justify-center gap-1.5 rounded-xl border text-[12px] sm:text-[12.5px] font-semibold',
                 'transition-all duration-200 ease-out',
                 t.ring,
                 t.text,
@@ -862,11 +862,11 @@ function BundleCard({ category: c }: { category: Category }) {
             </a>
           </div>
         ) : price ? (
-          <div className="mt-auto px-4 pb-5">
+          <div className="mt-auto px-3.5 pb-4 sm:px-4 sm:pb-5">
             {/* Price — bundle, struck retail, calm save chip */}
-            <div className="mt-3.5 flex items-baseline gap-2 border-t border-border pt-3.5">
+            <div className="mt-3 flex items-baseline gap-2 border-t border-border pt-3 sm:mt-3.5 sm:pt-3.5">
               <span
-                className="text-[20px] font-bold leading-none tabular-nums"
+                className="text-[18px] sm:text-[20px] font-bold leading-none tabular-nums"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 ₾{price.bundle}
@@ -893,7 +893,7 @@ function BundleCard({ category: c }: { category: Category }) {
               type="button"
               onClick={() => bundle?.openBuy(c)}
               className={cn(
-                'mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl text-[12.5px] font-semibold text-primary-foreground',
+                'mt-2.5 sm:mt-3 flex h-9 sm:h-10 w-full items-center justify-center gap-2 rounded-xl text-[12px] sm:text-[12.5px] font-semibold text-primary-foreground',
                 'transition-all duration-200 ease-out',
                 t.bg,
                 'hover:brightness-105 active:scale-[0.99]',
@@ -959,11 +959,11 @@ function CourseSliderRow({
         tone={c.tone}
         ariaLabel={`${c.name} — ${dict.slider.ariaCourses}`}
         heading={
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
             {/* Mission patch — category image, or icon on tone wash */}
             <span
               className={cn(
-                'relative grid h-11 w-11 sm:h-14 sm:w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border',
+                'relative grid h-10 w-10 sm:h-14 sm:w-14 shrink-0 place-items-center overflow-hidden rounded-xl sm:rounded-2xl border',
                 t.ring,
                 !hasImage && t.iconBg,
               )}
@@ -982,7 +982,7 @@ function CourseSliderRow({
                   <span className="absolute inset-0 bg-black/15" />
                 </>
               ) : (
-                <span className="text-xl sm:text-2xl">{c.icon}</span>
+                <span className="text-lg sm:text-2xl">{c.icon}</span>
               )}
             </span>
 
@@ -996,7 +996,7 @@ function CourseSliderRow({
                 <span className="tabular-nums text-foreground">{c.lessons}</span> {dict.catalog.lessonsUnit}
               </p>
               <h3
-                className="mt-0.5 text-lg sm:text-2xl font-bold leading-tight tracking-tight truncate"
+                className="mt-0.5 text-[15px] sm:text-2xl font-bold leading-tight tracking-tight truncate"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {c.name}
@@ -1009,7 +1009,7 @@ function CourseSliderRow({
           <div
             key={co.id}
             data-slide-item
-            className="snap-start shrink-0 w-[220px] sm:w-[248px] lg:w-[268px]"
+            className="snap-start shrink-0 w-[188px] sm:w-[248px] lg:w-[268px]"
           >
             <CourseCard course={co} category={c} />
           </div>
@@ -1054,7 +1054,7 @@ function CourseCard({
       href={href(`courses/${co.id}`)}
       draggable={false}
       className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-card p-4',
+        'group relative flex h-full flex-col overflow-hidden rounded-2xl sm:rounded-[20px] border border-border bg-card p-3.5 sm:p-4',
         'transition-all duration-300 ease-out transform-gpu',
         'hover:-translate-y-2 hover:border-transparent hover:shadow-[0_26px_52px_-22px_var(--pulse-glow)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -1081,7 +1081,7 @@ function CourseCard({
       <div className="relative flex items-start justify-between gap-2">
         <span
           className={cn(
-            'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
+            'grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-lg sm:rounded-xl text-base sm:text-lg transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6',
             t.iconBg,
           )}
           aria-hidden
@@ -1102,7 +1102,7 @@ function CourseCard({
 
       {/* Title */}
       <h4
-        className="relative mt-3.5 text-[16px] sm:text-[17px] font-bold leading-snug tracking-tight line-clamp-2"
+        className="relative mt-3 sm:mt-3.5 text-[14.5px] sm:text-[17px] font-bold leading-snug tracking-tight line-clamp-2"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {co.title}
@@ -1110,34 +1110,34 @@ function CourseCard({
 
       {/* Description */}
       {co.description && (
-        <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
+        <p className="relative mt-1.5 sm:mt-2 text-[11px] sm:text-xs leading-relaxed text-muted-foreground line-clamp-2">
           {co.description}
         </p>
       )}
 
       {/* Meta chips — audience · level · pace */}
-      <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+      <div className="relative mt-2.5 sm:mt-3 flex flex-wrap items-center gap-1 sm:gap-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 sm:px-2 sm:py-1 text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-foreground/70">
           <span className={cn('h-1.5 w-1.5 rounded-full', t.bg)} aria-hidden />
           {dict.audienceTag[co.audience]}
         </span>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 sm:px-2 sm:py-1 text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-foreground/70">
           <LevelMeter level={co.level} tone={c.tone} />
           {dict.level[co.level]}
         </span>
         {minPerLesson > 0 && (
-          <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-foreground/70">
+          <span className="inline-flex items-center rounded-full border border-border/70 bg-background/60 px-1.5 py-0.5 sm:px-2 sm:py-1 text-[8.5px] sm:text-[9px] font-bold uppercase tracking-widest text-foreground/70">
             ~{minPerLesson} {dict.courseCard.minPerLesson}
           </span>
         )}
       </div>
 
       {/* Footer — always visible, price-forward */}
-      <div className="relative mt-auto pt-3.5">
-        <div className="border-t border-dashed border-border/80 pt-3">
+      <div className="relative mt-auto pt-3 sm:pt-3.5">
+        <div className="border-t border-dashed border-border/80 pt-2.5 sm:pt-3">
           {/* stats · save chip */}
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[10.5px] text-muted-foreground">
+            <span className="font-mono text-[10px] sm:text-[10.5px] text-muted-foreground">
               <span className="font-bold tabular-nums text-foreground">{co.lessons}</span>
               {' '}{dict.courseCard.lessonsShort}
               <span className="px-1 opacity-40">·</span>
@@ -1152,7 +1152,7 @@ function CourseCard({
           </div>
 
           {/* price · CTA */}
-          <div className="mt-2 flex items-end justify-between gap-3">
+          <div className="mt-1.5 sm:mt-2 flex items-end justify-between gap-2 sm:gap-3">
             {owned ? (
               <span className={cn('inline-flex items-center gap-1.5 text-[15px] font-bold', t.text)}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -1162,7 +1162,7 @@ function CourseCard({
               </span>
             ) : isFree ? (
               <span
-                className={cn('text-[20px] font-bold leading-none tracking-tight', t.text)}
+                className={cn('text-[18px] sm:text-[20px] font-bold leading-none tracking-tight', t.text)}
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {dict.courseCard.free}
@@ -1170,7 +1170,7 @@ function CourseCard({
             ) : (
               <span className="inline-flex items-baseline gap-1.5">
                 <span
-                  className="text-[22px] font-bold leading-none tabular-nums"
+                  className="text-[19px] sm:text-[22px] font-bold leading-none tabular-nums"
                   style={{ fontFamily: 'var(--font-display)' }}
                 >
                   ₾{co.price}
@@ -1185,7 +1185,7 @@ function CourseCard({
 
             <span
               className={cn(
-                'grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary-foreground shadow-sm',
+                'grid h-8 w-8 sm:h-9 sm:w-9 shrink-0 place-items-center rounded-full text-primary-foreground shadow-sm',
                 'transition-all duration-300 ease-out',
                 t.bg,
                 'group-hover:scale-110 group-hover:brightness-105 group-hover:shadow-[0_8px_20px_-4px_var(--pulse-glow)]',
