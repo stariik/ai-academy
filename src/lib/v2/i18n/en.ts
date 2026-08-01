@@ -22,10 +22,10 @@ export const en: Dict = {
 
   hero: {
     eyebrow: 'Georgian AI academy',
-    titleBefore: 'Your personal',
-    titleHighlight: 'AI tutor',
+    titleBefore: 'AI education and',
+    titleHighlight: 'the professions of the future in one place',
     description:
-      'Walli teaches in Georgian — at your pace, and never tires. From kids to professionals, there is a course for everyone.',
+      'The first AI education ecosystem, giving you the transformational knowledge of the digital age through a hyper-personal, holistic approach.',
     ctaPrimary: 'Browse categories',
     ctaSecondary: 'Free lesson',
     statStudents: 'students',

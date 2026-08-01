@@ -580,7 +580,7 @@ function Hero() {
           </div>
 
           <h1
-            className="mt-4 sm:mt-6 text-[32px] min-[380px]:text-[36px] sm:text-[56px] lg:text-7xl xl:text-[80px] font-bold leading-[1.08] tracking-tight"
+            className="mt-4 sm:mt-6 text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             {dict.hero.titleBefore}{' '}
