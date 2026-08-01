@@ -223,19 +223,17 @@ export function CatalogSection({
     <BundleCtx.Provider value={store}>
     <section id="categories" className="pt-6 pb-12 sm:pt-12 sm:pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="space-y-3 max-w-2xl">
+        <div className="space-y-3 max-w-3xl">
           <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2">
             <span className="h-1 w-6 rounded-full bg-pulse" />
             {dict.catalog.eyebrow}
           </p>
-          {/* Exactly two lines at every width. The highlight is always its
-              own line, so the break can't land mid-phrase, and the phone size
-              is fluid: 20px wherever 20px fits, easing down only on narrow
-              screens where the longer second line would otherwise wrap to a
-              third. Fixed 20px needs ~345px for that line and a 360px phone
-              only has 328. */}
+          {/* Two lines: the highlight is always its own line. The container
+              is max-w-3xl rather than 2xl because at lg the heading is 48px
+              and "უსაზღვრო შესაძლებლობები" is wider than 672px on its own,
+              which split it across a third line. */}
           <h2
-            className="text-[clamp(16px,5vw,20px)] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
+            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             {dict.catalog.titleBefore}{' '}
