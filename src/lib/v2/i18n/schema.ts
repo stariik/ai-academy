@@ -291,6 +291,8 @@ export type Dict = {
     passwordLabel: string;
     passwordPlaceholder: string;
     passwordHint: string;
+    showPassword: string;
+    hidePassword: string;
     displayNameLabel: string;
     displayNamePlaceholder: string;
     submitLogin: string;

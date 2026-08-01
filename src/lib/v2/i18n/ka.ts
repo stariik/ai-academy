@@ -325,6 +325,8 @@ export const ka: Dict = {
     passwordLabel: 'პაროლი',
     passwordPlaceholder: '••••••••',
     passwordHint: 'მინიმუმ 8 სიმბოლო',
+    showPassword: 'პაროლის ჩვენება',
+    hidePassword: 'პაროლის დამალვა',
     displayNameLabel: 'შენი სახელი',
     displayNamePlaceholder: 'როგორ მოგმართოს Walli',
     submitLogin: 'შესვლა',

@@ -5,7 +5,15 @@ import { useActionState } from 'react';
 import { signUpAction, type AuthState } from '../actions';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
-import { AuthShell, AuthInput, AuthSubmit, AuthError } from './AuthShell';
+import {
+  AuthShell,
+  AuthInput,
+  AuthPasswordInput,
+  AuthSubmit,
+  AuthError,
+  AuthNotice,
+  AuthSwitch,
+} from './AuthShell';
 
 export default function RegisterForm({
   dict,
@@ -42,34 +50,28 @@ function Inner({ redeemCode }: { redeemCode?: string }) {
       : dict.auth.errorGeneric
     : null;
 
+  const emailInvalid = state?.error === 'EMAIL_TAKEN';
+  const passwordInvalid = state?.error === 'PASSWORD_TOO_SHORT';
+
   return (
     <AuthShell
       eyebrow={dict.meta.brandName}
       title={dict.auth.registerTitle}
       subtitle={dict.auth.registerSubtitle}
       footer={
-        <>
-          <span>{dict.auth.switchToLogin}</span>{' '}
-          <a
-            href={
-              redeemCode
-                ? `${href('login')}?redeem=${encodeURIComponent(redeemCode)}`
-                : href('login')
-            }
-            className="font-bold text-pulse hover:underline"
-          >
-            {dict.auth.haveAccount}
-          </a>
-        </>
+        <AuthSwitch
+          prompt={dict.auth.switchToLogin}
+          actionLabel={dict.auth.haveAccount}
+          href={
+            redeemCode
+              ? `${href('login')}?redeem=${encodeURIComponent(redeemCode)}`
+              : href('login')
+          }
+        />
       }
     >
       {redeemCode && (
-        <div className="mb-4 rounded-xl border border-green-300 bg-green-50 px-3.5 py-3">
-          <p className="text-xs font-semibold text-green-800">{dict.promo.redeemPageSigningIn}</p>
-          <p className="mt-1 font-mono text-sm font-bold tracking-wider text-green-900 break-all">
-            {redeemCode}
-          </p>
-        </div>
+        <AuthNotice tone="success" title={dict.promo.redeemPageSigningIn} code={redeemCode} />
       )}
 
       <form action={formAction} className="space-y-4">
@@ -82,6 +84,7 @@ function Inner({ redeemCode }: { redeemCode?: string }) {
           type="text"
           placeholder={dict.auth.displayNamePlaceholder}
           autoComplete="nickname"
+          enterKeyHint="next"
           required
         />
         <AuthInput
@@ -90,16 +93,19 @@ function Inner({ redeemCode }: { redeemCode?: string }) {
           type="email"
           placeholder={dict.auth.emailPlaceholder}
           autoComplete="email"
+          enterKeyHint="next"
+          invalid={emailInvalid}
           required
         />
-        <AuthInput
+        <AuthPasswordInput
           label={dict.auth.passwordLabel}
           name="password"
-          type="password"
           placeholder={dict.auth.passwordPlaceholder}
           hint={dict.auth.passwordHint}
+          minLength={8}
           autoComplete="new-password"
-          required
+          toggleLabel={{ show: dict.auth.showPassword, hide: dict.auth.hidePassword }}
+          invalid={passwordInvalid}
         />
 
         {errorMessage && <AuthError message={errorMessage} />}

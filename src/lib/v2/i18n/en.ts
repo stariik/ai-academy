@@ -326,6 +326,8 @@ export const en: Dict = {
     passwordLabel: 'Password',
     passwordPlaceholder: '••••••••',
     passwordHint: 'Minimum 8 characters',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     displayNameLabel: 'Your name',
     displayNamePlaceholder: 'How should Walli address you?',
     submitLogin: 'Sign in',

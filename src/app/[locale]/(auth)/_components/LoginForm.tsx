@@ -6,7 +6,15 @@ import { signInAction, type AuthState } from '../actions';
 import { useV2Locale } from '@/lib/v2/i18n/context';
 import { V2LocaleProvider } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
-import { AuthShell, AuthInput, AuthSubmit, AuthError } from './AuthShell';
+import {
+  AuthShell,
+  AuthInput,
+  AuthPasswordInput,
+  AuthSubmit,
+  AuthError,
+  AuthNotice,
+  AuthSwitch,
+} from './AuthShell';
 
 export default function LoginForm({
   dict,
@@ -41,40 +49,29 @@ function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemC
       : dict.auth.errorGeneric
     : null;
 
+  const credentialsInvalid = state?.error === 'INVALID_CREDENTIALS';
+
   return (
     <AuthShell
       eyebrow={dict.meta.brandName}
       title={dict.auth.loginTitle}
       subtitle={dict.auth.loginSubtitle}
       footer={
-        <>
-          <span>{dict.auth.switchToRegister}</span>{' '}
-          <a
-            href={
-              redeemCode
-                ? `${href('register')}?redeem=${encodeURIComponent(redeemCode)}`
-                : href('register')
-            }
-            className="font-bold text-pulse hover:underline"
-          >
-            {dict.auth.needAccount}
-          </a>
-        </>
+        <AuthSwitch
+          prompt={dict.auth.switchToRegister}
+          actionLabel={dict.auth.needAccount}
+          href={
+            redeemCode
+              ? `${href('register')}?redeem=${encodeURIComponent(redeemCode)}`
+              : href('register')
+          }
+        />
       }
     >
-      {confirmNotice && (
-        <div className="mb-4 rounded-xl border border-pulse/40 bg-pulse/5 px-3.5 py-2.5 text-xs font-semibold text-pulse">
-          {dict.auth.confirmEmailNotice}
-        </div>
-      )}
+      {confirmNotice && <AuthNotice title={dict.auth.confirmEmailNotice} />}
 
       {redeemCode && (
-        <div className="mb-4 rounded-xl border border-green-300 bg-green-50 px-3.5 py-3">
-          <p className="text-xs font-semibold text-green-800">{dict.promo.redeemPageSigningIn}</p>
-          <p className="mt-1 font-mono text-sm font-bold tracking-wider text-green-900 break-all">
-            {redeemCode}
-          </p>
-        </div>
+        <AuthNotice tone="success" title={dict.promo.redeemPageSigningIn} code={redeemCode} />
       )}
 
       <form action={formAction} className="space-y-4">
@@ -87,15 +84,17 @@ function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemC
           type="email"
           placeholder={dict.auth.emailPlaceholder}
           autoComplete="email"
+          enterKeyHint="next"
+          invalid={credentialsInvalid}
           required
         />
-        <AuthInput
+        <AuthPasswordInput
           label={dict.auth.passwordLabel}
           name="password"
-          type="password"
           placeholder={dict.auth.passwordPlaceholder}
           autoComplete="current-password"
-          required
+          toggleLabel={{ show: dict.auth.showPassword, hide: dict.auth.hidePassword }}
+          invalid={credentialsInvalid}
         />
 
         {errorMessage && <AuthError message={errorMessage} />}
