@@ -38,6 +38,16 @@ function postAuthDestination(locale: Locale, rawRedeem: string | null): string {
   return `/${locale}`;
 }
 
+function onboardingDestination(locale: Locale, rawRedeem: string | null): string {
+  if (rawRedeem) {
+    const code = rawRedeem.trim().toUpperCase();
+    if (/^[A-Z0-9-]{4,32}$/.test(code)) {
+      return `/${locale}/welcome?redeem=${encodeURIComponent(code)}`;
+    }
+  }
+  return `/${locale}/welcome`;
+}
+
 /** Best-effort merge of the cookie-anchored anonymous session into a user. */
 async function attachCookieSessionToUser(userId: string) {
   const cookieStore = await cookies();
@@ -92,6 +102,13 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   await attachCookieSessionToUser(data.user.id);
   await ensureCookieMatchesLinkedSession(data.user.id);
 
+  const metadata = data.user.user_metadata as {
+    onboarding_required?: boolean;
+    onboarding_completed?: boolean;
+  } | null;
+  if (metadata?.onboarding_required === true && metadata.onboarding_completed !== true) {
+    redirect(onboardingDestination(locale, redeem));
+  }
   redirect(postAuthDestination(locale, redeem));
 }
 
@@ -114,7 +131,11 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     email,
     password,
     options: {
-      data: { display_name: displayName },
+      data: {
+        display_name: displayName,
+        onboarding_required: true,
+        onboarding_completed: false,
+      },
     },
   });
   if (error || !data.user) {
@@ -156,7 +177,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   // Otherwise, route to login with a "check your email" hint — preserving
   // the redeem code so they can pick up where they left off after confirming.
   if (data.session) {
-    redirect(postAuthDestination(locale, redeem));
+    redirect(onboardingDestination(locale, redeem));
   }
   const confirmDest = redeem
     ? `/${locale}/login?confirm=1&redeem=${encodeURIComponent(redeem)}`

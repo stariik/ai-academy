@@ -26,6 +26,7 @@ export type AiFeature =
   | 'outline_detection'
   | 'quiz_generation'
   | 'metadata_generation'
+  | 'onboarding_interview'
   | 'ui_translation'
   | 'category_image';
 

@@ -26,6 +26,13 @@ export default async function RegisterPage({
 
   const authed = await getAuthUser();
   if (authed) {
+    if (authed.onboardingRequired && !authed.onboardingCompleted) {
+      redirect(
+        redeemCode
+          ? `/${locale}/welcome?redeem=${encodeURIComponent(redeemCode)}`
+          : `/${locale}/welcome`,
+      );
+    }
     redirect(redeemCode ? `/${locale}/redeem/${redeemCode}` : `/${locale}`);
   }
 

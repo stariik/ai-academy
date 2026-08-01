@@ -116,6 +116,111 @@ export default async function AdminStudentDetailPage({
         />
       </div>
 
+      {student.onboarding && (
+        <section className="overflow-hidden rounded-xl border border-teal/20 bg-white">
+          <header className="flex flex-col gap-2 border-b border-gray-100 bg-teal-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-teal">
+                WALL-E onboarding
+              </p>
+              <h2 className="mt-0.5 text-sm font-semibold text-gray-900">
+                What this student wants
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              {student.onboarding.segmentLabel && (
+                <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                  {student.onboarding.segmentLabel}
+                </span>
+              )}
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  student.onboarding.status === 'completed'
+                    ? 'bg-teal-100 text-teal'
+                    : 'bg-amber-100 text-amber-700'
+                }`}
+              >
+                {student.onboarding.status === 'completed'
+                  ? `${student.onboarding.questionCount} answers`
+                  : `${student.onboarding.questionCount}/7 · in progress`}
+              </span>
+            </div>
+          </header>
+          <div className="space-y-4 p-4">
+            {student.onboarding.summary && (
+              <p className="text-sm leading-relaxed text-gray-700">
+                {student.onboarding.summary}
+              </p>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl bg-gray-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  Primary goal
+                </p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-gray-700">
+                  {student.onboarding.primaryGoal || 'Not clear yet'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-gray-50 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  Desired outcome
+                </p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-gray-700">
+                  {student.onboarding.desiredOutcome || 'Not clear yet'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                ...student.onboarding.learningPreferences,
+                ...student.onboarding.barriers,
+              ].map((label, index) => (
+                <span
+                  key={`${label}-${index}`}
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                    student.onboarding?.barriers.includes(label)
+                      ? 'border-amber-200 bg-amber-50 text-amber-700'
+                      : 'border-gray-200 bg-gray-50 text-gray-600'
+                  }`}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            {student.onboarding.verbatimQuote && (
+              <blockquote className="rounded-xl border-l-2 border-teal bg-teal-50/50 px-4 py-3 text-xs italic leading-relaxed text-gray-700">
+                “{student.onboarding.verbatimQuote}”
+              </blockquote>
+            )}
+            {student.onboarding.transcript.length > 0 && (
+              <details>
+                <summary className="cursor-pointer text-xs font-semibold text-teal hover:text-navy">
+                  Read onboarding conversation ({student.onboarding.transcript.length} messages)
+                </summary>
+                <div className="mt-3 max-h-80 space-y-2 overflow-y-auto rounded-xl bg-gray-50 p-3">
+                  {student.onboarding.transcript.map((message, index) => (
+                    <div
+                      key={`${message.at}-${index}`}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <p
+                        className={`max-w-[86%] rounded-xl px-3 py-2 text-[11px] leading-relaxed ${
+                          message.role === 'user'
+                            ? 'bg-teal text-white'
+                            : 'border border-gray-200 bg-white text-gray-700'
+                        }`}
+                      >
+                        {message.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Weak/strong topics + badges */}
       {(p?.weakTopics.length || p?.strongTopics.length || student.badges.length) ? (
         <div className="grid gap-4 lg:grid-cols-3">

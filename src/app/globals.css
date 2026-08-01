@@ -918,6 +918,30 @@ body {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 
+/* Keep onboarding usable on short landscape screens. The standard tablet
+   shell reserves room for the brand bar; in landscape that would leave too
+   little height for the question choices and bottom composer. */
+@media (min-width: 640px) and (max-height: 600px) {
+  .onboarding-page-header {
+    display: none;
+  }
+
+  .onboarding-layout {
+    height: 100dvh;
+    padding-bottom: 0;
+  }
+
+  .onboarding-chat-shell {
+    height: 100dvh;
+    max-height: none;
+  }
+
+  .onboarding-option-grid {
+    max-height: max(112px, calc(100dvh - 260px));
+    overflow-y: auto;
+  }
+}
+
 /* ============================================================
    Onboarding Premium Styles (merged from onboarding app)
    ============================================================ */

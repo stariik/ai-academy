@@ -10,6 +10,10 @@
 
 import 'server-only';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
+import type {
+  OnboardingAnswer,
+  OnboardingTranscriptMessage,
+} from '@/lib/onboarding';
 
 let cached: SupabaseClient | null = null;
 
@@ -447,6 +451,20 @@ export type StudentDetail = {
     tokens: number;
     costUsd: number;
   };
+  onboarding: {
+    status: 'in_progress' | 'completed';
+    questionCount: number;
+    primaryGoal: string;
+    desiredOutcome: string;
+    experienceLevel: string;
+    learningPreferences: string[];
+    weeklyCommitment: string;
+    barriers: string[];
+    summary: string;
+    segmentLabel: string;
+    verbatimQuote: string;
+    transcript: OnboardingTranscriptMessage[];
+  } | null;
 };
 
 export async function getStudentDetail(sessionId: string): Promise<StudentDetail | null> {
@@ -539,6 +557,40 @@ export async function getStudentDetail(sessionId: string): Promise<StudentDetail
     }));
   }
 
+  let onboarding: StudentDetail['onboarding'] = null;
+  if (session.user_id) {
+    const onboardingRes = await db
+      .from('onboarding_profiles')
+      .select(
+        'status, question_count, primary_goal, desired_outcome, experience_level, learning_preferences, weekly_commitment, barriers, ai_summary, segment_label, verbatim_quote, transcript',
+      )
+      .eq('user_id', session.user_id)
+      .maybeSingle();
+    if (onboardingRes.data) {
+      const row = onboardingRes.data as Record<string, unknown>;
+      const strings = (value: unknown) =>
+        Array.isArray(value)
+          ? value.filter((item): item is string => typeof item === 'string')
+          : [];
+      onboarding = {
+        status: row.status === 'completed' ? 'completed' : 'in_progress',
+        questionCount: Number(row.question_count) || 0,
+        primaryGoal: typeof row.primary_goal === 'string' ? row.primary_goal : '',
+        desiredOutcome: typeof row.desired_outcome === 'string' ? row.desired_outcome : '',
+        experienceLevel: typeof row.experience_level === 'string' ? row.experience_level : '',
+        learningPreferences: strings(row.learning_preferences),
+        weeklyCommitment: typeof row.weekly_commitment === 'string' ? row.weekly_commitment : '',
+        barriers: strings(row.barriers),
+        summary: typeof row.ai_summary === 'string' ? row.ai_summary : '',
+        segmentLabel: typeof row.segment_label === 'string' ? row.segment_label : '',
+        verbatimQuote: typeof row.verbatim_quote === 'string' ? row.verbatim_quote : '',
+        transcript: Array.isArray(row.transcript)
+          ? (row.transcript as OnboardingTranscriptMessage[])
+          : [],
+      };
+    }
+  }
+
   const profileRow = profileRes.data as {
     total_xp: number;
     current_streak: number;
@@ -618,7 +670,112 @@ export async function getStudentDetail(sessionId: string): Promise<StudentDetail
     })),
     reviewQueueDue: dueRes.count ?? 0,
     ai,
+    onboarding,
   };
+}
+
+// ============================================================
+// Onboarding research
+// ============================================================
+
+export type OnboardingInsight = {
+  id: string;
+  userId: string;
+  sessionId: string | null;
+  displayName: string;
+  email: string | null;
+  locale: 'ka' | 'en';
+  status: 'in_progress' | 'completed';
+  questionCount: number;
+  interests: string[];
+  primaryGoal: string;
+  desiredOutcome: string;
+  experienceLevel: string;
+  learningPreferences: string[];
+  weeklyCommitment: string;
+  barriers: string[];
+  motivation: string;
+  summary: string;
+  segmentLabel: string;
+  opportunitySignals: string[];
+  verbatimQuote: string;
+  answers: OnboardingAnswer[];
+  transcript: OnboardingTranscriptMessage[];
+  createdAt: string;
+  completedAt: string | null;
+};
+
+export type OnboardingInsightData = {
+  available: boolean;
+  rows: OnboardingInsight[];
+};
+
+export async function listOnboardingInsights(): Promise<OnboardingInsightData> {
+  const db = adminDb();
+  const profilesRes = await db
+    .from('onboarding_profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(2000);
+
+  if (profilesRes.error) {
+    return { available: false, rows: [] };
+  }
+
+  const [sessionsRes, emailMap] = await Promise.all([
+    db.from('student_sessions').select('id, user_id, display_name').not('user_id', 'is', null),
+    getUserEmailMap(db),
+  ]);
+  const sessionsByUser = new Map(
+    ((sessionsRes.data ?? []) as {
+      id: string;
+      user_id: string;
+      display_name: string;
+    }[]).map((session) => [session.user_id, session]),
+  );
+  const strings = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string')
+      : [];
+
+  const rows = ((profilesRes.data ?? []) as Record<string, unknown>[]).map((row) => {
+    const userId = String(row.user_id);
+    const session = sessionsByUser.get(userId);
+    const email = emailMap.get(userId) ?? null;
+    return {
+      id: String(row.id),
+      userId,
+      sessionId:
+        typeof row.session_id === 'string'
+          ? row.session_id
+          : session?.id ?? null,
+      displayName: session?.display_name || email?.split('@')[0] || 'Student',
+      email,
+      locale: row.locale === 'en' ? 'en' : 'ka',
+      status: row.status === 'completed' ? 'completed' : 'in_progress',
+      questionCount: Number(row.question_count) || 0,
+      interests: strings(row.interests),
+      primaryGoal: typeof row.primary_goal === 'string' ? row.primary_goal : '',
+      desiredOutcome: typeof row.desired_outcome === 'string' ? row.desired_outcome : '',
+      experienceLevel: typeof row.experience_level === 'string' ? row.experience_level : '',
+      learningPreferences: strings(row.learning_preferences),
+      weeklyCommitment: typeof row.weekly_commitment === 'string' ? row.weekly_commitment : '',
+      barriers: strings(row.barriers),
+      motivation: typeof row.motivation === 'string' ? row.motivation : '',
+      summary: typeof row.ai_summary === 'string' ? row.ai_summary : '',
+      segmentLabel: typeof row.segment_label === 'string' ? row.segment_label : '',
+      opportunitySignals: strings(row.opportunity_signals),
+      verbatimQuote: typeof row.verbatim_quote === 'string' ? row.verbatim_quote : '',
+      answers: Array.isArray(row.answers) ? (row.answers as OnboardingAnswer[]) : [],
+      transcript: Array.isArray(row.transcript)
+        ? (row.transcript as OnboardingTranscriptMessage[])
+        : [],
+      createdAt: String(row.created_at),
+      completedAt: typeof row.completed_at === 'string' ? row.completed_at : null,
+    } satisfies OnboardingInsight;
+  });
+
+  return { available: true, rows };
 }
 
 // ============================================================
