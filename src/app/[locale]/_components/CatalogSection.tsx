@@ -228,15 +228,18 @@ export function CatalogSection({
             <span className="h-1 w-6 rounded-full bg-pulse" />
             {dict.catalog.eyebrow}
           </p>
+          {/* Exactly two lines at every width. The highlight is always its
+              own line, so the break can't land mid-phrase, and the phone size
+              is fluid: 20px wherever 20px fits, easing down only on narrow
+              screens where the longer second line would otherwise wrap to a
+              third. Fixed 20px needs ~345px for that line and a 360px phone
+              only has 328. */}
           <h2
-            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
+            className="text-[clamp(16px,5vw,20px)] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            {/* The highlight is its own line on phones, so the heading is
-                always exactly two lines instead of however the text happens
-                to wrap. Each half fits a 320px screen on its own. */}
             {dict.catalog.titleBefore}{' '}
-            <span className="block sm:inline bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
               {dict.catalog.titleHighlight}
             </span>
           </h2>
