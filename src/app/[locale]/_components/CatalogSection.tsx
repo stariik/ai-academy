@@ -1075,25 +1075,21 @@ function CourseCard({
         </span>
       )}
 
-      {/* Title — the anchor of the card. The category icon chip that used to
-          sit above it is gone: every card in a row is the same category, and
+      {/* Title — the anchor of the card, and now shown in full: no clamp, so
+          a long name never ends in an ellipsis. The description came out to
+          pay for the extra lines. The category icon chip that used to sit
+          above it is gone too: every card in a row is the same category, and
           the row header already shows it. */}
       <h4
         className={cn(
-          'relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight line-clamp-2',
+          'relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight',
+          // Keeps the text clear of the discount ribbon in the corner.
           !owned && discount > 0 && 'pr-12',
         )}
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {co.title}
       </h4>
-
-      {/* Description */}
-      {co.description && (
-        <p className="relative mt-2 text-xs sm:text-[12.5px] leading-relaxed text-muted-foreground line-clamp-2">
-          {co.description}
-        </p>
-      )}
 
       {/* One readable meta line replaces three 9px uppercase chips. The
           audience chip is gone with them — it's inherited from the category,
@@ -1105,11 +1101,6 @@ function CourseCard({
         <span>
           <span className="font-bold tabular-nums text-foreground/85">{co.lessons}</span>{' '}
           {dict.courseCard.lessonsShort}
-        </span>
-        <span className="opacity-40">·</span>
-        <span>
-          ~<span className="font-bold tabular-nums text-foreground/85">{co.hours}</span>
-          {dict.courseCard.hoursShort}
         </span>
       </div>
 
