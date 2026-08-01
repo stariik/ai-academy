@@ -42,8 +42,8 @@ export const en: Dict = {
 
   catalog: {
     eyebrow: 'Catalog',
-    titleBefore: 'Transformational knowledge and',
-    titleHighlight: 'boundless possibilities',
+    titleBefore: 'Get',
+    titleHighlight: 'transformational knowledge',
     description:
       'Look through the categories, pick the direction you want, and master new skills at the speed of AI',
     emptyState: 'No courses yet — coming soon.',
@@ -52,7 +52,7 @@ export const en: Dict = {
     lessonsUnitShort: 'lsn',
     soon: 'soon',
     bundleEyebrow: 'Bundle deal',
-    bundleCta: 'Get the bundle',
+    bundleCta: 'Buy',
     bundleSave: 'Save',
     bundleForever: 'Lifetime access',
     bundleDialogTitle: 'Unlock the whole bundle',
