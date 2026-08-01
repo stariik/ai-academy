@@ -617,8 +617,10 @@ function Hero() {
               {dict.hero.ctaPrimary}
               <span aria-hidden>→</span>
             </a>
+            {/* Jumps to the CTA banner at the foot of the page — the free
+                lesson pitch this button is promising. */}
             <a
-              href="#categories"
+              href="#start"
               className="group inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
             >
               <span
@@ -732,9 +734,9 @@ function AudiencePill({ children }: { children: React.ReactNode }) {
    ============================================================ */
 
 function CtaBanner() {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   return (
-    <section className="py-10 sm:py-20 lg:py-24 px-4 sm:px-6">
+    <section id="start" className="scroll-mt-20 py-10 sm:py-20 lg:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-pulse/40 bg-card p-5 sm:p-10 lg:p-12">
           <div className="absolute inset-0 -z-10 opacity-50 bg-starfield" aria-hidden />
@@ -762,18 +764,13 @@ function CtaBanner() {
                 {dict.ctaBanner.description}
               </p>
               <div className="mt-5 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
+                {/* was href="#", which went nowhere */}
                 <a
-                  href="#"
+                  href={href('register')}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                 >
                   {dict.ctaBanner.ctaPrimary}
                   <span aria-hidden>→</span>
-                </a>
-                <a
-                  href="#categories"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
-                >
-                  {dict.ctaBanner.ctaSecondary}
                 </a>
               </div>
             </div>
