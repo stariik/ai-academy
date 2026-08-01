@@ -229,11 +229,14 @@ export function CatalogSection({
             {dict.catalog.eyebrow}
           </p>
           <h2
-            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12] text-balance"
+            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
             style={{ fontFamily: 'var(--font-display)' }}
           >
+            {/* The highlight is its own line on phones, so the heading is
+                always exactly two lines instead of however the text happens
+                to wrap. Each half fits a 320px screen on its own. */}
             {dict.catalog.titleBefore}{' '}
-            <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
+            <span className="block sm:inline bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
               {dict.catalog.titleHighlight}
             </span>
           </h2>
