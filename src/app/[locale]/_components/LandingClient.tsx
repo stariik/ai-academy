@@ -417,8 +417,8 @@ function useHeroWalliSize() {
   React.useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      if (w < 380) setSize(160);
-      else if (w < 640) setSize(200);
+      if (w < 380) setSize(132);
+      else if (w < 640) setSize(168);
       else if (w < 1024) setSize(240);
       else if (w < 1280) setSize(280);
       else setSize(320);
@@ -435,7 +435,7 @@ function Hero() {
   const walliSize = useHeroWalliSize();
 
   return (
-    <section className="relative pt-8 pb-14 sm:pt-14 sm:pb-20 lg:pt-20 lg:pb-28 px-4 sm:px-6 overflow-hidden">
+    <section className="relative pt-6 pb-10 sm:pt-14 sm:pb-20 lg:pt-20 lg:pb-28 px-4 sm:px-6 overflow-hidden">
       <div className="absolute inset-0 -z-10 bg-starfield opacity-40" aria-hidden />
       <div
         className="absolute top-1/3 -right-24 w-[420px] h-[420px] rounded-full bg-pulse/15 blur-3xl -z-10 lg:block hidden"
@@ -471,13 +471,13 @@ function Hero() {
         </div>
 
         <div className="order-2 lg:order-1 text-center lg:text-left lg:pl-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-pulse/30 bg-pulse/10 text-pulse px-3 py-1.5 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 rounded-full border border-pulse/30 bg-pulse/10 text-pulse px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" />
             {dict.hero.eyebrow}
           </div>
 
           <h1
-            className="mt-5 sm:mt-6 text-[42px] sm:text-[56px] lg:text-7xl xl:text-[80px] font-bold leading-[1.08] tracking-tight"
+            className="mt-4 sm:mt-6 text-[32px] min-[380px]:text-[36px] sm:text-[56px] lg:text-7xl xl:text-[80px] font-bold leading-[1.08] tracking-tight"
             style={{ fontFamily: 'var(--font-display)' }}
           >
             {dict.hero.titleBefore}{' '}
@@ -486,21 +486,21 @@ function Hero() {
             </span>
           </h1>
 
-          <p className="mt-5 sm:mt-6 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
+          <p className="mt-4 sm:mt-6 text-[14.5px] sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed">
             {dict.hero.description}
           </p>
 
-          <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center lg:justify-start gap-3">
+          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center lg:justify-start gap-3">
             <a
               href="#categories"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 text-sm sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
               {dict.hero.ctaPrimary}
               <span aria-hidden>→</span>
             </a>
             <a
               href="#categories"
-              className="group inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-6 py-3.5 text-sm sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
+              className="group inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
             >
               <span
                 aria-hidden
@@ -512,10 +512,10 @@ function Hero() {
             </a>
           </div>
 
-          <div className="mt-8 sm:mt-10 grid grid-cols-3 max-w-md mx-auto lg:mx-0 divide-x divide-border border-y border-border py-3">
+          <div className="mt-6 sm:mt-10 grid grid-cols-3 max-w-md mx-auto lg:mx-0 divide-x divide-border border-y border-border py-2.5 sm:py-3">
             <div className="text-center lg:text-left lg:px-4 first:lg:px-0">
               <p
-                className="text-lg sm:text-xl font-bold tabular-nums"
+                className="text-base sm:text-xl font-bold tabular-nums"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 2.4K+
@@ -526,7 +526,7 @@ function Hero() {
             </div>
             <div className="text-center lg:px-4">
               <p
-                className="text-lg sm:text-xl font-bold tabular-nums"
+                className="text-base sm:text-xl font-bold tabular-nums"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 9
@@ -537,7 +537,7 @@ function Hero() {
             </div>
             <div className="text-center lg:text-left lg:px-4">
               <p
-                className="text-lg sm:text-xl font-bold tabular-nums inline-flex items-center gap-1"
+                className="text-base sm:text-xl font-bold tabular-nums inline-flex items-center gap-1"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 4.8
@@ -588,7 +588,7 @@ function FloatingChip({
     <div className={cn('absolute float', className)} style={{ animationDelay: delay }}>
       <div
         className={cn(
-          'rounded-full bg-card border px-3 py-1.5 text-[10px] sm:text-xs font-bold flex items-center gap-1.5 whitespace-nowrap',
+          'rounded-full bg-card border px-2.5 py-1 sm:px-3 sm:py-1.5 text-[9px] sm:text-xs font-bold flex items-center gap-1.5 whitespace-nowrap',
           ring,
           glow,
         )}
@@ -601,7 +601,7 @@ function FloatingChip({
 
 function AudiencePill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+    <span className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold text-muted-foreground">
       {children}
     </span>
   );
@@ -614,11 +614,11 @@ function AudiencePill({ children }: { children: React.ReactNode }) {
 function HowItWorks() {
   const { dict } = useV2Locale();
   return (
-    <section id="how" className="py-16 sm:py-24 px-4 sm:px-6">
+    <section id="how" className="py-12 sm:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-7xl">
         <SectionHeader eyebrow={dict.howItWorks.eyebrow} title={dict.howItWorks.title} />
 
-        <div className="relative mt-10 sm:mt-14 grid gap-4 sm:gap-5 md:grid-cols-3">
+        <div className="relative mt-7 sm:mt-14 grid gap-3 sm:gap-5 md:grid-cols-3">
           <div
             className="hidden md:block absolute top-1/2 left-[15%] right-[15%] h-px -z-10 bg-gradient-to-r from-transparent via-border to-transparent"
             aria-hidden
@@ -667,7 +667,7 @@ function Step({
   return (
     <div
       className={cn(
-        'group relative rounded-3xl border border-border bg-card p-5 sm:p-7 transition-all duration-300',
+        'group relative rounded-2xl sm:rounded-3xl border border-border bg-card p-4 sm:p-7 transition-all duration-300',
         'hover:-translate-y-1 hover:shadow-[0_12px_40px_-12px_var(--pulse-glow)]',
         'hover:border-transparent',
       )}
@@ -689,7 +689,7 @@ function Step({
 
       <div
         className={cn(
-          'absolute top-5 sm:top-6 right-5 sm:right-6 text-4xl sm:text-5xl font-black tabular-nums leading-none transition-opacity',
+          'absolute top-4 sm:top-6 right-4 sm:right-6 text-3xl sm:text-5xl font-black tabular-nums leading-none transition-opacity',
           t.text,
           'opacity-20 group-hover:opacity-40',
         )}
@@ -697,11 +697,11 @@ function Step({
       >
         {number}
       </div>
-      <div className="relative mb-3 sm:mb-4 inline-block">
-        <Walli size={68} state={walliState} noShadow />
+      <div className="relative mb-2.5 sm:mb-4 inline-block">
+        <Walli size={58} state={walliState} noShadow />
       </div>
       <h3
-        className="text-lg sm:text-xl font-bold mb-2 leading-tight"
+        className="text-base sm:text-xl font-bold mb-1.5 sm:mb-2 leading-tight"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
@@ -718,9 +718,9 @@ function Step({
 function CtaBanner() {
   const { dict } = useV2Locale();
   return (
-    <section className="py-14 sm:py-20 lg:py-24 px-4 sm:px-6">
+    <section className="py-10 sm:py-20 lg:py-24 px-4 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <div className="relative overflow-hidden rounded-3xl border border-pulse/40 bg-card p-6 sm:p-10 lg:p-12">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-pulse/40 bg-card p-5 sm:p-10 lg:p-12">
           <div className="absolute inset-0 -z-10 opacity-50 bg-starfield" aria-hidden />
           <div
             className="absolute -bottom-16 -right-16 w-72 h-72 rounded-full bg-pulse/25 blur-3xl"
@@ -734,7 +734,7 @@ function CtaBanner() {
           <div className="relative grid gap-6 sm:gap-8 md:grid-cols-[1fr_auto] md:items-center">
             <div className="text-center md:text-left">
               <h2
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
+                className="text-[26px] sm:text-4xl lg:text-5xl font-bold leading-[1.1] tracking-tight"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {dict.ctaBanner.titleBefore}{' '}
@@ -742,20 +742,20 @@ function CtaBanner() {
                   {dict.ctaBanner.titleHighlight}
                 </span>
               </h2>
-              <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0 leading-relaxed">
+              <p className="mt-2.5 sm:mt-4 text-[14.5px] sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0 leading-relaxed">
                 {dict.ctaBanner.description}
               </p>
-              <div className="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
+              <div className="mt-5 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
                 <a
                   href="#"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 text-sm sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                 >
                   {dict.ctaBanner.ctaPrimary}
                   <span aria-hidden>→</span>
                 </a>
                 <a
                   href="#categories"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-6 py-3.5 text-sm sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
                 >
                   {dict.ctaBanner.ctaSecondary}
                 </a>
@@ -766,7 +766,7 @@ function CtaBanner() {
               </p>
             </div>
             <div className="flex justify-center md:justify-end">
-              <Walli size={140} state="wave" className="sm:hidden" />
+              <Walli size={112} state="wave" className="sm:hidden" />
               <Walli size={180} state="wave" className="hidden sm:block lg:hidden" />
               <Walli size={210} state="wave" className="hidden lg:block" />
             </div>
@@ -785,8 +785,8 @@ export function Footer({ categories }: { categories: Category[] }) {
   const { dict, href } = useV2Locale();
   return (
     <footer className="border-t border-border bg-muted/30">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-14 lg:py-16">
-        <div className="grid gap-8 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr]">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-14 lg:py-16">
+        <div className="grid gap-6 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
             <a href={href()} className="inline-flex items-center gap-2 mb-3 sm:mb-4">
               <Walli size={32} state="idle" noShadow />
@@ -966,7 +966,7 @@ function SectionHeader({
         {eyebrow}
       </p>
       <h2
-        className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
+        className="text-[26px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.08]"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}
