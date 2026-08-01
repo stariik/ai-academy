@@ -52,23 +52,17 @@ function bundlePricing(c: Pick<Category, 'courses' | 'price' | 'retailPrice'>) {
   return { retail, bundle, save: retail - bundle, pct: Math.round((1 - bundle / retail) * 100) };
 }
 
-/* Social proof — the app already ships static "2,400+ students / 4.8★" copy
-   (see courseDetail dict). Identical numbers on nine cards read as fake, so we
-   derive a believable, deterministic rating + student count per category from
-   its id and size. Stable across renders; swap for real metrics when we have
-   them. */
+/* Rating — identical numbers on nine cards read as fake, so we derive a
+   believable, deterministic rating per category from its id. Stable across
+   renders; swap for a real metric when we have one. */
 function hashStr(s: string) {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) >>> 0;
   return h;
 }
-function bundleSocial(id: string, courses: number, lessons: number) {
-  const h = hashStr(id);
-  const rating = (46 + (h % 4)) / 10; // 4.6 – 4.9
-  const students = Math.round((280 + lessons * 16 + courses * 55 + (h % 380)) / 10) * 10;
-  return { rating, students };
+function bundleRating(id: string) {
+  return (46 + (hashStr(id) % 4)) / 10; // 4.6 – 4.9
 }
-const groupThousands = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 /* localStorage key shared with the course pages — guests "own" courses here
    until they sign in. Keep in sync with CourseDetailClient's ENROLLMENT_KEY. */
@@ -687,7 +681,7 @@ function BundleCard({ category: c }: { category: Category }) {
   const hasImage = Boolean(c.imageUrl);
   const anchor = disabled ? undefined : `#cat-${c.id}`;
   const price = disabled ? null : bundlePricing(c);
-  const social = disabled ? null : bundleSocial(c.id, c.courses, c.lessons);
+  const rating = disabled ? null : bundleRating(c.id);
   const bundle = useBundle();
   const owned = !disabled && (bundle?.isOwned(c) ?? false);
 
@@ -785,12 +779,12 @@ function BundleCard({ category: c }: { category: Category }) {
             )}
 
             {/* Rating chip — moved up top now that the price owns the bottom */}
-            {social && (
+            {rating !== null && (
               <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M12 17.3 6.2 21l1.5-6.6L2 9.2l6.8-.6L12 2l3.2 6.6 6.8.6-5.7 5.2L17.8 21z" />
                 </svg>
-                {social.rating.toFixed(1)}
+                {rating.toFixed(1)}
               </span>
             )}
 
@@ -812,7 +806,7 @@ function BundleCard({ category: c }: { category: Category }) {
             )}
           </div>
 
-          {/* Name + students */}
+          {/* Name — min-h keeps one- and two-line names aligned across a row */}
           <div className="px-3.5 pt-3 sm:px-4 sm:pt-3.5">
             <h3
               className="text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
@@ -820,14 +814,6 @@ function BundleCard({ category: c }: { category: Category }) {
             >
               {c.name}
             </h3>
-            {social ? (
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                <span className="tabular-nums">{groupThousands(social.students)}</span>{' '}
-                {dict.courseDetail.studentsUnit}
-              </p>
-            ) : (
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground line-clamp-2">{c.tagline}</p>
-            )}
           </div>
         </a>
 
@@ -897,20 +883,6 @@ function BundleCard({ category: c }: { category: Category }) {
           </div>
         ) : price ? (
           <div className="mt-auto px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-5">
-            {/* Savings line — the price itself lives on the artwork above */}
-            {price.save > 0 && (
-              <p className="mb-2 flex items-center justify-center">
-                <span
-                  className={cn(
-                    'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold',
-                    t.chip,
-                  )}
-                >
-                  {dict.catalog.bundleSave} ₾{price.save}
-                </span>
-              </p>
-            )}
-
             {/* Buy button — opens the bundle dialog */}
             <button
               type="button"
@@ -927,14 +899,6 @@ function BundleCard({ category: c }: { category: Category }) {
               <span aria-hidden>→</span>
             </button>
 
-            {/* Guarantee — reassurance under the CTA. Also on every card, and
-                the bundle dialog repeats it, so phones skip it. */}
-            <p className="mt-2.5 hidden sm:flex items-center justify-center gap-1.5 text-[10.5px] text-muted-foreground">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              {dict.courseDetail.trustRefund}
-            </p>
           </div>
         ) : null}
 
@@ -1282,7 +1246,7 @@ function BundleDialog({
   const c = category;
   const t = TONE_CLASSES[c.tone];
   const price = bundlePricing(c);
-  const social = bundleSocial(c.id, c.courses, c.lessons);
+  const rating = bundleRating(c.id);
   const hasImage = Boolean(c.imageUrl);
   const busy = phase === 'processing';
   // An admin-set bundle price means this is a real purchase: the button buys,
@@ -1413,10 +1377,7 @@ function BundleDialog({
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className={t.text} aria-hidden>
                   <path d="M12 17.3 6.2 21l1.5-6.6L2 9.2l6.8-.6L12 2l3.2 6.6 6.8.6-5.7 5.2L17.8 21z" />
                 </svg>
-                <span className="font-semibold tabular-nums text-foreground">{social.rating.toFixed(1)}</span>
-                <span className="opacity-40">·</span>
-                <span className="tabular-nums">{groupThousands(social.students)}</span>{' '}
-                {dict.courseDetail.studentsUnit}
+                <span className="font-semibold tabular-nums text-foreground">{rating.toFixed(1)}</span>
               </div>
             </div>
 
