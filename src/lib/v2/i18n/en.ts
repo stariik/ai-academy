@@ -132,7 +132,7 @@ export const en: Dict = {
 
   footer: {
     about:
-      'Georgian AI academy. Walli teaches in Georgian — kids, teens, and adults.',
+      'WALLE, the first Georgian AI education platform, creating boundless possibilities of transformational knowledge for the leaders of the digital age',
     columnCategories: 'Categories',
     columnProduct: 'Product',
     columnCompany: 'Company',

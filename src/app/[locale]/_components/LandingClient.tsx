@@ -808,7 +808,7 @@ export function Footer({ categories }: { categories: Category[] }) {
               <Walli size={32} state="idle" noShadow />
               <span className="text-base font-bold tracking-tight">{dict.meta.brandName}</span>
             </Link>
-            <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+            <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
               {dict.footer.about}
             </p>
             <div className="mt-4 sm:mt-5 flex items-center gap-2">
