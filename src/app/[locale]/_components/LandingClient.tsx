@@ -16,6 +16,7 @@ import type { Dict, Locale } from '@/lib/v2/i18n';
 import type { AuthUser } from '@/lib/auth';
 import { signOutAction } from '../(auth)/actions';
 import { CatalogSection } from './CatalogSection';
+import Link from 'next/link';
 
 /* ============================================================
    Top-level shell
@@ -131,7 +132,7 @@ export function Navbar({
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between gap-3 h-14 sm:h-16">
-          <a href={href()} className="flex items-center gap-2 shrink-0 min-w-0">
+          <Link href={href()} className="flex items-center gap-2 shrink-0 min-w-0">
             <Walli size={32} state="idle" noShadow />
             <div className="leading-tight min-w-0">
               <p className="text-sm sm:text-base font-bold tracking-tight truncate">
@@ -141,11 +142,11 @@ export function Navbar({
                 {dict.meta.siteTagline}
               </p>
             </div>
-          </a>
+          </Link>
 
           <nav className="hidden md:flex items-center gap-5 lg:gap-7 text-sm font-semibold">
             {NAV_LINKS.map((l) => (
-              <a
+              <Link
                 key={l.label}
                 href={l.href}
                 aria-current={l.active ? 'true' : undefined}
@@ -158,7 +159,7 @@ export function Navbar({
                 )}
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -170,38 +171,33 @@ export function Navbar({
                 <UserMenu authUser={authUser} />
               ) : (
                 <>
-                  <a
+                  <Link
                     href={href('login')}
                     className="text-sm font-semibold px-2.5 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {dict.navbar.signIn}
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href={href('register')}
                     className="inline-flex items-center gap-1.5 text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                   >
                     {dict.navbar.signUp}
                     <span aria-hidden>→</span>
-                  </a>
+                  </Link>
                 </>
               )}
             </div>
 
-            {/* Phones: language and the primary action stay on the bar itself.
-                On a bilingual site, switching language is a per-visit need —
-                it shouldn't be three taps deep in a menu. Theme is a
-                set-once preference, so it moves into the sheet to make room. */}
+            {/* Phones: only the primary action stays on the bar. Language,
+                theme and the profile all live inside the sheet. */}
             <div className="md:hidden flex items-center gap-1.5">
-              <LanguageSwitcher />
-              {authUser ? (
-                <AvatarLink authUser={authUser} />
-              ) : (
-                <a
+              {!authUser && (
+                <Link
                   href={href('register')}
                   className="inline-flex h-9 items-center rounded-full bg-pulse px-3.5 text-[13px] font-bold text-primary-foreground shadow-[0_4px_14px_var(--pulse-glow)] active:scale-95 transition-transform"
                 >
                   {dict.navbar.signUp}
-                </a>
+                </Link>
               )}
               <button
                 onClick={() => setMobileOpen(true)}
@@ -276,13 +272,13 @@ export function UserMenu({ authUser }: { authUser: AuthUser }) {
           role="menu"
           className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-border bg-card shadow-[0_18px_50px_-20px_rgba(0,0,0,0.2)] py-1.5 z-50"
         >
-          <a
+          <Link
             href={href('profile')}
             role="menuitem"
             className="block px-4 py-2 text-sm font-semibold hover:bg-pulse/5 hover:text-pulse transition-colors"
           >
             {dict.profile.pageTitle}
-          </a>
+          </Link>
           <form action={signOutAction}>
             <input type="hidden" name="locale" value={locale} />
             <button
@@ -296,26 +292,6 @@ export function UserMenu({ authUser }: { authUser: AuthUser }) {
         </div>
       )}
     </div>
-  );
-}
-
-/** Phone-sized shortcut straight to the profile — no menu detour. */
-function AvatarLink({ authUser }: { authUser: AuthUser }) {
-  const { dict, href } = useV2Locale();
-  const t = TONE_CLASSES[toneFromString(authUser.id)];
-  const name = authUser.displayName ?? dict.profile.anonymousName;
-
-  return (
-    <a
-      href={href('profile')}
-      aria-label={dict.profile.pageTitle}
-      className={cn(
-        'grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-black text-primary-foreground active:scale-95 transition-transform',
-        t.bg,
-      )}
-    >
-      {userInitials(name)}
-    </a>
   );
 }
 
@@ -407,12 +383,12 @@ function MobileMenu({
       className="fixed inset-0 z-50 bg-background/98 backdrop-blur-md md:hidden flex flex-col"
     >
       <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border">
-        <a href={href()} className="flex items-center gap-2" onClick={onClose}>
+        <Link href={href()} className="flex items-center gap-2" onClick={onClose}>
           <Walli size={32} state="idle" noShadow />
           <span className="text-sm sm:text-base font-bold tracking-tight">
             {dict.meta.brandName}
           </span>
-        </a>
+        </Link>
         <button
           ref={closeRef}
           onClick={onClose}
@@ -427,7 +403,7 @@ function MobileMenu({
 
       <nav className="flex-1 flex flex-col px-5 sm:px-6 py-6 gap-1 overflow-y-auto">
         {links.map((l) => (
-          <a
+          <Link
             key={l.label}
             href={l.href}
             onClick={onClose}
@@ -450,19 +426,41 @@ function MobileMenu({
             >
               →
             </span>
-          </a>
+          </Link>
         ))}
 
         <div className="mt-8 space-y-3">
           {authUser ? (
             <>
-              <a
+              {/* Identity row — who you're signed in as, and the way through
+                  to the profile. Replaces the avatar that used to sit on the
+                  bar. */}
+              <Link
                 href={href('profile')}
                 onClick={onClose}
-                className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
+                className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-pulse/40 active:bg-muted"
               >
-                {dict.profile.pageTitle}
-              </a>
+                <span
+                  className={cn(
+                    'grid h-11 w-11 shrink-0 place-items-center rounded-full text-sm font-black text-primary-foreground',
+                    TONE_CLASSES[toneFromString(authUser.id)].bg,
+                  )}
+                  aria-hidden
+                >
+                  {userInitials(authUser.displayName ?? dict.profile.anonymousName)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-base font-bold tracking-tight">
+                    {authUser.displayName ?? dict.profile.anonymousName}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {dict.profile.pageTitle}
+                  </span>
+                </span>
+                <span aria-hidden className="text-muted-foreground">
+                  →
+                </span>
+              </Link>
               <form action={signOutAction}>
                 <input type="hidden" name="locale" value={locale} />
                 <button
@@ -475,26 +473,25 @@ function MobileMenu({
             </>
           ) : (
             <>
-              <a
+              <Link
                 href={href('register')}
                 onClick={onClose}
                 className="block text-center rounded-full bg-pulse text-primary-foreground px-5 py-3.5 text-base font-bold shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-shadow"
               >
                 {dict.navbar.signUp}
-              </a>
-              <a
+              </Link>
+              <Link
                 href={href('login')}
                 onClick={onClose}
                 className="block text-center text-base font-semibold text-foreground hover:text-pulse transition-colors py-2"
               >
                 {dict.navbar.signIn}
-              </a>
+              </Link>
             </>
           )}
         </div>
 
-        {/* Preferences strip. Language is also on the bar itself; it stays
-            here too because this is where people look for it. */}
+        {/* Preferences strip — language and theme both live here only. */}
         <div className="mt-auto pt-6 space-y-3 border-t border-border">
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
@@ -894,10 +891,10 @@ export function Footer({ categories }: { categories: Category[] }) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-14 lg:py-16">
         <div className="grid gap-6 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
-            <a href={href()} className="inline-flex items-center gap-2 mb-3 sm:mb-4">
+            <Link href={href()} className="inline-flex items-center gap-2 mb-3 sm:mb-4">
               <Walli size={32} state="idle" noShadow />
               <span className="text-base font-bold tracking-tight">{dict.meta.brandName}</span>
-            </a>
+            </Link>
             <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
               {dict.footer.about}
             </p>
@@ -1008,12 +1005,12 @@ function FooterColumn({
       <ul className="space-y-2 sm:space-y-2.5 text-sm">
         {links.map((l) => (
           <li key={l.label}>
-            <a
+            <Link
               href={l.href}
               className="text-foreground/70 hover:text-pulse transition-colors leading-snug"
             >
               {l.label}
-            </a>
+            </Link>
           </li>
         ))}
       </ul>
