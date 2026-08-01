@@ -71,8 +71,10 @@ export function Navbar({
   homeAnchors?: boolean;
 }) {
   const { dict, href } = useV2Locale();
+  const pathname = usePathname();
   const [scrolled, setScrolled] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [activeSection, setActiveSection] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -81,14 +83,42 @@ export function Navbar({
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Scroll-spy for the landing page's three sections, so the nav answers
+  // "where am I?" on a page you scroll for a long time. The band sits just
+  // below the header: a section is active while it crosses the upper third.
+  React.useEffect(() => {
+    if (!homeAnchors || typeof IntersectionObserver === 'undefined') return;
+    const els = ['categories', 'courses', 'how']
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (els.length === 0) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const top = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (top) setActiveSection(top.target.id);
+      },
+      { rootMargin: '-18% 0px -70% 0px' },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [homeAnchors]);
+
   const anchor = (id: string) => (homeAnchors ? `#${id}` : `${href()}#${id}`);
   const NAV_LINKS = [
-    { label: dict.navbar.categories, href: anchor('categories') },
-    { label: dict.navbar.courses, href: anchor('courses') },
-    { label: dict.navbar.howItWorks, href: anchor('how') },
+    { label: dict.navbar.categories, href: anchor('categories'), section: 'categories' },
+    { label: dict.navbar.courses, href: anchor('courses'), section: 'courses' },
+    { label: dict.navbar.howItWorks, href: anchor('how'), section: 'how' },
     { label: dict.navbar.about, href: href('about') },
     { label: dict.navbar.contact, href: href('contact') },
-  ];
+  ].map((l) => ({
+    ...l,
+    active: l.section
+      ? homeAnchors && activeSection === l.section
+      : pathname === l.href,
+  }));
 
   return (
     <>
@@ -118,7 +148,14 @@ export function Navbar({
               <a
                 key={l.label}
                 href={l.href}
-                className="relative text-muted-foreground hover:text-foreground transition-colors py-1.5 after:absolute after:left-0 after:right-0 after:bottom-0 after:mx-auto after:h-[2px] after:w-0 after:rounded-full after:bg-pulse after:transition-[width] after:duration-300 hover:after:w-full"
+                aria-current={l.active ? 'true' : undefined}
+                className={cn(
+                  'relative transition-colors py-1.5',
+                  'after:absolute after:left-0 after:right-0 after:bottom-0 after:mx-auto after:h-[2px] after:rounded-full after:bg-pulse after:transition-[width] after:duration-300 hover:after:w-full',
+                  l.active
+                    ? 'text-foreground after:w-full'
+                    : 'text-muted-foreground hover:text-foreground after:w-0',
+                )}
               >
                 {l.label}
               </a>
@@ -150,12 +187,27 @@ export function Navbar({
               )}
             </div>
 
-            <div className="md:hidden flex items-center gap-1">
-              <ThemeToggle />
+            {/* Phones: language and the primary action stay on the bar itself.
+                On a bilingual site, switching language is a per-visit need —
+                it shouldn't be three taps deep in a menu. Theme is a
+                set-once preference, so it moves into the sheet to make room. */}
+            <div className="md:hidden flex items-center gap-1.5">
+              <LanguageSwitcher />
+              {authUser ? (
+                <AvatarLink authUser={authUser} />
+              ) : (
+                <a
+                  href={href('register')}
+                  className="inline-flex h-9 items-center rounded-full bg-pulse px-3.5 text-[13px] font-bold text-primary-foreground shadow-[0_4px_14px_var(--pulse-glow)] active:scale-95 transition-transform"
+                >
+                  {dict.navbar.signUp}
+                </a>
+              )}
               <button
                 onClick={() => setMobileOpen(true)}
                 aria-label={dict.navbar.menu}
-                className="p-2 rounded-lg hover:bg-muted text-foreground"
+                aria-expanded={mobileOpen}
+                className="grid h-10 w-10 place-items-center rounded-xl text-foreground hover:bg-muted active:bg-muted transition-colors"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -247,6 +299,26 @@ export function UserMenu({ authUser }: { authUser: AuthUser }) {
   );
 }
 
+/** Phone-sized shortcut straight to the profile — no menu detour. */
+function AvatarLink({ authUser }: { authUser: AuthUser }) {
+  const { dict, href } = useV2Locale();
+  const t = TONE_CLASSES[toneFromString(authUser.id)];
+  const name = authUser.displayName ?? dict.profile.anonymousName;
+
+  return (
+    <a
+      href={href('profile')}
+      aria-label={dict.profile.pageTitle}
+      className={cn(
+        'grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-black text-primary-foreground active:scale-95 transition-transform',
+        t.bg,
+      )}
+    >
+      {userInitials(name)}
+    </a>
+  );
+}
+
 function userInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '??';
@@ -276,7 +348,9 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
     <div
       className={cn(
         'inline-flex items-center font-bold rounded-full border border-border bg-card overflow-hidden',
-        full ? 'text-sm' : 'text-[11px]',
+        // Both variants clear a 36px tap target; the old 24px pill was below
+        // anything you could reliably hit with a thumb.
+        full ? 'h-11 text-sm' : 'h-9 text-xs',
       )}
     >
       {(['ka', 'en'] as const).map((l) => (
@@ -286,8 +360,8 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
           onClick={() => switchTo(l)}
           aria-pressed={locale === l}
           className={cn(
-            'transition-colors',
-            full ? 'px-3.5 py-1.5' : 'px-2 py-1',
+            'h-full transition-colors',
+            full ? 'px-4' : 'px-2.5',
             locale === l
               ? 'bg-pulse text-primary-foreground'
               : 'text-muted-foreground hover:text-foreground',
@@ -305,20 +379,33 @@ function MobileMenu({
   authUser,
   onClose,
 }: {
-  links: { label: string; href: string }[];
+  links: { label: string; href: string; active?: boolean }[];
   authUser: AuthUser | null;
   onClose: () => void;
 }) {
   const { dict, locale, href } = useV2Locale();
+  const closeRef = React.useRef<HTMLButtonElement>(null);
+
   React.useEffect(() => {
     document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
     };
-  }, []);
+  }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/98 backdrop-blur-md md:hidden flex flex-col">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={dict.navbar.menu}
+      className="fixed inset-0 z-50 bg-background/98 backdrop-blur-md md:hidden flex flex-col"
+    >
       <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border">
         <a href={href()} className="flex items-center gap-2" onClick={onClose}>
           <Walli size={32} state="idle" noShadow />
@@ -327,9 +414,10 @@ function MobileMenu({
           </span>
         </a>
         <button
+          ref={closeRef}
           onClick={onClose}
           aria-label={dict.navbar.closeMenu}
-          className="p-2 rounded-lg hover:bg-muted text-foreground"
+          className="grid h-10 w-10 place-items-center rounded-xl hover:bg-muted text-foreground"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M6 6L18 18M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -338,22 +426,30 @@ function MobileMenu({
       </div>
 
       <nav className="flex-1 flex flex-col px-5 sm:px-6 py-6 gap-1 overflow-y-auto">
-        {links.map((l, i) => (
+        {links.map((l) => (
           <a
             key={l.label}
             href={l.href}
             onClick={onClose}
-            className="group flex items-center justify-between py-4 border-b border-border text-2xl font-bold hover:text-pulse transition-colors"
+            aria-current={l.active ? 'true' : undefined}
+            className={cn(
+              'group flex items-center justify-between py-4 border-b border-border text-2xl font-bold transition-colors',
+              l.active ? 'text-pulse' : 'hover:text-pulse',
+            )}
             style={{ fontFamily: 'var(--font-display)' }}
           >
-            <span>{l.label}</span>
+            <span className="flex items-center gap-2.5">
+              {l.active && (
+                <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" aria-hidden />
+              )}
+              {l.label}
+            </span>
             <span
               aria-hidden
               className="text-base text-muted-foreground/60 group-hover:text-pulse group-hover:translate-x-0.5 transition-all"
             >
               →
             </span>
-            <span className="sr-only">{i + 1}</span>
           </a>
         ))}
 
@@ -397,11 +493,21 @@ function MobileMenu({
           )}
         </div>
 
-        <div className="mt-auto pt-6 flex items-center justify-between border-t border-border">
-          <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
-            {dict.navbar.language}
-          </span>
-          <LanguageSwitcher full />
+        {/* Preferences strip. Language is also on the bar itself; it stays
+            here too because this is where people look for it. */}
+        <div className="mt-auto pt-6 space-y-3 border-t border-border">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
+              {dict.navbar.language}
+            </span>
+            <LanguageSwitcher full />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
+              {dict.profile.tabSettings}
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
     </div>

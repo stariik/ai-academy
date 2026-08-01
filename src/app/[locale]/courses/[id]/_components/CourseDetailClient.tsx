@@ -28,14 +28,13 @@ import {
 
 import { Walli, type WalliState } from '@/components/walli/Walli';
 import { EveCover } from '@/components/walli/EveCover';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import {
   LEVEL_DOTS, TONE_CLASSES,
   type Course, type Category, type CourseDetail, type Lesson,
 } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
-import { LanguageSwitcher, UserMenu } from '../../../_components/LandingClient';
+import { Navbar } from '../../../_components/LandingClient';
 import type { AuthUser } from '@/lib/auth';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import {
@@ -274,7 +273,9 @@ function CoursePage({
   // --- render ---------------------------------------------------------------
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-      <Navbar authUser={authUser} />
+      {/* homeAnchors={false}: this page has no #categories/#courses sections,
+          so the bare hashes did nothing when tapped. */}
+      <Navbar authUser={authUser} homeAnchors={false} />
 
       <main className="relative">
         <Hero
@@ -348,64 +349,6 @@ function CoursePage({
   );
 }
 
-/* ============================================================
-   Navbar — minimal, mirrors /v2 visual shell
-   ============================================================ */
-
-function Navbar({ authUser }: { authUser: AuthUser | null }) {
-  const { dict, href } = useV2Locale();
-  const [scrolled, setScrolled] = React.useState(false);
-  React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  return (
-    <header
-      className={cn(
-        'sticky top-0 z-40 transition-all',
-        scrolled
-          ? 'backdrop-blur-md bg-background/80 border-b border-border'
-          : 'bg-transparent border-b border-transparent',
-      )}
-    >
-      <div className="mx-auto max-w-7xl px-4 sm:px-0 flex items-center justify-between h-16">
-        <a href={href()} className="flex items-center gap-2">
-          <Walli size={36} state="idle" noShadow />
-          <div>
-            <p className="text-base font-bold leading-none tracking-tight">{dict.meta.brandName}</p>
-            <p className="text-[10px] text-muted-foreground leading-none mt-1">{dict.courseDetail.brandSubtitle}</p>
-          </div>
-        </a>
-
-        <div className="flex items-center gap-2">
-          <LanguageSwitcher />
-          <ThemeToggle />
-          {authUser ? (
-            <UserMenu authUser={authUser} />
-          ) : (
-            <>
-              <a
-                href={href('login')}
-                className="hidden sm:inline-flex text-sm font-semibold px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {dict.navbar.signIn}
-              </a>
-              <a
-                href={href('register')}
-                className="inline-flex text-sm font-semibold rounded-full bg-pulse text-primary-foreground px-4 py-2 hover:shadow-[0_4px_16px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
-              >
-                {dict.navbar.signUp}
-              </a>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
 
 /* ============================================================
    Hero
