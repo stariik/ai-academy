@@ -445,9 +445,5 @@ export type Dict = {
     errorRequired: string;
     errorEmail: string;
     errorGeneric: string;
-    ctaTitle: string;
-    ctaSubtitle: string;
-    ctaPrimary: string;
-    ctaSecondary: string;
   };
 };

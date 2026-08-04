@@ -549,9 +549,5 @@ export const en: Dict = {
     errorRequired: 'This field is required.',
     errorEmail: 'Please enter a valid email address.',
     errorGeneric: 'Something went wrong. Please try again.',
-    ctaTitle: 'Start learning while you wait',
-    ctaSubtitle: 'The first lesson is free. No account needed.',
-    ctaPrimary: 'Try a free lesson',
-    ctaSecondary: 'Browse courses',
   },
 };

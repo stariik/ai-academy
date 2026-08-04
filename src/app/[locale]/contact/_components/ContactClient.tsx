@@ -11,8 +11,6 @@ import {
   BookOpen,
   Handshake,
   Lightbulb,
-  ArrowRight,
-  Sparkles,
   Mail,
 } from 'lucide-react';
 import type { Category } from '@/lib/v2/data';
@@ -293,7 +291,7 @@ function ContactForm() {
 
 /* ─── main sections ─── */
 function ContactSections() {
-  const { dict, href } = useV2Locale();
+  const { dict } = useV2Locale();
   const c = dict.contact;
 
   return (
@@ -405,47 +403,6 @@ function ContactSections() {
               </div>
             </Reveal>
           </div>
-        </div>
-      </section>
-
-      {/* ─── CTA banner ─── */}
-      <section className="py-16 sm:py-24 border-t border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
-          <Reveal>
-            <div className="relative overflow-hidden rounded-[28px] border border-pulse/25 bg-gradient-to-br from-pulse/12 via-card to-card px-6 py-10 sm:px-12 sm:py-14 text-center">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -top-20 -right-10 h-56 w-56 rounded-full bg-pulse/20 blur-3xl"
-              />
-              <div className="relative space-y-4">
-                <Sparkles className="w-5 h-5 text-pulse mx-auto" />
-                <h2
-                  className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {c.ctaTitle}
-                </h2>
-                <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                  {c.ctaSubtitle}
-                </p>
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                  <a
-                    href={href('register')}
-                    className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_28px_var(--pulse-glow)] hover:-translate-y-0.5 hover:shadow-[0_14px_36px_var(--pulse-glow)] transition-all"
-                  >
-                    {c.ctaPrimary}
-                    <ArrowRight className="w-4 h-4" />
-                  </a>
-                  <a
-                    href={`${href()}#courses`}
-                    className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-6 py-3 text-sm font-bold hover:border-pulse/40 hover:text-pulse transition-colors"
-                  >
-                    {c.ctaSecondary}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </Reveal>
         </div>
       </section>
     </>
