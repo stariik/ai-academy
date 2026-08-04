@@ -7,10 +7,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Headphones,
-  BookOpen,
-  Handshake,
-  Lightbulb,
   Mail,
 } from 'lucide-react';
 import type { Category } from '@/lib/v2/data';
@@ -21,7 +17,6 @@ import { Walli } from '@/components/walli/Walli';
 import { Navbar, Footer } from '../../_components/LandingClient';
 
 const CONTACT_EMAIL = 'walle.academy.2026@gmail.com';
-const TOPIC_ICONS = [Headphones, BookOpen, Handshake, Lightbulb];
 
 export default function ContactClient({
   dict,
@@ -67,15 +62,6 @@ function Reveal({
     >
       {children}
     </motion.div>
-  );
-}
-
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2">
-      <span className="h-1 w-6 rounded-full bg-pulse" />
-      {children}
-    </p>
   );
 }
 
@@ -304,59 +290,30 @@ function ContactSections() {
         />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-14 pb-20 sm:pt-20 sm:pb-28">
-          <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
+          <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
 
-            {/* left — headline + info */}
-            <div className="space-y-8 lg:pt-4">
-              <div className="space-y-5">
-                <Reveal>
-                  <Eyebrow>{c.heroEyebrow}</Eyebrow>
-                </Reveal>
-                <Reveal delay={0.05}>
-                  <h1
-                    className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]"
-                    style={{ fontFamily: 'var(--font-display)' }}
-                  >
-                    {c.heroTitle}{' '}
-                    <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
-                      {c.heroTitleHighlight}
-                    </span>
-                  </h1>
-                </Reveal>
-                <Reveal delay={0.1}>
-                  <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                    {c.heroSubtitle}
-                  </p>
-                </Reveal>
-              </div>
-
-              {/* topic chips */}
-              <Reveal delay={0.15}>
-                <div className="grid grid-cols-2 gap-3">
-                  {c.topics.map((topic, i) => {
-                    const Icon = TOPIC_ICONS[i % TOPIC_ICONS.length];
-                    return (
-                      <div
-                        key={topic.title}
-                        className="flex items-start gap-3 rounded-xl border border-border bg-card p-3.5 hover:border-pulse/35 transition-colors"
-                      >
-                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-pulse/12 text-pulse shrink-0 mt-0.5">
-                          <Icon className="w-4 h-4" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold leading-tight">{topic.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                            {topic.description}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+            {/* left — Walli leads, one line of copy under the wave */}
+            <div className="flex flex-col items-center text-center gap-5 sm:gap-7">
+              <Reveal>
+                <div className="relative">
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/20 to-transparent blur-2xl scale-125"
+                  />
+                  <Walli size={168} state="wave" className="sm:hidden" />
+                  <Walli size={230} state="wave" className="hidden sm:block" />
                 </div>
               </Reveal>
 
-              {/* direct email */}
-              <Reveal delay={0.2}>
+              <Reveal delay={0.08}>
+                <h1 className="caps text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.02]">
+                  <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
+                    {c.heroTitle}
+                  </span>
+                </h1>
+              </Reveal>
+
+              <Reveal delay={0.14}>
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
                   className="inline-flex items-center gap-2.5 text-sm text-muted-foreground hover:text-pulse transition-colors group"
@@ -366,17 +323,6 @@ function ContactSections() {
                     {CONTACT_EMAIL}
                   </span>
                 </a>
-              </Reveal>
-
-              {/* Walli — desktop only */}
-              <Reveal delay={0.18} className="hidden lg:block pt-2">
-                <div className="relative w-fit">
-                  <div
-                    aria-hidden
-                    className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/15 to-transparent blur-2xl scale-125"
-                  />
-                  <Walli size={140} state="wave" />
-                </div>
               </Reveal>
             </div>
 

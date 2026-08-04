@@ -507,29 +507,7 @@ export const en: Dict = {
   },
 
   contact: {
-    heroEyebrow: 'Contact us',
-    heroTitle: "We'd love to",
-    heroTitleHighlight: 'hear from you',
-    heroSubtitle:
-      'Got a question, a great idea, or just want to say hello? Fill in the form — we read every message.',
-    topics: [
-      {
-        title: 'Technical support',
-        description: 'Something not working? Tell us what happened.',
-      },
-      {
-        title: 'Course questions',
-        description: 'Curious about a topic or which path fits you?',
-      },
-      {
-        title: 'Partnerships',
-        description: 'Schools, companies — let us talk.',
-      },
-      {
-        title: 'Feedback & ideas',
-        description: 'Found something we can improve? We listen.',
-      },
-    ],
+    heroTitle: 'Text me',
     formTitle: 'Send us a message',
     formSubtitle: 'We will get back to you within 24 hours on weekdays.',
     fieldName: 'Your name',
