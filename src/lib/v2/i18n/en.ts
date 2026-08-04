@@ -21,7 +21,6 @@ export const en: Dict = {
   },
 
   hero: {
-    eyebrow: 'Georgian AI academy',
     titleBefore: 'AI education and',
     titleHighlight: 'the professions of the future in one place',
     description:
@@ -31,10 +30,6 @@ export const en: Dict = {
     statStudents: 'students',
     statCategories: 'categories',
     statRating: 'rating',
-    audienceFor: 'Built for everyone:',
-    audienceKids: 'Kids 6-12',
-    audienceTeens: 'Teens',
-    audienceAdults: 'Adults',
     chipFoundations: 'AI Foundations',
     chipCreative: 'Creators',
     chipForKids: 'For kids',

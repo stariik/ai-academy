@@ -586,14 +586,9 @@ function Hero() {
         </div>
 
         <div className="order-2 lg:order-1 text-center lg:text-left lg:pl-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-pulse/30 bg-pulse/10 text-pulse px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-semibold">
-            <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" />
-            {dict.hero.eyebrow}
-          </div>
-
           <h1
-            className="mt-4 sm:mt-6 text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight"
-            style={{ fontFamily: 'var(--font-display)' }}
+            className="uppercase text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight"
+            style={{ fontFamily: 'var(--font-caps)' }}
           >
             {dict.hero.titleBefore}{' '}
             <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
@@ -665,17 +660,6 @@ function Hero() {
               </p>
             </div>
           </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-center lg:justify-start gap-x-3 gap-y-2">
-            <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">
-              {dict.hero.audienceFor}
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              <AudiencePill>{dict.hero.audienceKids}</AudiencePill>
-              <AudiencePill>{dict.hero.audienceTeens}</AudiencePill>
-              <AudiencePill>{dict.hero.audienceAdults}</AudiencePill>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -714,14 +698,6 @@ function FloatingChip({
         {children}
       </div>
     </div>
-  );
-}
-
-function AudiencePill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold text-muted-foreground">
-      {children}
-    </span>
   );
 }
 

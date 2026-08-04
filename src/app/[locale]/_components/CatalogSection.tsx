@@ -227,8 +227,8 @@ export function CatalogSection({
               and "უსაზღვრო შესაძლებლობები" is wider than 672px on its own,
               which split it across a third line. */}
           <h2
-            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
-            style={{ fontFamily: 'var(--font-display)' }}
+            className="uppercase text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
+            style={{ fontFamily: 'var(--font-caps)' }}
           >
             {dict.catalog.titleBefore}{' '}
             <span className="block bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
@@ -973,8 +973,8 @@ function CourseSliderRow({
                 <span className="tabular-nums text-foreground">{c.lessons}</span> {dict.catalog.lessonsUnit}
               </p>
               <h3
-                className="mt-0.5 text-[15px] sm:text-2xl font-bold leading-tight tracking-tight truncate"
-                style={{ fontFamily: 'var(--font-display)' }}
+                className="uppercase mt-0.5 text-[15px] sm:text-2xl font-bold leading-tight tracking-tight truncate"
+                style={{ fontFamily: 'var(--font-caps)' }}
               >
                 {c.name}
               </h3>

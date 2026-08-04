@@ -21,7 +21,6 @@ export const ka: Dict = {
   },
 
   hero: {
-    eyebrow: 'ქართული AI აკადემია',
     titleBefore: 'AI განათლება და',
     titleHighlight: 'მომავლის პროფესიები ერთ სივრცეში',
     description:
@@ -31,10 +30,6 @@ export const ka: Dict = {
     statStudents: 'მოსწავლე',
     statCategories: 'კატეგორია',
     statRating: 'შეფასება',
-    audienceFor: 'აგებული ყველასთვის:',
-    audienceKids: 'ბავშვები 6-12',
-    audienceTeens: 'ახალგაზრდები',
-    audienceAdults: 'უფროსები',
     chipFoundations: 'AI საფუძვლები',
     chipCreative: 'შემოქმედება',
     chipForKids: 'ბავშვებისთვის',

@@ -23,7 +23,6 @@ export type Dict = {
     language: string;
   };
   hero: {
-    eyebrow: string;
     titleBefore: string;
     titleHighlight: string;
     description: string;
@@ -32,10 +31,6 @@ export type Dict = {
     statStudents: string;
     statCategories: string;
     statRating: string;
-    audienceFor: string;
-    audienceKids: string;
-    audienceTeens: string;
-    audienceAdults: string;
     chipFoundations: string;
     chipCreative: string;
     chipForKids: string;
