@@ -108,7 +108,6 @@ export function Navbar({
 
   const anchor = (id: string) => (homeAnchors ? `#${id}` : `${href()}#${id}`);
   const NAV_LINKS = [
-    { label: dict.navbar.categories, href: anchor('categories'), section: 'categories' },
     { label: dict.navbar.courses, href: anchor('courses'), section: 'courses' },
     { label: dict.navbar.about, href: href('about') },
     { label: dict.navbar.contact, href: href('contact') },
@@ -135,9 +134,6 @@ export function Navbar({
             <div className="leading-tight min-w-0">
               <p className="text-sm sm:text-base font-bold tracking-tight truncate">
                 {dict.meta.brandName}
-              </p>
-              <p className="hidden sm:block text-[10px] text-muted-foreground -mt-0.5">
-                {dict.meta.siteTagline}
               </p>
             </div>
           </Link>
@@ -733,7 +729,7 @@ function AudiencePill({ children }: { children: React.ReactNode }) {
    CTA Banner
    ============================================================ */
 
-function CtaBanner() {
+export function CtaBanner() {
   const { dict, href } = useV2Locale();
   return (
     <section id="start" className="scroll-mt-20 py-10 sm:py-20 lg:py-24 px-4 sm:px-6">

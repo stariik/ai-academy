@@ -18,6 +18,11 @@ import {
 
 type Tab = 'overview' | 'achievements' | 'progress' | 'settings';
 
+// ponytail: env flag, not a DB-backed admin toggle. Set
+// NEXT_PUBLIC_PROFILE_ALL_TABS=1 and redeploy to bring the other three back.
+// Upgrade to an admin switch only if this needs flipping without a deploy.
+const ALL_TABS = process.env.NEXT_PUBLIC_PROFILE_ALL_TABS === '1';
+
 export default function ProfileClient({
   payload,
   dict,
@@ -36,7 +41,7 @@ export default function ProfileClient({
 
 function ProfileInner({ payload }: { payload: ProfilePayload }) {
   const { dict, href } = useV2Locale();
-  const [tab, setTab] = React.useState<Tab>('overview');
+  const [tab, setTab] = React.useState<Tab>(ALL_TABS ? 'overview' : 'settings');
 
   return (
     <div className="relative min-h-screen bg-background text-foreground">
@@ -418,9 +423,13 @@ function levelToBg(level: 0 | 1 | 2 | 3 | 4): string {
 function TabsNav({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
   const { dict } = useV2Locale();
   const items: { id: Tab; label: string }[] = [
-    { id: 'overview', label: dict.profile.tabOverview },
-    { id: 'achievements', label: dict.profile.tabAchievements },
-    { id: 'progress', label: dict.profile.tabProgress },
+    ...(ALL_TABS
+      ? ([
+          { id: 'overview', label: dict.profile.tabOverview },
+          { id: 'achievements', label: dict.profile.tabAchievements },
+          { id: 'progress', label: dict.profile.tabProgress },
+        ] as const)
+      : []),
     { id: 'settings', label: dict.profile.tabSettings },
   ];
   return (
