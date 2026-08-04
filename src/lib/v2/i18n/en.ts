@@ -443,7 +443,7 @@ export const en: Dict = {
     storyEyebrow: 'Our story',
     storyTitle: 'Born from a simple observation',
     storyBody:
-      "In 2025, the world's best AI courses were in English. Georgians who did not speak English fluently were locked out of the fastest-growing field in the world. Schools could not keep up. The tools that existed were built for other countries, other languages, other contexts. So we built our own — an AI tutor that speaks Georgian, teaches AI from scratch, and never runs out of patience.",
+      'The world is changing at an unprecedented speed. We believe AI is not a threat — it is a force that unlocks limitless potential. WALLE Academy was founded on the conviction that the education of the future should be within everyone’s reach. We equip the leaders of the digital era with transformational knowledge, so that you can create, lead, and define the era. We are building limitless possibilities for you!',
     storyPullquote: 'Every Georgian deserves a world-class AI education — in their own language.',
 
     whatEyebrow: 'What we built',
