@@ -436,7 +436,7 @@ export const en: Dict = {
     heroTitle: "Georgia's first",
     heroTitleHighlight: 'AI academy',
     heroSubtitle:
-      'We built walle.academy because world-class AI education did not exist in Georgian — and that gap was costing an entire generation. We are closing it.',
+      "Our mission is to make AI education accessible to everyone, and to equip the digital era's new leaders with the knowledge of the future.",
     heroCtaPrimary: 'Start free',
     heroCtaSecondary: 'Browse courses',
 
