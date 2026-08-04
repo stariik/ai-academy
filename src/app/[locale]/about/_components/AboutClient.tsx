@@ -111,10 +111,7 @@ function AboutSections({ categories }: { categories: Category[] }) {
                 <Eyebrow>{a.heroEyebrow}</Eyebrow>
               </Reveal>
               <Reveal delay={0.05}>
-                <h1
-                  className="text-[30px] min-[380px]:text-[34px] sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.06]"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
+                <h1 className="caps text-[30px] min-[380px]:text-[34px] sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.06]">
                   {a.heroTitle}{' '}
                   <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
                     {a.heroTitleHighlight}
@@ -174,11 +171,6 @@ function AboutSections({ categories }: { categories: Category[] }) {
       {/* ─── Story ─── */}
       <section className="py-12 sm:py-24 border-t border-border bg-muted/20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 space-y-6 text-center">
-          <Reveal>
-            <div className="flex justify-center">
-              <Eyebrow>{a.storyEyebrow}</Eyebrow>
-            </div>
-          </Reveal>
           <Reveal delay={0.05}>
             <h2
               className="text-[26px] sm:text-4xl font-bold tracking-tight leading-tight"
