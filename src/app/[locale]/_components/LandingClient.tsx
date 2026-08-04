@@ -132,7 +132,7 @@ export function Navbar({
           <Link href={href()} className="flex items-center gap-2 shrink-0 min-w-0">
             <Walli size={32} state="idle" noShadow />
             <div className="leading-tight min-w-0">
-              <p className="uppercase text-base sm:text-xl font-bold tracking-tight truncate">
+              <p className="text-base sm:text-xl font-bold tracking-tight truncate">
                 walle academy
               </p>
             </div>
@@ -586,10 +586,7 @@ function Hero() {
         </div>
 
         <div className="order-2 lg:order-1 text-center lg:text-left lg:pl-8">
-          <h1
-            className="text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight"
-            style={{ fontFamily: 'var(--font-caps)' }}
-          >
+          <h1 className="caps text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight">
             {dict.hero.titleBefore}{' '}
             <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
               {dict.hero.titleHighlight}

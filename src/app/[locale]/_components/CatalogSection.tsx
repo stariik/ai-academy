@@ -222,10 +222,7 @@ export function CatalogSection({
               is max-w-3xl rather than 2xl because at lg the heading is 48px
               and "უსაზღვრო შესაძლებლობები" is wider than 672px on its own,
               which split it across a third line. */}
-          <h2
-            className="text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]"
-            style={{ fontFamily: 'var(--font-caps)' }}
-          >
+          <h2 className="caps text-[20px] sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.12]">
             {dict.catalog.titleBefore}{' '}
             <span className="block bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
               {dict.catalog.titleHighlight}
@@ -802,10 +799,7 @@ function BundleCard({ category: c }: { category: Category }) {
 
           {/* Name — min-h keeps one- and two-line names aligned across a row */}
           <div className="px-3.5 pt-3 sm:px-4 sm:pt-3.5">
-            <h3
-              className="text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
+            <h3 className="caps text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]">
               {c.name}
             </h3>
           </div>
@@ -968,10 +962,7 @@ function CourseSliderRow({
                 <span className="px-1.5 opacity-40">·</span>
                 <span className="tabular-nums text-foreground">{c.lessons}</span> {dict.catalog.lessonsUnit}
               </p>
-              <h3
-                className="mt-0.5 text-[15px] sm:text-2xl font-bold leading-tight tracking-tight truncate"
-                style={{ fontFamily: 'var(--font-caps)' }}
-              >
+              <h3 className="caps mt-0.5 text-[15px] sm:text-2xl font-bold leading-tight tracking-tight truncate">
                 {c.name}
               </h3>
             </div>
@@ -1067,11 +1058,10 @@ function CourseCard({
           the row header already shows it. */}
       <h4
         className={cn(
-          'relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight',
+          'caps relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight',
           // Keeps the text clear of the discount ribbon in the corner.
           !owned && discount > 0 && 'pr-12',
         )}
-        style={{ fontFamily: 'var(--font-display)' }}
       >
         {co.title}
       </h4>
