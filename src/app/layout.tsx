@@ -68,7 +68,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ka" suppressHydrationWarning>
+    <html lang="ka" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
         className={`${markGeo.variable} ${markGeoCaps.variable} ${geistMono.variable} antialiased`}
       >

@@ -218,10 +218,6 @@ export function CatalogSection({
     <section id="categories" className="pt-6 pb-12 sm:pt-12 sm:pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="space-y-3 max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold inline-flex items-center gap-2">
-            <span className="h-1 w-6 rounded-full bg-pulse" />
-            {dict.catalog.eyebrow}
-          </p>
           {/* Two lines: the highlight is always its own line. The container
               is max-w-3xl rather than 2xl because at lg the heading is 48px
               and "უსაზღვრო შესაძლებლობები" is wider than 672px on its own,

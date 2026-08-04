@@ -36,7 +36,6 @@ export const en: Dict = {
   },
 
   catalog: {
-    eyebrow: 'Catalog',
     titleBefore: 'Get',
     titleHighlight: 'transformational knowledge',
     description:

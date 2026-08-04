@@ -36,7 +36,6 @@ export const ka: Dict = {
   },
 
   catalog: {
-    eyebrow: 'კატალოგი',
     titleBefore: 'მიიღე',
     titleHighlight: 'ტრანსფორმაციული ცოდნა',
     description:

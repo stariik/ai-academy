@@ -36,7 +36,6 @@ export type Dict = {
     chipForKids: string;
   };
   catalog: {
-    eyebrow: string;
     titleBefore: string;
     titleHighlight: string;
     description: string;
