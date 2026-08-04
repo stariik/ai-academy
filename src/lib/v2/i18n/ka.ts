@@ -432,8 +432,8 @@ export const ka: Dict = {
 
   about: {
     heroEyebrow: 'walle.academy-ს შესახებ',
-    heroTitle: 'საქართველოს პირველი',
-    heroTitleHighlight: 'AI აკადემია',
+    heroTitle: 'პირველი',
+    heroTitleHighlight: 'AI აკადემია საქართველოში',
     heroSubtitle:
       'ჩვენი მისიაა, გავხადოთ AI განათლება ხელმისაწვდომი ყველასთვის და გავაძლიეროთ მომავლის ცოდნით ციფრული ეპოქის ახალი ლიდერები',
     heroCtaPrimary: 'დაიწყე უფასოდ',

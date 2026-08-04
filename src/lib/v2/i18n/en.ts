@@ -433,8 +433,8 @@ export const en: Dict = {
 
   about: {
     heroEyebrow: 'About walle.academy',
-    heroTitle: "Georgia's first",
-    heroTitleHighlight: 'AI academy',
+    heroTitle: 'The first',
+    heroTitleHighlight: 'AI academy in Georgia',
     heroSubtitle:
       "Our mission is to make AI education accessible to everyone, and to equip the digital era's new leaders with the knowledge of the future.",
     heroCtaPrimary: 'Start free',
