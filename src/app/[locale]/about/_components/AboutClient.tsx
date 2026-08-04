@@ -8,7 +8,7 @@ import type { AuthUser } from '@/lib/auth';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import { Walli } from '@/components/walli/Walli';
-import { Navbar, Footer } from '../../_components/LandingClient';
+import { Navbar, Footer, CtaBanner } from '../../_components/LandingClient';
 
 export default function AboutClient({
   dict,
@@ -197,6 +197,11 @@ function AboutSections({ categories }: { categories: Category[] }) {
           </Reveal>
         </div>
       </section>
+
+      {/* ─── CTA — same banner the landing page ends on ─── */}
+      <div className="border-t border-border">
+        <CtaBanner />
+      </div>
     </>
   );
 }
