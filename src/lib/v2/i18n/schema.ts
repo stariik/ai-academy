@@ -414,8 +414,6 @@ export type Dict = {
     valuesEyebrow: string;
     valuesTitle: string;
     valuesItems: { title: string; description: string }[];
-    contactNudgeTitle: string;
-    contactNudgeBody: string;
     ctaTitle: string;
     ctaSubtitle: string;
     ctaPrimary: string;
