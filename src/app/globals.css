@@ -262,6 +262,19 @@
 }
 
 /* Base */
+/* Anchor links (the navbar's #courses / #categories) glide instead of jumping.
+   Next's router disables this for its own scroll restoration, so route changes
+   still land at the top instantly. */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
