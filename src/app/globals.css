@@ -284,7 +284,14 @@ body {
 
 /* Every uppercased element renders in MarkGEO-CAPS automatically — covers
    tracking-widest eyebrows, badges, and any label that already uses the
-   `uppercase` Tailwind utility. Override per-element if needed. */
+   `uppercase` Tailwind utility. Override per-element if needed.
+
+   Georgian caveat: do NOT pair `uppercase` with Georgian text. CSS maps
+   Mkhedruli to Mtavruli (ა U+10D0 -> Ა U+1C90) and MarkGEO-CAPS has zero
+   glyphs in that block, so the text silently falls back to another font.
+   The CAPS face already draws caps shapes at the plain Mkhedruli
+   codepoints — set `font-family: var(--font-caps)` alone. `uppercase` is
+   still correct for Latin-only strings, which the face covers in full. */
 .uppercase {
   font-family: var(--font-caps);
 }

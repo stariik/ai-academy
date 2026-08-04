@@ -587,7 +587,7 @@ function Hero() {
 
         <div className="order-2 lg:order-1 text-center lg:text-left lg:pl-8">
           <h1
-            className="uppercase text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight"
+            className="text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight"
             style={{ fontFamily: 'var(--font-caps)' }}
           >
             {dict.hero.titleBefore}{' '}
