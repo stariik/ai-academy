@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Mail } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import type { Category } from '@/lib/v2/data';
 import type { AuthUser } from '@/lib/auth';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
@@ -186,40 +186,14 @@ function AboutSections({ categories }: { categories: Category[] }) {
           </Reveal>
           <Reveal delay={0.15}>
             <blockquote className="mt-6 sm:mt-8 rounded-3xl border border-pulse/25 bg-gradient-to-br from-pulse/8 via-card to-card px-5 py-6 sm:px-10 sm:py-9">
-              <Sparkles className="w-5 h-5 text-pulse mx-auto mb-3" />
+              {/* <Sparkles className="w-5 h-5 text-pulse mx-auto mb-3" /> */}
               <p
                 className="text-[17px] sm:text-2xl font-bold leading-snug text-foreground"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                "{a.storyPullquote}"
+                {a.storyPullquote}
               </p>
             </blockquote>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ─── Contact nudge ─── */}
-      <section className="py-10 sm:py-14 border-t border-border bg-muted/20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <Reveal>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-5 rounded-2xl border border-border bg-card p-4 sm:px-6 sm:py-5">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-pulse/12 text-pulse shrink-0">
-                  <Mail className="w-5 h-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-bold">{a.contactNudgeTitle}</p>
-                  <p className="text-xs text-muted-foreground">{a.contactNudgeBody}</p>
-                </div>
-              </div>
-              <a
-                href={href('contact')}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-bold hover:border-pulse/40 hover:text-pulse transition-colors shrink-0"
-              >
-                {dict.contact.heroEyebrow}
-                <ArrowRight className="w-4 h-4" />
-              </a>
-            </div>
           </Reveal>
         </div>
       </section>

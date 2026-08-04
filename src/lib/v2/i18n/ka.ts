@@ -499,8 +499,6 @@ export const ka: Dict = {
       },
     ],
 
-    contactNudgeTitle: 'კითხვა გაქვს?',
-    contactNudgeBody: '24/7',
     ctaTitle: 'მზად ხარ დასაწყებად?',
     ctaSubtitle: 'პირველი გაკვეთილი უფასოა. ანგარიში, ბარათი, ვალდებულება — არ გჭირდება.',
     ctaPrimary: 'სცადე უფასო გაკვეთილი',
