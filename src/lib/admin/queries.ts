@@ -10,6 +10,7 @@
 
 import 'server-only';
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
+import { CATEGORY_VISUALS } from '@/lib/v2/data';
 import type {
   OnboardingAnswer,
   OnboardingTranscriptMessage,
@@ -1020,6 +1021,229 @@ export async function listCoursesWithStats(): Promise<AdminCourseListItem[]> {
     studentsActive: activeCounts.get(c.id) ?? 0,
     createdAt: c.created_at,
   }));
+}
+
+// ============================================================
+// Payments + their Bank of Georgia log trail
+// ============================================================
+
+export type PaymentLogEvent = {
+  id: string;
+  event: string;
+  ok: boolean;
+  httpStatus: number | null;
+  request: unknown;
+  response: unknown;
+  error: string | null;
+  durationMs: number | null;
+  createdAt: string;
+  /** Only set on unmatched events, where there's no payment to group under. */
+  bogOrderId: string | null;
+};
+
+export type AdminPaymentRow = {
+  id: string;
+  userId: string;
+  email: string | null;
+  /** What was bought, in words. */
+  target: string;
+  isBundle: boolean;
+  amountCents: number;
+  currency: string;
+  status: string;
+  bogOrderId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  events: PaymentLogEvent[];
+  hasFailure: boolean;
+};
+
+export type PaymentsOverview = {
+  /** False until migrations/2026-08-04-payment-logs.sql has been run. */
+  logsAvailable: boolean;
+  days: number;
+  totals: {
+    payments: number;
+    paid: number;
+    pending: number;
+    failed: number;
+    refunded: number;
+    revenueCents: number;
+    refundedCents: number;
+    failedEvents: number;
+  };
+  rows: AdminPaymentRow[];
+  /**
+   * Log events we could not tie to a payment — rejected signatures, callbacks
+   * naming an order we have no row for. Invisible everywhere else, so they get
+   * their own section rather than being dropped.
+   */
+  unmatched: PaymentLogEvent[];
+};
+
+type PaymentLogRow = {
+  id: string;
+  payment_id: string | null;
+  bog_order_id: string | null;
+  event: string;
+  ok: boolean;
+  http_status: number | null;
+  request: unknown;
+  response: unknown;
+  error: string | null;
+  duration_ms: number | null;
+  created_at: string;
+};
+
+function toLogEvent(r: PaymentLogRow): PaymentLogEvent {
+  return {
+    id: r.id,
+    event: r.event,
+    ok: r.ok,
+    httpStatus: r.http_status,
+    request: r.request,
+    response: r.response,
+    error: r.error,
+    durationMs: r.duration_ms,
+    createdAt: r.created_at,
+    bogOrderId: r.bog_order_id,
+  };
+}
+
+export async function getPaymentsOverview(days: number): Promise<PaymentsOverview> {
+  const db = adminDb();
+  const since = daysAgoIso(days);
+
+  const [logsRes, paymentsRes, coursesRes, emailMap] = await Promise.all([
+    db
+      .from('payment_logs')
+      .select(
+        'id, payment_id, bog_order_id, event, ok, http_status, request, response, error, duration_ms, created_at',
+      )
+      .gte('created_at', since)
+      .order('created_at', { ascending: true })
+      .limit(20000),
+    db
+      .from('payments')
+      .select(
+        'id, user_id, course_id, category_slug, bog_order_id, amount_cents, currency, status, created_at, updated_at',
+      )
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(2000),
+    db.from('courses').select('id, title'),
+    getUserEmailMap(db),
+  ]);
+
+  const logsAvailable = !logsRes.error;
+  const logs = (logsRes.data ?? []) as PaymentLogRow[];
+
+  type PaymentDbRow = {
+    id: string;
+    user_id: string;
+    course_id: string | null;
+    category_slug: string | null;
+    bog_order_id: string | null;
+    amount_cents: number;
+    currency: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+  };
+  const payments = (paymentsRes.data ?? []) as PaymentDbRow[];
+  const byId = new Map(payments.map((p) => [p.id, p]));
+
+  // A log can be newer than its payment (a refund months later), so pull in
+  // any payment the logs reference but the date window missed.
+  const missing = [
+    ...new Set(logs.map((l) => l.payment_id).filter((id): id is string => !!id && !byId.has(id))),
+  ];
+  if (missing.length > 0) {
+    const { data } = await db
+      .from('payments')
+      .select(
+        'id, user_id, course_id, category_slug, bog_order_id, amount_cents, currency, status, created_at, updated_at',
+      )
+      .in('id', missing.slice(0, 500));
+    for (const p of (data ?? []) as PaymentDbRow[]) {
+      payments.push(p);
+      byId.set(p.id, p);
+    }
+  }
+
+  const courseTitle = new Map(
+    ((coursesRes.data ?? []) as { id: string; title: string }[]).map((c) => [c.id, c.title]),
+  );
+  const bundleName = new Map(
+    Object.values(CATEGORY_VISUALS).map((v) => [v.slug, v.nameEn]),
+  );
+
+  const eventsByPayment = new Map<string, PaymentLogEvent[]>();
+  const unmatched: PaymentLogEvent[] = [];
+  let failedEvents = 0;
+  for (const l of logs) {
+    if (!l.ok) failedEvents += 1;
+    const event = toLogEvent(l);
+    if (!l.payment_id) {
+      unmatched.push(event);
+      continue;
+    }
+    const list = eventsByPayment.get(l.payment_id) ?? [];
+    list.push(event);
+    eventsByPayment.set(l.payment_id, list);
+  }
+
+  const totals: PaymentsOverview['totals'] = {
+    payments: 0,
+    paid: 0,
+    pending: 0,
+    failed: 0,
+    refunded: 0,
+    revenueCents: 0,
+    refundedCents: 0,
+    failedEvents,
+  };
+
+  const rows: AdminPaymentRow[] = payments
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    .map((p) => {
+      totals.payments += 1;
+      if (p.status === 'paid') {
+        totals.paid += 1;
+        totals.revenueCents += p.amount_cents;
+      } else if (p.status === 'refunded') {
+        totals.refunded += 1;
+        totals.refundedCents += p.amount_cents;
+      } else if (p.status === 'failed') {
+        totals.failed += 1;
+      } else {
+        totals.pending += 1;
+      }
+
+      const events = eventsByPayment.get(p.id) ?? [];
+      return {
+        id: p.id,
+        userId: p.user_id,
+        email: emailMap.get(p.user_id) ?? null,
+        target: p.course_id
+          ? (courseTitle.get(p.course_id) ?? '(deleted course)')
+          : `Bundle — ${bundleName.get(p.category_slug ?? '') ?? p.category_slug}`,
+        isBundle: !p.course_id,
+        amountCents: p.amount_cents,
+        currency: p.currency,
+        status: p.status,
+        bogOrderId: p.bog_order_id,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+        events,
+        hasFailure: events.some((e) => !e.ok),
+      };
+    });
+
+  // Newest first: an unmatched callback is usually something you're chasing now.
+  unmatched.reverse();
+
+  return { logsAvailable, days, totals, rows, unmatched };
 }
 
 // ============================================================

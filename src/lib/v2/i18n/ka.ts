@@ -21,7 +21,6 @@ export const ka: Dict = {
   },
 
   hero: {
-    eyebrow: 'ქართული AI აკადემია',
     titleBefore: 'AI განათლება და',
     titleHighlight: 'მომავლის პროფესიები ერთ სივრცეში',
     description:
@@ -31,10 +30,6 @@ export const ka: Dict = {
     statStudents: 'მოსწავლე',
     statCategories: 'კატეგორია',
     statRating: 'შეფასება',
-    audienceFor: 'აგებული ყველასთვის:',
-    audienceKids: 'ბავშვები 6-12',
-    audienceTeens: 'ახალგაზრდები',
-    audienceAdults: 'უფროსები',
     chipFoundations: 'AI საფუძვლები',
     chipCreative: 'შემოქმედება',
     chipForKids: 'ბავშვებისთვის',
@@ -507,7 +502,7 @@ export const ka: Dict = {
     ],
 
     contactNudgeTitle: 'კითხვა გაქვს?',
-    contactNudgeBody: 'სამუშაო დღეებში 24 საათში გიპასუხებთ.',
+    contactNudgeBody: '24/7',
     ctaTitle: 'მზად ხარ დასაწყებად?',
     ctaSubtitle: 'პირველი გაკვეთილი უფასოა. ანგარიში, ბარათი, ვალდებულება — არ გჭირდება.',
     ctaPrimary: 'სცადე უფასო გაკვეთილი',

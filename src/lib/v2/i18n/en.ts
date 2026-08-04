@@ -21,7 +21,6 @@ export const en: Dict = {
   },
 
   hero: {
-    eyebrow: 'Georgian AI academy',
     titleBefore: 'AI education and',
     titleHighlight: 'the professions of the future in one place',
     description:
@@ -31,10 +30,6 @@ export const en: Dict = {
     statStudents: 'students',
     statCategories: 'categories',
     statRating: 'rating',
-    audienceFor: 'Built for everyone:',
-    audienceKids: 'Kids 6-12',
-    audienceTeens: 'Teens',
-    audienceAdults: 'Adults',
     chipFoundations: 'AI Foundations',
     chipCreative: 'Creators',
     chipForKids: 'For kids',
@@ -508,7 +503,7 @@ export const en: Dict = {
     ],
 
     contactNudgeTitle: 'Have a question?',
-    contactNudgeBody: 'We reply within 24 hours on weekdays.',
+    contactNudgeBody: '24/7',
     ctaTitle: 'Ready to start?',
     ctaSubtitle: 'The first lesson is free. No account, no card, no commitment.',
     ctaPrimary: 'Try a free lesson',

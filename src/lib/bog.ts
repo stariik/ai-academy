@@ -9,10 +9,15 @@
 // Credentials come from BOG_CLIENT_ID / BOG_CLIENT_SECRET. For the
 // test environment use the Test Public Key (client_id) + Test Secret
 // Key (client_secret).
+//
+// Every call here goes through bogFetch(), which records the request and
+// the response in `payment_logs` — success or failure — so /admin/payments
+// can show what we sent and what came back for any payment.
 // ============================================================
 
 import 'server-only';
 import { createVerify } from 'node:crypto';
+import { logPaymentEvent, type PaymentEvent } from '@/lib/payment-log';
 
 const TOKEN_URL = 'https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token';
 const ORDERS_URL = 'https://api.bog.ge/payments/v1/ecommerce/orders';
@@ -32,24 +37,91 @@ function creds() {
   return { id, secret };
 }
 
+/** What a logged call belongs to, so the admin view can group by payment. */
+export type BogLogCtx = { paymentId?: string | null; bogOrderId?: string | null };
+
+/** BOG speaks JSON, but error bodies are sometimes plain text — keep either. */
+function parseBody(text: string): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/** Short, safe response excerpt for the thrown Error message. */
+function excerpt(value: unknown): string {
+  const s = typeof value === 'string' ? value : JSON.stringify(value);
+  return !s ? '' : s.length > 300 ? `${s.slice(0, 300)}…` : s;
+}
+
+/**
+ * One BOG HTTP call, logged both ways. Returns the parsed response body on
+ * 2xx and throws on anything else — the log row is written before the throw,
+ * so a failure is never invisible. Logging itself can't throw.
+ *
+ * Auth headers are redacted by src/lib/payment-log.ts, not here.
+ */
+async function bogFetch(
+  event: PaymentEvent,
+  ctx: BogLogCtx,
+  url: string,
+  init: { method?: string; headers: Record<string, string>; body?: string },
+): Promise<unknown> {
+  const started = Date.now();
+  const request = {
+    method: init.method ?? 'GET',
+    url,
+    headers: init.headers,
+    body: init.body === undefined ? null : parseBody(init.body),
+  };
+
+  let httpStatus: number | null = null;
+  let response: unknown = null;
+  let error: string | null = null;
+
+  try {
+    const res = await fetch(url, init);
+    httpStatus = res.status;
+    response = parseBody(await res.text());
+    if (!res.ok) error = `HTTP ${res.status} ${excerpt(response)}`.trim();
+  } catch (err) {
+    // Network-level failure — no status, no body.
+    error = err instanceof Error ? err.message : String(err);
+  }
+
+  await logPaymentEvent({
+    event,
+    paymentId: ctx.paymentId,
+    bogOrderId: ctx.bogOrderId,
+    ok: error === null,
+    httpStatus,
+    request,
+    response,
+    error,
+    durationMs: Date.now() - started,
+  });
+
+  if (error) throw new Error(`BOG ${event} failed: ${error}`);
+  return response;
+}
+
 // ponytail: fetch a fresh token per checkout. Caching the ~1h token only
 // matters at volume we don't have; add it when token calls show up hot.
-async function getToken(): Promise<string> {
+async function getToken(ctx: BogLogCtx): Promise<string> {
   const { id, secret } = creds();
   const basic = Buffer.from(`${id}:${secret}`).toString('base64');
-  const res = await fetch(TOKEN_URL, {
+  const data = (await bogFetch('token', ctx, TOKEN_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Basic ${basic}`,
     },
     body: 'grant_type=client_credentials',
-  });
-  if (!res.ok) {
-    throw new Error(`BOG token failed: ${res.status} ${await res.text()}`);
-  }
-  const data = (await res.json()) as { access_token?: string };
-  if (!data.access_token) throw new Error('BOG token: no access_token in response');
+  })) as { access_token?: string } | null;
+
+  if (!data?.access_token) throw new Error('BOG token: no access_token in response');
   return data.access_token;
 }
 
@@ -65,8 +137,11 @@ export type CreateOrderInput = {
 export async function createOrder(
   input: CreateOrderInput,
 ): Promise<{ orderId: string; redirectUrl: string }> {
-  const token = await getToken();
-  const res = await fetch(ORDERS_URL, {
+  // externalOrderId IS our payments.id, so both calls below attribute to it.
+  const ctx: BogLogCtx = { paymentId: input.externalOrderId };
+  const token = await getToken(ctx);
+
+  const data = (await bogFetch('create_order', ctx, ORDERS_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -85,16 +160,10 @@ export async function createOrder(
       },
       redirect_urls: { success: input.successUrl, fail: input.failUrl },
     }),
-  });
-  if (!res.ok) {
-    throw new Error(`BOG create order failed: ${res.status} ${await res.text()}`);
-  }
-  const data = (await res.json()) as {
-    id?: string;
-    _links?: { redirect?: { href?: string } };
-  };
-  const redirectUrl = data._links?.redirect?.href;
-  if (!data.id || !redirectUrl) throw new Error('BOG create order: missing id/redirect link');
+  })) as { id?: string; _links?: { redirect?: { href?: string } } } | null;
+
+  const redirectUrl = data?._links?.redirect?.href;
+  if (!data?.id || !redirectUrl) throw new Error('BOG create order: missing id/redirect link');
   return { orderId: data.id, redirectUrl };
 }
 
@@ -106,19 +175,16 @@ export async function createOrder(
  */
 export async function getPaymentDetails(
   orderId: string,
+  paymentId?: string | null,
 ): Promise<{ statusKey?: string; externalOrderId?: string }> {
-  const token = await getToken();
-  const res = await fetch(`${RECEIPT_URL}/${orderId}`, {
+  const ctx: BogLogCtx = { paymentId, bogOrderId: orderId };
+  const token = await getToken(ctx);
+
+  const data = (await bogFetch('status_lookup', ctx, `${RECEIPT_URL}/${orderId}`, {
     headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    throw new Error(`BOG get payment details failed: ${res.status} ${await res.text()}`);
-  }
-  const data = (await res.json()) as {
-    external_order_id?: string;
-    order_status?: { key?: string };
-  };
-  return { statusKey: data.order_status?.key, externalOrderId: data.external_order_id };
+  })) as { external_order_id?: string; order_status?: { key?: string } } | null;
+
+  return { statusKey: data?.order_status?.key, externalOrderId: data?.external_order_id };
 }
 
 /**
@@ -129,9 +195,11 @@ export async function getPaymentDetails(
  * be rejected) whenever a bank/network discount reduced what the card paid.
  * Throws on any BOG error; caller must not touch local state if this throws.
  */
-export async function refundOrder(orderId: string): Promise<void> {
-  const token = await getToken();
-  const res = await fetch(`https://api.bog.ge/payments/v1/payment/refund/${orderId}`, {
+export async function refundOrder(orderId: string, paymentId?: string | null): Promise<void> {
+  const ctx: BogLogCtx = { paymentId, bogOrderId: orderId };
+  const token = await getToken(ctx);
+
+  await bogFetch('refund', ctx, `https://api.bog.ge/payments/v1/payment/refund/${orderId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -139,9 +207,6 @@ export async function refundOrder(orderId: string): Promise<void> {
     },
     body: '{}',
   });
-  if (!res.ok) {
-    throw new Error(`BOG refund failed: ${res.status} ${await res.text()}`);
-  }
 }
 
 /**

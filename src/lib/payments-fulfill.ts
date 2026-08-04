@@ -183,7 +183,10 @@ async function reconcile(
 
     if (!payment?.bog_order_id) return false;
 
-    const { statusKey, externalOrderId } = await getPaymentDetails(payment.bog_order_id);
+    const { statusKey, externalOrderId } = await getPaymentDetails(
+      payment.bog_order_id,
+      payment.id,
+    );
     // Guard: the receipt must be for this exact payment row.
     if (externalOrderId && externalOrderId !== payment.id) return false;
 
