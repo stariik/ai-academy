@@ -296,6 +296,18 @@ body {
   font-family: var(--font-caps);
 }
 
+/* Bilingual caps for headings. Georgian: the CAPS face draws caps shapes at
+   the plain Mkhedruli codepoints, so the font alone is the whole job.
+   English: that same face carries real lowercase Latin (a, o, p all sit at
+   x-height), so Latin still needs text-transform. `lang` comes from the
+   [locale] layout wrapper. */
+.caps {
+  font-family: var(--font-caps);
+}
+.caps:lang(en) {
+  text-transform: uppercase;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

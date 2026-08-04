@@ -67,11 +67,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Font variables live on <html>, not <body>: --font-caps & friends are
+  // declared on :root and reference these, and a var() resolves on the element
+  // that declares it. Sitting on <body> they were invisible to :root, so every
+  // `font-family: var(--font-caps)` silently computed to nothing.
   return (
-    <html lang="ka" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body
-        className={`${markGeo.variable} ${markGeoCaps.variable} ${geistMono.variable} antialiased`}
-      >
+    <html
+      lang="ka"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+      className={`${markGeo.variable} ${markGeoCaps.variable} ${geistMono.variable}`}
+    >
+      <body className="antialiased">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
