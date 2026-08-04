@@ -402,7 +402,6 @@ export type Dict = {
     heroSubtitle: string;
     heroCtaPrimary: string;
     heroCtaSecondary: string;
-    storyEyebrow: string;
     storyTitle: string;
     storyBody: string;
     storyPullquote: string;

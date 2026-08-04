@@ -171,11 +171,6 @@ function AboutSections({ categories }: { categories: Category[] }) {
       {/* ─── Story ─── */}
       <section className="py-12 sm:py-24 border-t border-border bg-muted/20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 space-y-6 text-center">
-          <Reveal>
-            <div className="flex justify-center">
-              <Eyebrow>{a.storyEyebrow}</Eyebrow>
-            </div>
-          </Reveal>
           <Reveal delay={0.05}>
             <h2
               className="text-[26px] sm:text-4xl font-bold tracking-tight leading-tight"

@@ -440,11 +440,10 @@ export const en: Dict = {
     heroCtaPrimary: 'Start free',
     heroCtaSecondary: 'Browse courses',
 
-    storyEyebrow: 'Our story',
     storyTitle: 'Our philosophy',
     storyBody:
       'The world is changing at an unprecedented speed. We believe AI is not a threat — it is a force that unlocks limitless potential. WALLE Academy was founded on the conviction that the education of the future should be within everyone’s reach. We equip the leaders of the digital era with transformational knowledge, so that you can create, lead, and define the era. We are building limitless possibilities for you!',
-    storyPullquote: 'Every Georgian deserves a world-class AI education — in their own language.',
+    storyPullquote: 'Master AI — become a leader of the future!',
 
     whatEyebrow: 'What we built',
     whatTitle: 'Walli — your personal AI tutor',
