@@ -804,7 +804,7 @@ function BundleCard({ category: c }: { category: Category }) {
           <div className="px-3.5 pt-3 sm:px-4 sm:pt-3.5">
             <h3
               className="text-[14px] font-bold leading-tight tracking-tight line-clamp-2 min-h-[2.4em]"
-              style={{ fontFamily: 'var(--font-display)' }}
+              style={{ fontFamily: 'var(--font-caps)' }}
             >
               {c.name}
             </h3>
@@ -1071,7 +1071,7 @@ function CourseCard({
           // Keeps the text clear of the discount ribbon in the corner.
           !owned && discount > 0 && 'pr-12',
         )}
-        style={{ fontFamily: 'var(--font-display)' }}
+        style={{ fontFamily: 'var(--font-caps)' }}
       >
         {co.title}
       </h4>

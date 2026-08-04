@@ -132,7 +132,7 @@ export function Navbar({
           <Link href={href()} className="flex items-center gap-2 shrink-0 min-w-0">
             <Walli size={32} state="idle" noShadow />
             <div className="leading-tight min-w-0">
-              <p className="uppercase text-base sm:text-xl font-bold tracking-tight truncate">
+              <p className="text-base sm:text-xl font-bold tracking-tight truncate">
                 walle academy
               </p>
             </div>
