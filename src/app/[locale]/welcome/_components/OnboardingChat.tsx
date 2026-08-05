@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
@@ -21,6 +22,7 @@ import type {
   OnboardingAnswer,
   OnboardingProfileSignals,
   OnboardingQuestion,
+  OnboardingRoadmapStep,
   OnboardingTranscriptMessage,
 } from '@/lib/onboarding';
 
@@ -50,26 +52,28 @@ type Copy = {
   completeTitle: string;
   completeBody: string;
   pathReady: string;
+  roadmapTitle: string;
+  startFirst: string;
   enter: string;
   preparing: string;
 };
 
 const COPY: Record<Locale, Copy> = {
   en: {
-    brandEyebrow: 'A small conversation before we begin',
-    headline: (name) => `${name}, let’s make this academy feel like yours.`,
+    brandEyebrow: 'A few questions, then your plan',
+    headline: (name) => `${name}, let’s build your learning plan.`,
     intro:
-      'I’ll ask 4–7 short questions. There are no right answers — I simply want to understand what you hope to create, improve, or change with AI.',
-    start: 'Personalize my path',
+      'I’ll ask 4–7 short questions, then turn your answers into a plan: which courses to take, in what order, at a pace that fits your week.',
+    start: 'Build my plan',
     time: 'About 2 minutes',
     questions: '4–7 thoughtful questions',
     honest: 'No wrong answers',
     privacy:
-      'Your answers personalize learning and help us build a better academy. We only summarize what you choose to share.',
+      'Your answers build your plan and help us make a better academy. We only summarize what you choose to share.',
     guideLabel: 'Your learning companion',
-    guideTitle: 'WALL‑E is listening',
+    guideTitle: 'WALL‑E is planning',
     guideBody:
-      'The same WALL‑E you’ll meet inside lessons is here to understand your starting point — then adapt the journey to you.',
+      'The same WALL‑E you’ll meet inside lessons is working out where you start, what comes next, and how fast to go.',
     stepLabel: (current) => `Question ${current} · maximum 7`,
     saved: 'Answers saved',
     selectHint: (max) => `Choose up to ${max}`,
@@ -78,28 +82,30 @@ const COPY: Record<Locale, Copy> = {
     send: 'Send answer',
     retry: 'Try again',
     error: 'I lost the signal for a moment. Your previous answers are safe — please try again.',
-    completeEyebrow: 'Signal received',
-    completeTitle: 'Your starting path is ready.',
-    completeBody: 'WALL‑E will use this context to make explanations and recommendations more relevant.',
+    completeEyebrow: 'Plan ready',
+    completeTitle: 'Your learning plan is ready.',
+    completeBody: 'You can change course at any time — the plan follows you, not the other way around.',
     pathReady: 'What I heard',
+    roadmapTitle: 'Your roadmap',
+    startFirst: 'Start step 1',
     enter: 'Enter my academy',
     preparing: 'WALL‑E is thinking about your answer…',
   },
   ka: {
-    brandEyebrow: 'პატარა საუბარი დაწყებამდე',
-    headline: (name) => `${name}, მოდი ეს აკადემია შენს სივრცედ ვაქციოთ.`,
+    brandEyebrow: 'რამდენიმე კითხვა და შენი გეგმა',
+    headline: (name) => `${name}, მოდი შენი სასწავლო გეგმა ავაწყოთ.`,
     intro:
-      'დაგისვამ 4–7 მოკლე კითხვას. სწორი ან არასწორი პასუხი არ არსებობს — უბრალოდ მინდა გავიგო, რისი შექმნა, გაუმჯობესება ან შეცვლა გინდა AI-ის დახმარებით.',
-    start: 'ჩემი გზის მორგება',
+      'დაგისვამ 4–7 მოკლე კითხვას და პასუხებს გეგმად ვაქცევ: რომელი კურსები გაიარო, რა თანმიმდევრობით და რა ტემპით, რომ შენს კვირას მოერგოს.',
+    start: 'ჩემი გეგმის აწყობა',
     time: 'დაახლოებით 2 წუთი',
     questions: '4–7 გააზრებული კითხვა',
     honest: 'არასწორი პასუხი არ არსებობს',
     privacy:
-      'შენი პასუხები სწავლას მოგარგებს და უკეთესი აკადემიის შექმნაში დაგვეხმარება. ვაჯამებთ მხოლოდ იმას, რასაც თავად გვიზიარებ.',
+      'შენი პასუხები შენს გეგმას ქმნის და უკეთესი აკადემიის შექმნაში გვეხმარება. ვაჯამებთ მხოლოდ იმას, რასაც თავად გვიზიარებ.',
     guideLabel: 'შენი სასწავლო თანამგზავრი',
-    guideTitle: 'WALL‑E გისმენს',
+    guideTitle: 'WALL‑E გეგმავს',
     guideBody:
-      'იგივე WALL‑E, რომელსაც გაკვეთილებში შეხვდები, ახლა შენს საწყის წერტილს გაიგებს და შემდეგ გზას მოგარგებს.',
+      'იგივე WALL‑E, რომელსაც გაკვეთილებში შეხვდები, ახლა ადგენს საიდან დაიწყო, რა მოჰყვება და რა ტემპით იაროთ.',
     stepLabel: (current) => `კითხვა ${current} · მაქსიმუმ 7`,
     saved: 'პასუხები შენახულია',
     selectHint: (max) => `აირჩიე მაქსიმუმ ${max}`,
@@ -108,10 +114,12 @@ const COPY: Record<Locale, Copy> = {
     send: 'პასუხის გაგზავნა',
     retry: 'ხელახლა ცდა',
     error: 'კავშირი წამით დავკარგე. წინა პასუხები შენახულია — გთხოვ, კიდევ სცადო.',
-    completeEyebrow: 'სიგნალი მიღებულია',
-    completeTitle: 'შენი საწყისი გზა მზადაა.',
-    completeBody: 'WALL‑E ამ კონტექსტს ახსნებისა და რეკომენდაციების უკეთ მოსარგებად გამოიყენებს.',
+    completeEyebrow: 'გეგმა მზადაა',
+    completeTitle: 'შენი სასწავლო გეგმა მზადაა.',
+    completeBody: 'ნებისმიერ დროს შეგიძლია მიმართულება შეცვალო — გეგმა შენ მოგყვება და არა პირიქით.',
     pathReady: 'რა გავიგე',
+    roadmapTitle: 'შენი გზამკვლევი',
+    startFirst: 'პირველი ნაბიჯის დაწყება',
     enter: 'აკადემიაში შესვლა',
     preparing: 'WALL‑E შენს პასუხზე ფიქრობს…',
   },
@@ -172,8 +180,8 @@ export default function OnboardingChat({
       nowMessage(
         'assistant',
         locale === 'ka'
-          ? `გამარჯობა, ${displayName} 👋 მე WALL‑E ვარ. სანამ შენთვის პირველ ნაბიჯს ავარჩევთ, მინდა ცოტა უკეთ გაგიცნო.`
-          : `Hi, ${displayName} 👋 I’m WALL‑E. Before we choose your first step, I’d love to understand you a little better.`,
+          ? `გამარჯობა, ${displayName} 👋 მე WALL‑E ვარ. რამდენიმე კითხვას დაგისვამ და ბოლოს შენს სასწავლო გეგმას გადმოგცემ — რომელი კურსიდან დაიწყო და რა მოჰყვება.`
+          : `Hi, ${displayName} 👋 I’m WALL‑E. I’ll ask a few questions, then hand you your learning plan — which course to start with and what follows.`,
       ),
     [displayName, locale],
   );
@@ -183,6 +191,7 @@ export default function OnboardingChat({
   const [answers, setAnswers] = React.useState<OnboardingAnswer[]>([]);
   const [question, setQuestion] = React.useState<OnboardingQuestion | null>(null);
   const [profile, setProfile] = React.useState<OnboardingProfileSignals | null>(null);
+  const [roadmap, setRoadmap] = React.useState<OnboardingRoadmapStep[]>([]);
   const [selected, setSelected] = React.useState<string[]>([]);
   const [freeText, setFreeText] = React.useState('');
   const [pending, setPending] = React.useState(false);
@@ -213,6 +222,9 @@ export default function OnboardingChat({
         if (savedMessages.length) setMessages(savedMessages);
         if (savedRow.status === 'completed') {
           setProfile(profileFromRow(savedRow));
+          if (Array.isArray(savedRow.roadmap)) {
+            setRoadmap(savedRow.roadmap as OnboardingRoadmapStep[]);
+          }
           setPhase('complete');
           return;
         }
@@ -263,6 +275,7 @@ export default function OnboardingChat({
         complete: boolean;
         question: OnboardingQuestion | null;
         profile: OnboardingProfileSignals | null;
+        roadmap: OnboardingRoadmapStep[] | null;
         assistantMessage: OnboardingTranscriptMessage;
       };
     },
@@ -279,6 +292,7 @@ export default function OnboardingChat({
       setQuestion(result.question);
       setPhase(result.complete ? 'complete' : 'interview');
       if (result.profile) setProfile(result.profile);
+      if (result.roadmap) setRoadmap(result.roadmap);
     } catch {
       setError(T.error);
     } finally {
@@ -325,6 +339,7 @@ export default function OnboardingChat({
       setMessages((current) => [...current, result.assistantMessage]);
       if (result.complete) {
         setProfile(result.profile);
+        setRoadmap(result.roadmap ?? []);
         setPhase('complete');
       } else {
         setSelected([]);
@@ -565,7 +580,15 @@ export default function OnboardingChat({
                 />
               )}
               {phase === 'complete' && (
-                <CompletionComposer copy={T} profile={profile} onEnter={enterAcademy} />
+                <CompletionComposer
+                  copy={T}
+                  locale={locale}
+                  profile={profile}
+                  roadmap={roadmap}
+                  // A redeem code must be claimed before jumping into a course.
+                  showStart={!redeemCode}
+                  onEnter={enterAcademy}
+                />
               )}
             </div>
           </section>
@@ -823,17 +846,20 @@ function InterviewComposer({
 
 function CompletionComposer({
   copy,
+  locale,
   profile,
+  roadmap,
+  showStart,
   onEnter,
 }: {
   copy: Copy;
+  locale: Locale;
   profile: OnboardingProfileSignals | null;
+  roadmap: OnboardingRoadmapStep[];
+  showStart: boolean;
   onEnter: () => void;
 }) {
-  const chips = [
-    ...(profile?.interests ?? []),
-    ...(profile?.learningPreferences ?? []),
-  ].slice(0, 4);
+  const first = roadmap[0];
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -852,33 +878,70 @@ function CompletionComposer({
             <p className="mt-1 text-sm font-bold leading-relaxed text-foreground">
               {profile?.summary || copy.completeBody}
             </p>
-            {chips.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {chips.map((chip) => (
-                  <span
-                    key={chip}
-                    className="rounded-full border border-pulse/20 bg-card/75 px-2.5 py-1 text-[10px] font-bold text-pulse"
-                  >
-                    {chip}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      {roadmap.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            {copy.roadmapTitle}
+          </p>
+          <ol className="max-h-[34vh] space-y-2 overflow-y-auto pr-1 sm:max-h-none">
+            {roadmap.map((step, index) => (
+              <li key={step.courseId}>
+                <Link
+                  href={`/${locale}/courses/${step.courseId}`}
+                  className="group flex items-start gap-3 rounded-2xl border border-border bg-background px-3.5 py-3 transition-all hover:border-pulse/45 hover:bg-pulse/5"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-pulse/12 text-xs font-black text-pulse">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="text-sm font-bold text-foreground">{step.title}</span>
+                      {step.when && (
+                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-pulse">
+                          {step.when}
+                        </span>
+                      )}
+                    </span>
+                    {step.why && (
+                      <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                        {step.why}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-pulse" />
+                </Link>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-relaxed text-muted-foreground sm:max-w-sm">
+        <p className="text-xs leading-relaxed text-muted-foreground sm:max-w-[16rem]">
           {copy.completeBody}
         </p>
-        <button
-          type="button"
-          onClick={onEnter}
-          className="group inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-pulse px-6 text-sm font-bold text-primary-foreground shadow-[0_10px_28px_var(--pulse-glow)] transition hover:-translate-y-0.5"
-        >
-          {copy.enter}
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={onEnter}
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full border border-border px-5 text-sm font-bold text-foreground transition hover:border-pulse/45 hover:bg-pulse/5"
+          >
+            {copy.enter}
+          </button>
+          {showStart && first && (
+            <Link
+              href={`/${locale}/courses/${first.courseId}`}
+              className="group inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-pulse px-6 text-sm font-bold text-primary-foreground shadow-[0_10px_28px_var(--pulse-glow)] transition hover:-translate-y-0.5"
+            >
+              {copy.startFirst}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          )}
+        </div>
       </div>
     </motion.div>
   );

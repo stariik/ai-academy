@@ -8,11 +8,14 @@ import { RateLimiters } from '@/lib/security-patterns';
 import { logAiUsage } from '@/lib/ai/usage';
 import {
   buildFallbackProfile,
+  buildFallbackRoadmap,
   getFallbackQuestion,
   type OnboardingAnswer,
+  type OnboardingCatalogCourse,
   type OnboardingLocale,
   type OnboardingProfileSignals,
   type OnboardingQuestion,
+  type OnboardingRoadmapStep,
   type OnboardingTranscriptMessage,
 } from '@/lib/onboarding';
 
@@ -75,11 +78,19 @@ const profileSchema = z.object({
   verbatimQuote: z.string().max(240).default(''),
 });
 
+const roadmapStepSchema = z.object({
+  courseId: z.string().max(60),
+  title: z.string().max(160).default(''),
+  when: z.string().max(60).default(''),
+  why: z.string().max(240).default(''),
+});
+
 const aiResponseSchema = z.object({
   acknowledgement: z.string().min(1).max(300),
   complete: z.boolean(),
   question: questionSchema.nullable().optional(),
   profile: profileSchema.nullable().optional(),
+  roadmap: z.array(roadmapStepSchema).max(4).nullable().optional(),
   closing: z.string().max(500).nullable().optional(),
 });
 
@@ -96,11 +107,20 @@ function readJsonObject(text: string): unknown {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-function systemPrompt(locale: OnboardingLocale, answerCount: number): string {
+function systemPrompt(
+  locale: OnboardingLocale,
+  answerCount: number,
+  courses: OnboardingCatalogCourse[],
+): string {
   const language = locale === 'ka' ? 'natural, modern Georgian' : 'warm, concise English';
   return `You are WALL-E, the curious AI learning companion at walle.academy. Run a short,
-post-registration discovery conversation that helps personalize learning and gives the academy
-honest product/marketing research based on what the learner explicitly says.
+post-registration conversation whose single purpose is to build this learner a personal learning
+plan: which of our real courses they should take, in what order, at what pace. Every question you
+ask must earn its place by making that plan better. The transcript also gives the academy honest
+product research based on what the learner explicitly says.
+
+OUR COURSE CATALOG — the plan may only use these courses:
+${courses.map((course) => `- id=${course.id} | ${course.title} | tags: ${course.tags.join(', ') || 'none'} | ${course.description.slice(0, 160)}`).join('\n') || '- (catalog unavailable)'}
 
 INTERVIEW METHOD
 - Use motivational interviewing: warm reflection, autonomy, curiosity, no judgment.
@@ -120,9 +140,18 @@ their desired outcome or when their own words matter. Multi-select max is 2.
 - Write every learner-facing string in ${language}. Do not mix languages.
 
 WHEN COMPLETE
-Return a concise research profile grounded only in their answers. "verbatimQuote" must be an exact
-short excerpt from the learner, not an invented quote. "opportunitySignals" are stated unmet needs
-or friction points, never diagnoses.
+Return a concise research profile grounded only in their answers, plus the roadmap.
+"verbatimQuote" must be an exact short excerpt from the learner, not an invented quote.
+"opportunitySignals" are stated unmet needs or friction points, never diagnoses.
+
+ROADMAP RULES
+- 2 to 4 ordered steps. Fewer, well-chosen steps beat a long list.
+- "courseId" MUST be copied exactly from the catalog above. Never invent a course.
+- "title" is that course's exact title.
+- "when" is a short pacing label matching the weekly commitment they stated,
+  e.g. "Week 1–2" / "კვირა 1–2". Be realistic about the pace they actually chose.
+- "why" is one sentence tying the step to something they said, in their words where possible.
+- Order for momentum: the first step should produce their first small win.
 
 Return ONLY valid JSON with this exact shape:
 {
@@ -139,16 +168,57 @@ Return ONLY valid JSON with this exact shape:
     "maxSelections": 2
   },
   "profile": null,
+  "roadmap": null,
   "closing": null
 }
 
-For a completed interview set question=null, complete=true, add a warm closing, and profile:
-{
+For a completed interview set question=null, complete=true, add a warm closing that hands over the
+plan, and:
+"profile": {
   "interests": [], "primaryGoal": "", "desiredOutcome": "", "experienceLevel": "",
   "learningPreferences": [], "weeklyCommitment": "", "barriers": [], "motivation": "",
   "summary": "2 useful sentences", "segmentLabel": "", "opportunitySignals": [],
   "verbatimQuote": ""
-}.`;
+},
+"roadmap": [{"courseId":"exact id from catalog","title":"exact course title","when":"Week 1–2","why":"one sentence"}].`;
+}
+
+async function loadCatalog(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  locale: OnboardingLocale,
+): Promise<OnboardingCatalogCourse[]> {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('id, title, title_en, description, description_en, tags')
+    .order('created_at', { ascending: true });
+  if (error || !data) {
+    console.error('[onboarding] catalog load failed:', error);
+    return [];
+  }
+  return data.map((row) => ({
+    id: String(row.id),
+    title: (locale === 'en' ? row.title_en : null) || row.title || '',
+    description: ((locale === 'en' ? row.description_en : null) || row.description || '').slice(0, 300),
+    tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
+  }));
+}
+
+// Course ids are the one thing a hallucination would make unclickable.
+function normalizeRoadmap(
+  roadmap: OnboardingRoadmapStep[] | null | undefined,
+  courses: OnboardingCatalogCourse[],
+  profile: OnboardingProfileSignals,
+  locale: OnboardingLocale,
+): OnboardingRoadmapStep[] {
+  const byId = new Map(courses.map((course) => [course.id, course]));
+  const seen = new Set<string>();
+  const steps = (roadmap ?? []).flatMap((step) => {
+    const course = byId.get(step.courseId);
+    if (!course || seen.has(course.id)) return [];
+    seen.add(course.id);
+    return [{ ...step, title: course.title }];
+  });
+  return steps.length ? steps.slice(0, 4) : buildFallbackRoadmap(courses, profile, locale);
 }
 
 function normalizeQuestion(
@@ -205,13 +275,14 @@ async function generateTurn(
   locale: OnboardingLocale,
   sessionId: string,
   userId: string,
+  courses: OnboardingCatalogCourse[],
 ): Promise<AiTurn> {
   const startedAt = Date.now();
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1400,
     temperature: 0.55,
-    system: systemPrompt(locale, answers.length),
+    system: systemPrompt(locale, answers.length, courses),
     messages: [
       {
         role: 'user',
@@ -262,6 +333,7 @@ function fallbackTurn(
       complete: false,
       question,
       profile: null,
+      roadmap: null,
       closing: null,
     };
   }
@@ -273,10 +345,11 @@ function fallbackTurn(
     complete: true,
     question: null,
     profile: buildFallbackProfile(answers, locale),
+    roadmap: null,
     closing:
       locale === 'ka'
-        ? 'შენი საწყისი გზა მზადაა. წავიდეთ და პირველი პატარა გამარჯვება მოვიპოვოთ.'
-        : 'Your starting path is ready. Let’s go earn the first small win.',
+        ? 'შენი გეგმა მზადაა. წავიდეთ და პირველი პატარა გამარჯვება მოვიპოვოთ.'
+        : 'Your plan is ready. Let’s go earn the first small win.',
   };
 }
 
@@ -354,9 +427,10 @@ export async function POST(request: NextRequest) {
   }
 
   const { sessionId } = await getSession();
+  const courses = await loadCatalog(supabase, locale);
   let turn: AiTurn;
   try {
-    turn = await generateTurn(answers, locale, sessionId, user.id);
+    turn = await generateTurn(answers, locale, sessionId, user.id, courses);
   } catch (error) {
     console.error('[onboarding] AI turn failed, using guided fallback:', error);
     turn = fallbackTurn(answers, locale);
@@ -374,17 +448,19 @@ export async function POST(request: NextRequest) {
 
   const complete = turn.complete || (!question && answers.length >= 4);
   const profile = complete ? mergeProfile(turn.profile, answers, locale) : null;
+  const roadmap = profile ? normalizeRoadmap(turn.roadmap, courses, profile, locale) : null;
   const finalTurn: AiTurn = {
     ...turn,
     complete,
     question: complete ? null : question,
     profile,
+    roadmap,
     closing:
       complete
         ? turn.closing ??
           (locale === 'ka'
-            ? 'შენი საწყისი გზა მზადაა — პირველი პატარა გამარჯვება გველოდება.'
-            : 'Your starting path is ready — the first small win is waiting.')
+            ? 'შენი გეგმა მზადაა — პირველი პატარა გამარჯვება გველოდება.'
+            : 'Your plan is ready — the first small win is waiting.')
         : null,
   };
   const message: OnboardingTranscriptMessage = {
@@ -419,6 +495,7 @@ export async function POST(request: NextRequest) {
       segment_label: profile.segmentLabel,
       opportunity_signals: profile.opportunitySignals,
       verbatim_quote: profile.verbatimQuote,
+      roadmap: roadmap ?? [],
     });
   }
 
@@ -458,6 +535,7 @@ export async function POST(request: NextRequest) {
     complete,
     question: complete ? null : question,
     profile,
+    roadmap,
     closing: finalTurn.closing,
     assistantMessage: message,
   });
