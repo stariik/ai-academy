@@ -1058,7 +1058,7 @@ function CourseCard({
           the row header already shows it. */}
       <h4
         className={cn(
-          'caps relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight',
+          'relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight',
           // Keeps the text clear of the discount ribbon in the corner.
           !owned && discount > 0 && 'pr-12',
         )}

@@ -37,6 +37,20 @@ export type OnboardingTranscriptMessage = {
   at: string;
 };
 
+export type OnboardingRoadmapStep = {
+  courseId: string;
+  title: string;
+  when: string;
+  why: string;
+};
+
+export type OnboardingCatalogCourse = {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+};
+
 export type OnboardingProfileSignals = {
   interests: string[];
   primaryGoal: string;
@@ -220,6 +234,34 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     },
   ],
 };
+
+const PACE_LABELS: Record<OnboardingLocale, string[]> = {
+  en: ['Start here', 'Next', 'Then'],
+  ka: ['დაიწყე აქედან', 'შემდეგ', 'შემდეგ'],
+};
+
+// ponytail: tag overlap only — good enough when the AI path is unavailable.
+export function buildFallbackRoadmap(
+  courses: OnboardingCatalogCourse[],
+  profile: OnboardingProfileSignals,
+  locale: OnboardingLocale,
+): OnboardingRoadmapStep[] {
+  const wanted = profile.interests.map((interest) => interest.toLowerCase());
+  const score = (course: OnboardingCatalogCourse) =>
+    course.tags.filter((tag) => wanted.some((interest) => interest.includes(tag.toLowerCase()))).length;
+  return [...courses]
+    .sort((a, b) => score(b) - score(a))
+    .slice(0, 3)
+    .map((course, index) => ({
+      courseId: course.id,
+      title: course.title,
+      when: PACE_LABELS[locale][index] ?? PACE_LABELS[locale][2],
+      why:
+        locale === 'ka'
+          ? `დაგეხმარება აქ: ${profile.primaryGoal}`
+          : `Moves you toward: ${profile.primaryGoal}`,
+    }));
+}
 
 export function getFallbackQuestion(
   answerCount: number,

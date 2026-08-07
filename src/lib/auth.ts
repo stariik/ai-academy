@@ -13,9 +13,6 @@ export type AuthUser = {
   email: string | null;
   /** From user_metadata.display_name, falls back to email's local-part. */
   displayName: string | null;
-  /** Only new registrations with this explicit flag are routed into onboarding. */
-  onboardingRequired: boolean;
-  onboardingCompleted: boolean;
 };
 
 /**
@@ -36,11 +33,7 @@ export const getAuthUser = cache(async (): Promise<AuthUser | null> => {
   const { data } = await supabase.auth.getUser();
   const u = data.user;
   if (!u) return null;
-  const metadata = (u.user_metadata as {
-    display_name?: string;
-    onboarding_required?: boolean;
-    onboarding_completed?: boolean;
-  } | null) ?? {};
+  const metadata = (u.user_metadata as { display_name?: string } | null) ?? {};
   const displayName =
     metadata.display_name ??
     u.email?.split('@')[0] ??
@@ -49,8 +42,6 @@ export const getAuthUser = cache(async (): Promise<AuthUser | null> => {
     id: u.id,
     email: u.email ?? null,
     displayName,
-    onboardingRequired: metadata.onboarding_required === true,
-    onboardingCompleted: metadata.onboarding_completed === true,
   };
 });
 
