@@ -421,11 +421,7 @@ export type Dict = {
   };
 
   contact: {
-    heroEyebrow: string;
     heroTitle: string;
-    heroTitleHighlight: string;
-    heroSubtitle: string;
-    topics: { title: string; description: string }[];
     formTitle: string;
     formSubtitle: string;
     fieldName: string;
@@ -445,9 +441,5 @@ export type Dict = {
     errorRequired: string;
     errorEmail: string;
     errorGeneric: string;
-    ctaTitle: string;
-    ctaSubtitle: string;
-    ctaPrimary: string;
-    ctaSecondary: string;
   };
 };
