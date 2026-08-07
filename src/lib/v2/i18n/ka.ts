@@ -413,7 +413,7 @@ export const ka: Dict = {
     redeemPageBrowseCourses: 'კურსების ნახვა',
     redeemPageGoToCourse: 'კურსზე გადასვლა →',
     courseHeading: 'გაქვს კოდი ამ კურსისთვის?',
-    courseHasCodeCta: 'მაქვს კოდი',
+    courseHasCodeCta: 'პრომო კოდი',
     courseHasCodeHide: 'დახურვა',
     successTitle: 'კურსი გახსნილია!',
     successCta: 'სწავლის დაწყება →',

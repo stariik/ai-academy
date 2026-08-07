@@ -21,9 +21,9 @@ import * as React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, ChevronRight, Clock, Lock, Play, Sparkles,
-  Star, ArrowRight, ArrowLeft, Heart, BookOpen, Users,
+  ArrowRight, ArrowLeft, Heart, BookOpen,
   CircleDot, Trophy, Eye, Zap, Loader2,
-  ShieldCheck, Award, Infinity as InfinityIcon, MessageCircle, GraduationCap,
+  Award, MessageCircle, GraduationCap, Ticket,
 } from 'lucide-react';
 
 import { Walle, type WalleState } from '@/components/walle/Walle';
@@ -341,7 +341,6 @@ function CoursePage({
                 onEnroll={toggleEnrollment}
                 enrollBusy={busy}
                 onPromoRedeemed={addEnrollmentLocally}
-                previewHref={previewHref}
               />
             </aside>
           </div>
@@ -1283,7 +1282,6 @@ function PurchaseCard({
   onEnroll,
   enrollBusy,
   onPromoRedeemed,
-  previewHref,
 }: {
   course: Course;
   category: Category;
@@ -1296,7 +1294,6 @@ function PurchaseCard({
   onEnroll: () => void;
   enrollBusy: boolean;
   onPromoRedeemed: (courseId: string) => void;
-  previewHref: string;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -1340,7 +1337,6 @@ function PurchaseCard({
           onEnroll={onEnroll}
           enrollBusy={enrollBusy}
           onPromoRedeemed={onPromoRedeemed}
-          previewHref={previewHref}
         />
       )}
 
@@ -1394,26 +1390,6 @@ function PurchaseCard({
 }
 
 const INCLUDED_ICONS = [BookOpen, MessageCircle, Sparkles, GraduationCap, Zap];
-
-function TrustPill({
-  icon: Icon,
-  children,
-  tone,
-}: {
-  icon: typeof ShieldCheck;
-  children: React.ReactNode;
-  tone: keyof typeof TONE_CLASSES;
-}) {
-  const t = TONE_CLASSES[tone];
-  return (
-    <div className="flex items-center gap-2.5 text-xs">
-      <span className={cn('flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center', t.iconBg, t.text)}>
-        <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
-      </span>
-      <span className="text-foreground/85 leading-snug">{children}</span>
-    </div>
-  );
-}
 
 function BundleCrossSell({ category }: { category: Category }) {
   const { dict, href } = useV2Locale();
@@ -1496,12 +1472,15 @@ function CoursePromoExpandable({
   return (
     <div className="mt-4 border-t border-border/60 pt-4">
       {!open ? (
+        // Dashed full-width chip reads as a "there is a field behind this"
+        // affordance; the bare text link was easy to miss under the CTA.
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="text-xs font-semibold text-muted-foreground hover:text-pulse transition-colors"
+          className="group/promo w-full inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-border py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-pulse/50 hover:bg-pulse/5 hover:text-pulse"
         >
-          {dict.promo.courseHasCodeCta} →
+          <Ticket className="h-3.5 w-3.5 transition-transform group-hover/promo:-rotate-12" />
+          {dict.promo.courseHasCodeCta}
         </button>
       ) : (
         <div>
@@ -1558,7 +1537,6 @@ function BuyRailContent({
   onEnroll,
   enrollBusy,
   onPromoRedeemed,
-  previewHref,
 }: {
   course: Course;
   detail: CourseDetail;
@@ -1569,7 +1547,6 @@ function BuyRailContent({
   onEnroll: () => void;
   enrollBusy: boolean;
   onPromoRedeemed: (courseId: string) => void;
-  previewHref: string;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[tone];
@@ -1608,25 +1585,6 @@ function BuyRailContent({
         )}
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">
-        {hasPrice ? dict.courseDetail.priceOnceForever : dict.courseDetail.freeFirstLessonNote}
-      </p>
-
-      {/* Social proof */}
-      <div className="mt-3 flex items-center gap-3 text-xs">
-        <span className="inline-flex items-center gap-1.5">
-          <Users className={cn('w-3.5 h-3.5', t.text)} />
-          <span className="font-bold tabular-nums">2,400+</span>
-          <span className="text-muted-foreground">{dict.courseDetail.studentsUnit}</span>
-        </span>
-        <span className="text-muted-foreground/40">·</span>
-        <span className="inline-flex items-center gap-1.5">
-          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span className="font-bold tabular-nums">4.8</span>
-          <span className="text-muted-foreground">/ 5</span>
-        </span>
-      </div>
-
       {/* Primary CTA — full-bleed, glow, prominent */}
       <button
         type="button"
@@ -1653,34 +1611,11 @@ function BuyRailContent({
         )}
       </button>
 
-      {/* Secondary inline CTA — jumps straight into the first free lesson. */}
-      <Link
-        href={previewHref}
-        className="mt-2.5 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-pulse transition-colors"
-      >
-        <Play className="w-3 h-3 fill-current" />
-        <span>
-          {dict.courseDetail.previewInlinePrefix}<span className="underline underline-offset-2">{dict.courseDetail.previewInlineLink}</span>
-        </span>
-      </Link>
-
       {/* Promo code expandable — only for users who haven't enrolled yet */}
       {isLoggedIn && (
         <CoursePromoExpandable courseId={course.id} onSuccess={onPromoRedeemed} />
       )}
 
-      {/* Trust pills */}
-      <div className="mt-5 rounded-2xl bg-muted/40 p-3 space-y-2.5">
-        <TrustPill icon={InfinityIcon} tone={tone}>
-          {dict.courseDetail.trustLifetimeBuy}
-        </TrustPill>
-        <TrustPill icon={ShieldCheck} tone={tone}>
-          {dict.courseDetail.trustRefund}
-        </TrustPill>
-        <TrustPill icon={Award} tone={tone}>
-          {dict.courseDetail.trustCertificateComplete}
-        </TrustPill>
-      </div>
     </div>
   );
 }

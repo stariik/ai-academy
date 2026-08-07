@@ -414,7 +414,7 @@ export const en: Dict = {
     redeemPageBrowseCourses: 'Browse courses',
     redeemPageGoToCourse: 'Go to course →',
     courseHeading: 'Have a code for this course?',
-    courseHasCodeCta: 'I have a code',
+    courseHasCodeCta: 'Promo code',
     courseHasCodeHide: 'Hide',
     successTitle: 'Course unlocked!',
     successCta: 'Start learning →',
