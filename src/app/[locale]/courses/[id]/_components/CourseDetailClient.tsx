@@ -22,7 +22,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, ChevronRight, Clock, Lock, Play, Sparkles,
   Star, ArrowRight, ArrowLeft, Heart, BookOpen, Users,
-  CircleDot, Trophy, Eye, Zap,
+  CircleDot, Trophy, Eye, Zap, Loader2,
   ShieldCheck, Award, Infinity as InfinityIcon, MessageCircle, GraduationCap,
 } from 'lucide-react';
 
@@ -171,9 +171,17 @@ function CoursePage({
     setEnrollments((prev) => (prev.includes(courseId) ? prev : [...prev, courseId]));
   }, []);
 
+  // Every buy/enroll button shares this. It stays true across the redirect to
+  // the bank or to login so the spinner never flickers back to "Buy" while the
+  // browser is still leaving the page — a second click there is a second order.
+  const [busy, setBusy] = React.useState(false);
+
   const toggleEnrollment = React.useCallback(async () => {
+    if (busy) return;
+
     // Guests can't buy — send them to login first (paid courses only).
     if (!authed && course.price && course.price > 0) {
+      setBusy(true);
       window.location.href = localeHref('login');
       return;
     }
@@ -196,6 +204,7 @@ function CoursePage({
     // Paid course → Bank of Georgia checkout. Access is granted by the
     // payment callback, so we don't touch local enrollment state here.
     if (course.price && course.price > 0) {
+      setBusy(true);
       try {
         const res = await fetch('/api/checkout', {
           method: 'POST',
@@ -205,16 +214,18 @@ function CoursePage({
         const data = (await res.json().catch(() => ({}))) as { redirectUrl?: string };
         if (res.ok && data.redirectUrl) {
           window.location.href = data.redirectUrl;
-        } else {
-          console.error('[checkout] failed:', res.status);
+          return;
         }
+        console.error('[checkout] failed:', res.status);
       } catch (err) {
         console.error('[checkout] failed:', err);
       }
+      setBusy(false);
       return;
     }
 
     // Free course — optimistic add, then call the API. Rollback on failure.
+    setBusy(true);
     setEnrollments((prev) => (prev.includes(course.id) ? prev : [...prev, course.id]));
     try {
       const res = await fetch('/api/enrollments', {
@@ -226,8 +237,10 @@ function CoursePage({
     } catch (err) {
       console.error('[enroll] failed:', err);
       setEnrollments((prev) => prev.filter((x) => x !== course.id));
+    } finally {
+      setBusy(false);
     }
-  }, [authed, course.id, course.price, enrollments, localeHref]);
+  }, [authed, busy, course.id, course.price, enrollments, localeHref]);
 
   const toggleLessonComplete = React.useCallback(
     (lessonId: string) => {
@@ -320,6 +333,7 @@ function CoursePage({
                 completedCount={completedCount}
                 totalLessons={totalLessons}
                 onEnroll={toggleEnrollment}
+                enrollBusy={busy}
                 onPromoRedeemed={addEnrollmentLocally}
                 previewHref={previewHref}
               />
@@ -332,6 +346,7 @@ function CoursePage({
           course={course}
           isEnrolled={isEnrolled}
           onEnroll={toggleEnrollment}
+          enrollBusy={busy}
           previewHref={previewHref}
         />
       </main>
@@ -344,6 +359,7 @@ function CoursePage({
         isEnrolled={isEnrolled}
         progressPct={progressPct}
         onEnroll={toggleEnrollment}
+        enrollBusy={busy}
       />
 
     </div>
@@ -1469,6 +1485,7 @@ function PurchaseCard({
   completedCount,
   totalLessons,
   onEnroll,
+  enrollBusy,
   onPromoRedeemed,
   previewHref,
 }: {
@@ -1481,6 +1498,7 @@ function PurchaseCard({
   completedCount: number;
   totalLessons: number;
   onEnroll: () => void;
+  enrollBusy: boolean;
   onPromoRedeemed: (courseId: string) => void;
   previewHref: string;
 }) {
@@ -1524,6 +1542,7 @@ function PurchaseCard({
           tone={category.tone}
           isLoggedIn={isLoggedIn}
           onEnroll={onEnroll}
+          enrollBusy={enrollBusy}
           onPromoRedeemed={onPromoRedeemed}
           previewHref={previewHref}
         />
@@ -1741,6 +1760,7 @@ function BuyRailContent({
   tone,
   isLoggedIn,
   onEnroll,
+  enrollBusy,
   onPromoRedeemed,
   previewHref,
 }: {
@@ -1751,6 +1771,7 @@ function BuyRailContent({
   tone: keyof typeof TONE_CLASSES;
   isLoggedIn: boolean;
   onEnroll: () => void;
+  enrollBusy: boolean;
   onPromoRedeemed: (courseId: string) => void;
   previewHref: string;
 }) {
@@ -1814,16 +1835,26 @@ function BuyRailContent({
       <button
         type="button"
         onClick={onEnroll}
-        className="group/cta mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-pulse text-primary-foreground h-14 text-base font-bold shadow-[0_12px_30px_var(--pulse-glow)] hover:shadow-[0_18px_45px_var(--pulse-glow)] hover:-translate-y-0.5 active:scale-[0.98] transition-all"
+        disabled={enrollBusy}
+        className="group/cta mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-pulse text-primary-foreground h-14 text-base font-bold shadow-[0_12px_30px_var(--pulse-glow)] hover:shadow-[0_18px_45px_var(--pulse-glow)] hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-70 disabled:translate-y-0 disabled:active:scale-100"
       >
-        <span>
-          {hasPrice
-            ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}`
-            : isLoggedIn
-              ? dict.courseDetail.ctaStartLearning
-              : dict.courseDetail.ctaStartFree}
-        </span>
-        <ArrowRight className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
+        {enrollBusy ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>{hasPrice ? dict.catalog.bundleRedirecting : dict.catalog.bundleProcessing}</span>
+          </>
+        ) : (
+          <>
+            <span>
+              {hasPrice
+                ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}`
+                : isLoggedIn
+                  ? dict.courseDetail.ctaStartLearning
+                  : dict.courseDetail.ctaStartFree}
+            </span>
+            <ArrowRight className="w-5 h-5 transition-transform group-hover/cta:translate-x-1" />
+          </>
+        )}
       </button>
 
       {/* Secondary inline CTA — jumps straight into the first free lesson. */}
@@ -1950,11 +1981,13 @@ function CtaBanner({
   course,
   isEnrolled,
   onEnroll,
+  enrollBusy,
   previewHref,
 }: {
   course: Course;
   isEnrolled: boolean;
   onEnroll: () => void;
+  enrollBusy: boolean;
   previewHref: string;
 }) {
   const { dict } = useV2Locale();
@@ -1992,10 +2025,22 @@ function CtaBanner({
                   <>
                     <button
                       onClick={onEnroll}
-                      className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+                      disabled={enrollBusy}
+                      className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:translate-y-0"
                     >
-                      {course.price && course.price > 0 ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}` : dict.courseDetail.ctaStartFree}
-                      <ArrowRight className="w-4 h-4" />
+                      {enrollBusy ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {course.price && course.price > 0
+                            ? dict.catalog.bundleRedirecting
+                            : dict.catalog.bundleProcessing}
+                        </>
+                      ) : (
+                        <>
+                          {course.price && course.price > 0 ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}` : dict.courseDetail.ctaStartFree}
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                     <Link
                       href={previewHref}
@@ -2027,12 +2072,14 @@ function MobileBottomBar({
   isEnrolled,
   progressPct,
   onEnroll,
+  enrollBusy,
 }: {
   course: Course;
   category: Category;
   isEnrolled: boolean;
   progressPct: number;
   onEnroll: () => void;
+  enrollBusy: boolean;
 }) {
   const { dict } = useV2Locale();
   return (
@@ -2076,9 +2123,14 @@ function MobileBottomBar({
           <button
             type="button"
             onClick={onEnroll}
-            className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-[0_8px_24px_var(--pulse-glow)]"
+            disabled={enrollBusy}
+            className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-[0_8px_24px_var(--pulse-glow)] disabled:opacity-70"
           >
-            <Zap className="w-4 h-4" />
+            {enrollBusy ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4" />
+            )}
             {dict.courseDetail.startShort}
           </button>
         )}
