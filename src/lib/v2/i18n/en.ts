@@ -80,7 +80,7 @@ export const en: Dict = {
     step1Title: 'Pick a path',
     step1Description:
       'Nine categories, from AI foundations to agents — there is a course that fits you.',
-    step2Title: 'Walli teaches',
+    step2Title: 'Walle teaches',
     step2Description:
       'Conversational lessons in Georgian. Gentle on mistakes, celebratory on correct answers.',
     step3Title: 'Collect cards',
@@ -174,8 +174,8 @@ export const en: Dict = {
     curriculumTitle: 'What the course covers',
     prerequisitesLabel: 'Prerequisites',
     whatsIncludedLabel: 'What is included',
-    walliEyebrow: 'Your teacher',
-    walliTitle: 'Meet Walli',
+    walleEyebrow: 'Your teacher',
+    walleTitle: 'Meet Walle',
     relatedEyebrow: 'Related courses',
     relatedTitle: 'Other courses in this category',
     purchaseTitle: 'Buy this course',
@@ -205,8 +205,8 @@ export const en: Dict = {
     heroFreePreview: 'Free preview',
     yourProgress: 'Your progress',
     aiTeacher: 'AI teacher',
-    walliIntro: 'Ask me anything at any point in the lesson — I will answer just the way you need.',
-    walliIntroEnd: 'let us begin together.',
+    walleIntro: 'Ask me anything at any point in the lesson — I will answer just the way you need.',
+    walleIntroEnd: 'let us begin together.',
     modulesLabel: 'modules',
     curriculumDescription: 'Three steps — foundations, practice, your project. Every lesson is a live dialogue between us.',
     lessonReview: 'Review',
@@ -246,7 +246,7 @@ export const en: Dict = {
     priceLabel: 'Price',
     ctaBannerEnrolledTitle: 'Ready to keep going?',
     ctaBannerTitle: 'Shall we continue together?',
-    ctaBannerEnrolledDesc: 'Pick up right where you left off — Walli is waiting. Every lesson is one step closer.',
+    ctaBannerEnrolledDesc: 'Pick up right where you left off — Walle is waiting. Every lesson is one step closer.',
     ctaBannerDesc: 'Buy once. Yours forever. The first lesson is free. The rest — at your own pace.',
     footerHome: 'Home',
     footerCategories: 'Categories',
@@ -323,7 +323,7 @@ export const en: Dict = {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     displayNameLabel: 'Your name',
-    displayNamePlaceholder: 'How should Walli address you?',
+    displayNamePlaceholder: 'How should Walle address you?',
     submitLogin: 'Sign in',
     submitRegister: 'Sign up',
     submitLoading: 'Please wait...',
@@ -446,9 +446,9 @@ export const en: Dict = {
     storyPullquote: 'Master AI — become a leader of the future!',
 
     whatEyebrow: 'What we built',
-    whatTitle: 'Walli — your personal AI tutor',
+    whatTitle: 'Walle — your personal AI tutor',
     whatBody:
-      'Walli is a conversational AI tutor powered by Claude. It teaches in Georgian and English through structured lessons, asks questions instead of just giving answers, and will not let you move forward until you actually understand. Each course is a genuine dialogue — not a video lecture, not a quiz loop.',
+      'Walle is a conversational AI tutor powered by Claude. It teaches in Georgian and English through structured lessons, asks questions instead of just giving answers, and will not let you move forward until you actually understand. Each course is a genuine dialogue — not a video lecture, not a quiz loop.',
     whatItems: [
       {
         title: '9 learning paths',
@@ -458,7 +458,7 @@ export const en: Dict = {
       {
         title: 'Mastery-based progression',
         description:
-          'Walli uses check questions and a final quiz on every lesson. You move on when you understand — not just when you click "next".',
+          'Walle uses check questions and a final quiz on every lesson. You move on when you understand — not just when you click "next".',
       },
       {
         title: 'Spaced repetition built in',
@@ -486,7 +486,7 @@ export const en: Dict = {
       {
         title: 'Mastery over speed',
         description:
-          'We refuse to rubber-stamp progress. If you did not understand, Walli asks again. That is the whole point.',
+          'We refuse to rubber-stamp progress. If you did not understand, Walle asks again. That is the whole point.',
       },
       {
         title: 'Safe and honest',

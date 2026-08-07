@@ -3,7 +3,7 @@
 /**
  * Per-page check questions. Reuses /api/quiz/check-page for grading.
  * Three visual states:
- *   • locked      → muted card, hint to chat with Walli first
+ *   • locked      → muted card, hint to chat with Walle first
  *   • unlocked    → answer form (mcq / true_false / fill_in_blank / short_answer)
  *   • passed      → success ribbon
  */
@@ -12,7 +12,7 @@ import * as React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Lock, Check, X, RotateCcw, Sparkles, MessageCircle } from 'lucide-react';
 import type { QuizQuestion } from '@/types';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 
 type Result = {
@@ -56,7 +56,7 @@ export function CheckQuestionsV2({
         <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-pulse/15 blur-3xl" aria-hidden />
         <div className="relative flex items-center gap-3">
           <div className="shrink-0">
-            <Walli size={48} state="dance" noShadow />
+            <Walle size={48} state="dance" noShadow />
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">
@@ -91,7 +91,7 @@ export function CheckQuestionsV2({
               შემოწმების კითხვები ჩაკეტილია
             </p>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-xs mx-auto">
-              ისაუბრე Walli-სთან მასალაზე — ის გახსნის კითხვებს, როცა მზად იქნები.
+              ისაუბრე Walle-სთან მასალაზე — ის გახსნის კითხვებს, როცა მზად იქნები.
             </p>
           </div>
           <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-pulse">
@@ -303,7 +303,7 @@ function QuestionCard({
       </div>
 
       {/* MCQ — only the user's selection is annotated; the correct option is
-           NOT revealed when wrong (Walli explains via chat instead). */}
+           NOT revealed when wrong (Walle explains via chat instead). */}
       {q.type === 'mcq' && q.options && (
         <div className="space-y-2" role="radiogroup" aria-label={`კითხვა ${index + 1}`}>
           {q.options.map((opt, i) => {
@@ -463,7 +463,7 @@ function QuestionCard({
                 </p>
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold opacity-90">
                   <MessageCircle className="w-3 h-3" />
-                  <span>Walli ხსნის ჩატში — გადახედე და ხელახლა სცადე</span>
+                  <span>Walle ხსნის ჩატში — გადახედე და ხელახლა სცადე</span>
                 </div>
               </div>
             )}

@@ -7,7 +7,7 @@ import type { Category } from '@/lib/v2/data';
 import type { AuthUser } from '@/lib/auth';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { Navbar, Footer, CtaBanner } from '../../_components/LandingClient';
 
 export default function AboutClient({
@@ -93,7 +93,7 @@ function AboutSections({ categories }: { categories: Category[] }) {
         />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-8 pb-12 sm:pt-20 sm:pb-24">
           <div className="grid items-center gap-7 sm:gap-10 lg:grid-cols-[1.2fr_0.8fr]">
-            {/* Walli leads on a phone — the character introduces the page
+            {/* Walle leads on a phone — the character introduces the page
                 before the copy does. On desktop it stays on the right. */}
             <Reveal delay={0.1} className="order-1 flex justify-center lg:order-2 lg:justify-end">
               <div className="relative">
@@ -101,8 +101,8 @@ function AboutSections({ categories }: { categories: Category[] }) {
                   aria-hidden
                   className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/20 to-transparent blur-2xl scale-150"
                 />
-                <Walli size={132} state="wave" className="sm:hidden" />
-                <Walli size={210} state="wave" className="hidden sm:block" />
+                <Walle size={132} state="wave" className="sm:hidden" />
+                <Walle size={210} state="wave" className="hidden sm:block" />
               </div>
             </Reveal>
 

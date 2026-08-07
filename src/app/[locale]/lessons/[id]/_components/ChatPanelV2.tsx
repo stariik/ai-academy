@@ -5,7 +5,7 @@
  *
  * Reuses the streaming protocol from the legacy ChatPanel (POST /api/chat,
  * GET /api/chat-history, QUIZ_UNLOCK_MARKER) but rebuilds the UI on Eve
- * tokens. Walli sits inline as the assistant avatar and reacts to state:
+ * tokens. Walle sits inline as the assistant avatar and reacts to state:
  *   • wave on mount / page change
  *   • tilt during streaming (thinking pose)
  *   • spin once when the unlock marker fires
@@ -18,7 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ArrowUp, Sparkles, CheckCircle2, RotateCcw } from 'lucide-react';
 import type { Lesson, ChatMessage } from '@/types';
-import { Walli, type WalliState } from '@/components/walli/Walli';
+import { Walle, type WalleState } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 
 const QUIZ_UNLOCK_MARKER = '[READY_FOR_QUIZ]';
@@ -61,7 +61,7 @@ const STRINGS: Record<TutorLocale, {
     quickQuestions: 'სწრაფი კითხვები',
     again: 'ხელახლა',
     explainAgain: 'გასაგებად ხელახლა ამიხსენი — სხვა მაგალითით.',
-    placeholder: 'დაუსვი კითხვა Walli-ს…',
+    placeholder: 'დაუსვი კითხვა Walle-ს…',
     send: 'გაგზავნა',
     chatHistoryLabel: 'საუბრის ისტორია',
     chatMessageLabel: 'საუბრის შეტყობინება',
@@ -72,7 +72,7 @@ const STRINGS: Record<TutorLocale, {
     genericError: 'რაღაც არასწორად მოხდა',
     requestFailed: 'მოთხოვნა ვერ შესრულდა',
     emptyTeacher: 'შენი მასწავლებელი',
-    emptyTitle: 'მე ვარ Walli — ერთად ვისწავლოთ!',
+    emptyTitle: 'მე ვარ Walle — ერთად ვისწავლოთ!',
     emptyHint: 'დამისვი ნებისმიერი კითხვა — ან აარჩიე ერთ-ერთი წინადადება.',
     suggestionsHeader: 'შემოთავაზებები',
     suggestExplainSimple: (t) => `ამიხსენი "${t}" მარტივად`,
@@ -88,7 +88,7 @@ const STRINGS: Record<TutorLocale, {
     quickQuestions: 'Quick questions',
     again: 'Again',
     explainAgain: 'Please explain again — with a different example.',
-    placeholder: 'Ask Walli a question…',
+    placeholder: 'Ask Walle a question…',
     send: 'Send',
     chatHistoryLabel: 'Chat history',
     chatMessageLabel: 'Chat message',
@@ -99,7 +99,7 @@ const STRINGS: Record<TutorLocale, {
     genericError: 'Something went wrong',
     requestFailed: 'Request failed',
     emptyTeacher: 'Your teacher',
-    emptyTitle: "I'm Walli — let's learn together!",
+    emptyTitle: "I'm Walle — let's learn together!",
     emptyHint: 'Ask me anything — or pick one of the suggestions.',
     suggestionsHeader: 'Suggestions',
     suggestExplainSimple: (t) => `Explain "${t}" simply`,
@@ -112,7 +112,7 @@ const STRINGS: Record<TutorLocale, {
 };
 
 /**
- * Picks Walli's reaction state from the user's message content.
+ * Picks Walle's reaction state from the user's message content.
  *   • 'dance' — gratitude, comprehension, enthusiasm
  *   • 'wave'  — default acknowledgment for everything else
  *
@@ -122,7 +122,7 @@ const STRINGS: Record<TutorLocale, {
 const POSITIVE_HINTS =
   /(მადლობა|გავიგე|გასაგებია|სუპერ|მაგარია|ვაო|ფანტასტიკაა|thanks?|thank ?you|got ?it|cool|nice|wow|amazing|awesome|great|❤️|🎉|😄|😀|🙌)/i;
 
-function pickWalliReaction(text: string): WalliState {
+function pickWalleReaction(text: string): WalleState {
   if (!text) return 'wave';
   if (POSITIVE_HINTS.test(text)) return 'dance';
   return 'wave';
@@ -135,7 +135,7 @@ export function ChatPanelV2({
   teacherLocale,
   onTeacherLocaleChange,
   onUnlockCheck,
-  walliPulseKey,
+  wallePulseKey,
   pendingPrompt,
 }: {
   lessonId: string;
@@ -146,7 +146,7 @@ export function ChatPanelV2({
   teacherLocale: TutorLocale;
   onTeacherLocaleChange: (next: TutorLocale) => void;
   onUnlockCheck?: () => void;
-  walliPulseKey?: number;
+  wallePulseKey?: number;
   pendingPrompt?: { id: number; text: string } | null;
 }) {
   // Ref mirrors the prop so async closures (the auto-intro fetch chain) always
@@ -162,9 +162,9 @@ export function ChatPanelV2({
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [historyLoaded, setHistoryLoaded] = React.useState(false);
 
-  // Walli state + key (key forces re-mount for one-shot animations)
-  const [walliState, setWalliState] = React.useState<WalliState>('wave');
-  const [walliKey, setWalliKey] = React.useState(0);
+  // Walle state + key (key forces re-mount for one-shot animations)
+  const [walleState, setWalleState] = React.useState<WalleState>('wave');
+  const [walleKey, setWalleKey] = React.useState(0);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -174,28 +174,28 @@ export function ChatPanelV2({
 
   const currentPageData = lesson.pages?.find((p) => p.pageNumber === pageNumber);
 
-  /* ─── walli reactions ─── */
+  /* ─── walle reactions ─── */
   React.useEffect(() => {
     // Wave on page change, settle to idle.
-    setWalliState('wave');
-    setWalliKey((k) => k + 1);
-    const t = setTimeout(() => setWalliState('idle'), 3200);
+    setWalleState('wave');
+    setWalleKey((k) => k + 1);
+    const t = setTimeout(() => setWalleState('idle'), 3200);
     return () => clearTimeout(t);
   }, [pageNumber]);
 
   React.useEffect(() => {
-    setWalliState((prev) => (isStreaming ? 'tilt' : prev === 'tilt' ? 'idle' : prev));
+    setWalleState((prev) => (isStreaming ? 'tilt' : prev === 'tilt' ? 'idle' : prev));
   }, [isStreaming]);
 
   // External unlock pulse — celebrate one time.
   React.useEffect(() => {
-    if (walliPulseKey === undefined) return;
-    if (walliPulseKey === 0) return;
-    setWalliState('spin');
-    setWalliKey((k) => k + 1);
-    const t = setTimeout(() => setWalliState('idle'), 1400);
+    if (wallePulseKey === undefined) return;
+    if (wallePulseKey === 0) return;
+    setWalleState('spin');
+    setWalleKey((k) => k + 1);
+    const t = setTimeout(() => setWalleState('idle'), 1400);
     return () => clearTimeout(t);
-  }, [walliPulseKey]);
+  }, [wallePulseKey]);
 
   /* ─── load history / auto-intro ─── */
   React.useEffect(() => {
@@ -408,18 +408,18 @@ export function ChatPanelV2({
     [messages, isStreaming, lessonId, pageNumber, onUnlockCheck],
   );
 
-  /* ─── per-message Walli reaction ───
-     Latest assistant bubble's Walli responds to the conversation in three
+  /* ─── per-message Walle reaction ───
+     Latest assistant bubble's Walle responds to the conversation in three
      beats so the user sees a clear cause→effect:
-       1. You send         → Walli reacts to YOUR message
+       1. You send         → Walle reacts to YOUR message
                               · 'dance' if it reads enthusiastic / grateful
                               · 'wave'  otherwise (acknowledgment)
                               Holds for ~1.1–1.8s, then …
-       2. Walli is replying → 'tilt'  (thinking pose, while streaming)
+       2. Walle is replying → 'tilt'  (thinking pose, while streaming)
        3. Reply just landed → 'spin'  (celebration, ~1.4s)
        4. Otherwise        → 'idle'
      Older messages stay 'idle' so attention follows the live reply. */
-  const [userSendReaction, setUserSendReaction] = React.useState<WalliState | null>(null);
+  const [userSendReaction, setUserSendReaction] = React.useState<WalleState | null>(null);
   const lastSeenUserMsgIdRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     let lastUser: ChatMessage | undefined;
@@ -432,7 +432,7 @@ export function ChatPanelV2({
     if (!lastUser) return;
     if (lastUser.id === lastSeenUserMsgIdRef.current) return;
     lastSeenUserMsgIdRef.current = lastUser.id;
-    const reaction = pickWalliReaction(lastUser.content);
+    const reaction = pickWalleReaction(lastUser.content);
     setUserSendReaction(reaction);
     const holdMs = reaction === 'dance' ? 1800 : 1100;
     const t = setTimeout(() => setUserSendReaction(null), holdMs);
@@ -454,7 +454,7 @@ export function ChatPanelV2({
     }
   }, [isStreaming]);
 
-  const latestBubbleWalli: WalliState = userSendReaction
+  const latestBubbleWalle: WalleState = userSendReaction
     ? userSendReaction
     : isStreaming
       ? 'tilt'
@@ -503,7 +503,7 @@ export function ChatPanelV2({
   if (!historyLoaded) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        <Walli size={72} state="idle" />
+        <Walle size={72} state="idle" />
         <div className="flex items-center gap-1.5">
           {[0, 1, 2].map((i) => (
             <motion.span
@@ -523,7 +523,7 @@ export function ChatPanelV2({
       {/* ─── Header ─── */}
       <div className="shrink-0 px-3 sm:px-4 py-2.5 border-b border-border bg-card/60 backdrop-blur-sm flex items-center gap-3">
         <div className="relative shrink-0">
-          <Walli key={`hdr-${walliKey}`} state={walliState} size={36} noShadow />
+          <Walle key={`hdr-${walleKey}`} state={walleState} size={36} noShadow />
           {isStreaming && (
             <span
               aria-hidden
@@ -537,7 +537,7 @@ export function ChatPanelV2({
             {T.teacher}
           </p>
           <p className="text-sm font-bold mt-0.5 truncate" style={{ fontFamily: 'var(--font-display)' }}>
-            {currentPageData ? currentPageData.title : 'Walli'}
+            {currentPageData ? currentPageData.title : 'Walle'}
           </p>
         </div>
         <TeacherLocaleToggle
@@ -571,7 +571,7 @@ export function ChatPanelV2({
                 msg={msg}
                 isLast={idx === messages.length - 1}
                 isStreaming={isStreaming}
-                walliState={msg.id === latestAssistantId ? latestBubbleWalli : 'idle'}
+                walleState={msg.id === latestAssistantId ? latestBubbleWalle : 'idle'}
               />
             ))}
           </AnimatePresence>
@@ -710,7 +710,7 @@ function EmptyChat({
       <div className="rounded-3xl border border-pulse/25 bg-gradient-to-br from-pulse/8 via-card to-card p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="shrink-0">
-            <Walli size={48} state="wave" noShadow />
+            <Walle size={48} state="wave" noShadow />
           </div>
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.18em] text-pulse font-bold">
@@ -754,12 +754,12 @@ function MessageBubble({
   msg,
   isLast,
   isStreaming,
-  walliState,
+  walleState,
 }: {
   msg: ChatMessage;
   isLast: boolean;
   isStreaming: boolean;
-  walliState: WalliState;
+  walleState: WalleState;
 }) {
   const isAssistant = msg.role === 'assistant';
   const showTyping = isLast && isStreaming && !msg.content && isAssistant;
@@ -774,7 +774,7 @@ function MessageBubble({
     >
       {isAssistant && (
         <div className="shrink-0 mt-0.5" aria-hidden>
-          <Walli size={28} state={walliState} noShadow />
+          <Walle size={28} state={walleState} noShadow />
         </div>
       )}
       <div

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { ArrowLeft, Check, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { useV2Locale } from '@/lib/v2/i18n/context';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,7 @@ export function AuthShell({
         />
 
         <div className="relative max-w-md">
-          <Walli size={132} state="wave" noShadow />
+          <Walle size={132} state="wave" noShadow />
           <p className="mt-8 text-[11px] font-bold uppercase tracking-[0.22em] text-pulse">
             {dict.meta.siteName}
           </p>
@@ -80,7 +80,7 @@ export function AuthShell({
         <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-7 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pt-10">
           <div className="mb-6 text-center sm:mb-7">
             <div className="inline-block lg:hidden">
-              <Walli size={76} state="wave" noShadow />
+              <Walle size={76} state="wave" noShadow />
             </div>
             {eyebrow && (
               <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-pulse lg:hidden">

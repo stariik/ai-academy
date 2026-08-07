@@ -4,13 +4,13 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * EveCover — the course "cover" visual, shaped and styled after Walli/Eve's
- * head (see ./Walli.tsx): a glossy white egg-dome at Eve's ~5:4 proportions
+ * EveCover — the course "cover" visual, shaped and styled after Walle/Eve's
+ * head (see ./Walle.tsx): a glossy white egg-dome at Eve's ~5:4 proportions
  * with a soft cyan aura, the category emoji centered where the visor sits.
  * Used on landing course cards and the course-detail page so every course
  * shares the teacher's visual language.
  *
- * The path data and gradients are lifted verbatim from Walli's head so the
+ * The path data and gradients are lifted verbatim from Walle's head so the
  * silhouette and shading match the mascot exactly.
  */
 

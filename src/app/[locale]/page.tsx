@@ -23,7 +23,7 @@ export async function generateMetadata({
     ? 'Practical AI Courses Online | walle.academy'
     : 'AI კურსები ქართულად | walle.academy';
   const description = isEn
-    ? 'Learn AI tools, prompt engineering, coding, marketing, and business skills through practical online courses with Walli, your AI tutor.'
+    ? 'Learn AI tools, prompt engineering, coding, marketing, and business skills through practical online courses with Walle, your AI tutor.'
     : 'ისწავლე ხელოვნური ინტელექტი ქართულად: AI ინსტრუმენტები, პრომპტ ინჟინერია, პროგრამირება, მარკეტინგი და ბიზნესი პრაქტიკული ონლაინ კურსებით.';
   return {
     title: { absolute: title },

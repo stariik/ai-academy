@@ -96,7 +96,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
     const fallback: TeacherLocale = locale === 'en' ? 'en' : 'ka';
     if (typeof window === 'undefined') return fallback;
     try {
-      const stored = localStorage.getItem(`walli_lang:${lessonId}`);
+      const stored = localStorage.getItem(`walle_lang:${lessonId}`);
       return stored === 'ka' || stored === 'en' ? stored : fallback;
     } catch {
       return fallback;
@@ -106,7 +106,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
     (next: TeacherLocale) => {
       setTeacherLocale(next);
       try {
-        localStorage.setItem(`walli_lang:${lessonId}`, next);
+        localStorage.setItem(`walle_lang:${lessonId}`, next);
       } catch {
         /* ignore */
       }
@@ -119,11 +119,11 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
   const [translatedPage, setTranslatedPage] = React.useState<TranslatedPageOverlay | null>(null);
   const [translating, setTranslating] = React.useState(false);
 
-  // Walli reactions surface — child components can request a temporary state
-  const [walliPulse, setWalliPulse] = React.useState<0 | 1>(0);
+  // Walle reactions surface — child components can request a temporary state
+  const [wallePulse, setWallePulse] = React.useState<0 | 1>(0);
 
   // When the user submits wrong check-question answers we hand a prompt to
-  // the chat panel so Walli explains without revealing the answer. The id
+  // the chat panel so Walle explains without revealing the answer. The id
   // bumps on each new submission so the chat can dedupe.
   const [chatPrompt, setChatPrompt] = React.useState<{ id: number; text: string } | null>(null);
 
@@ -306,7 +306,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
       next.add(pageNum);
       return next;
     });
-    setWalliPulse((p) => (p === 0 ? 1 : 0));
+    setWallePulse((p) => (p === 0 ? 1 : 0));
   }, []);
 
   const handleCheckPassed = React.useCallback(
@@ -422,7 +422,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
               teacherLocale={teacherLocale}
               onTeacherLocaleChange={setAndPersistTeacherLocale}
               onUnlockCheck={() => handleCheckUnlocked(currentPage)}
-              walliPulseKey={walliPulse}
+              wallePulseKey={wallePulse}
               pendingPrompt={chatPrompt}
             />
           )}
@@ -544,7 +544,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
                 გვერდი დასრულდა
               </p>
               <p className="text-xs text-muted-foreground truncate mt-0.5">
-                გადადი შემდეგზე — Walli გელის
+                გადადი შემდეგზე — Walle გელის
               </p>
             </div>
             <button

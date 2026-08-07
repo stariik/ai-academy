@@ -9,7 +9,7 @@ import * as React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, X, Trophy, Sparkles } from 'lucide-react';
 import type { QuizQuestion, QuizResult, QuizAttempt } from '@/types';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 
 export function FinalQuizV2({
@@ -49,7 +49,7 @@ export function FinalQuizV2({
   // back to the site locale when no override has been set.
   const readTeacherLocale = (): 'ka' | 'en' => {
     try {
-      const stored = localStorage.getItem(`walli_lang:${lessonId}`);
+      const stored = localStorage.getItem(`walle_lang:${lessonId}`);
       if (stored === 'ka' || stored === 'en') return stored;
     } catch { /* ignore */ }
     return siteLocale;
@@ -101,7 +101,7 @@ export function FinalQuizV2({
               transition={{ duration: 0.5, ease: [0.34, 1.36, 0.64, 1] }}
               className="flex justify-center"
             >
-              <Walli size={120} state={result.passed ? 'dance' : 'tilt'} />
+              <Walle size={120} state={result.passed ? 'dance' : 'tilt'} />
             </motion.div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">

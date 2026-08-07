@@ -10,7 +10,7 @@ export const termsEn: LegalDoc = {
     {
       heading: '1. About Us',
       items: [
-        'walle.academy ("we", "us", "our") is an online AI-powered education platform offering courses in artificial intelligence and related subjects, delivered by Walli, an AI tutor powered by Claude (Anthropic).',
+        'walle.academy ("we", "us", "our") is an online AI-powered education platform offering courses in artificial intelligence and related subjects, delivered by Walle, an AI tutor powered by Claude (Anthropic).',
         'Operator: Walle Academy',
         'Registered address: [Street Address, City, Georgia] — insert your registered business address.',
         'Company registration number: [Registration Number] — insert your Georgian business registration number.',
@@ -61,10 +61,10 @@ export const termsEn: LegalDoc = {
     {
       heading: '6. Intellectual Property',
       items: [
-        'All content on walle.academy — including course materials, lesson text, quiz questions, AI tutor responses, graphics, and the Walli brand — is the intellectual property of walle.academy or its licensors, protected under applicable law.',
+        'All content on walle.academy — including course materials, lesson text, quiz questions, AI tutor responses, graphics, and the Walle brand — is the intellectual property of walle.academy or its licensors, protected under applicable law.',
         'Your purchase grants a personal, non-exclusive, non-transferable, revocable licence to access and use the content for your own personal, non-commercial learning purposes only.',
         'You may not reproduce, copy, distribute, sell, modify, publicly display, or create derivative works from any course content without our prior written consent.',
-        'User-generated content (e.g. answers submitted in quizzes, messages to Walli) remains yours, but you grant us a limited licence to process and store it for the purpose of delivering the service.',
+        'User-generated content (e.g. answers submitted in quizzes, messages to Walle) remains yours, but you grant us a limited licence to process and store it for the purpose of delivering the service.',
       ],
     },
     {
@@ -76,13 +76,13 @@ export const termsEn: LegalDoc = {
       ],
     },
     {
-      heading: '8. AI Tutor — Walli',
+      heading: '8. AI Tutor — Walle',
       items: [
-        'Walli is an AI-powered conversational tutor built on Anthropic\'s Claude model. It is designed to support learning within the scope of our course content.',
-        'Walli is not a human and may occasionally produce incorrect or incomplete information. It is not a substitute for professional, medical, legal, or financial advice.',
-        'Walli is instructed to stay within the subject matter of each lesson. It will not engage with off-topic, harmful, or inappropriate requests.',
-        'Conversations with Walli are stored to support your learning progress (e.g. spaced repetition). Conversation data is processed in accordance with our Privacy Policy.',
-        'We continuously improve Walli\'s instructional quality. Responses may vary and improve over time.',
+        'Walle is an AI-powered conversational tutor built on Anthropic\'s Claude model. It is designed to support learning within the scope of our course content.',
+        'Walle is not a human and may occasionally produce incorrect or incomplete information. It is not a substitute for professional, medical, legal, or financial advice.',
+        'Walle is instructed to stay within the subject matter of each lesson. It will not engage with off-topic, harmful, or inappropriate requests.',
+        'Conversations with Walle are stored to support your learning progress (e.g. spaced repetition). Conversation data is processed in accordance with our Privacy Policy.',
+        'We continuously improve Walle\'s instructional quality. Responses may vary and improve over time.',
       ],
     },
     {
@@ -170,7 +170,7 @@ export const privacyEn: LegalDoc = {
       items: [
         'Account data: your name (display name), email address, and hashed password when you create an account.',
         'Learning data: courses you are enrolled in, lesson progress, quiz answers and scores, XP points, daily streaks, badges earned, and spaced-repetition review history.',
-        'Communication data: messages you send to Walli (the AI tutor) during lessons. These are stored to support lesson continuity and personalisation.',
+        'Communication data: messages you send to Walle (the AI tutor) during lessons. These are stored to support lesson continuity and personalisation.',
         'Payment data: records of transactions (course purchased, amount, currency, date, and anonymised payment method type). We do not store full card numbers or CVV codes — these are handled entirely by our payment processor.',
         'Technical data: IP address, browser type and version, device type, operating system, pages visited, and session duration, collected automatically for security and platform performance.',
         'Anonymous guest data: progress data for users who have not created an account is stored locally on your device (localStorage) and associated with a temporary session identifier.',
@@ -202,7 +202,7 @@ export const privacyEn: LegalDoc = {
       items: [
         'We do not sell, rent, or trade your personal data. We share data only with the following trusted processors, under binding data processing agreements:',
         'Supabase (supabase.com) — our database and authentication provider. Your account, progress, and course data is stored on Supabase infrastructure. See supabase.com/privacy.',
-        'Anthropic (anthropic.com) — powers the Walli AI tutor via the Claude API. Lesson conversation content is transmitted to Anthropic for AI processing. Anthropic\'s data use is governed by its privacy policy at anthropic.com/privacy.',
+        'Anthropic (anthropic.com) — powers the Walle AI tutor via the Claude API. Lesson conversation content is transmitted to Anthropic for AI processing. Anthropic\'s data use is governed by its privacy policy at anthropic.com/privacy.',
         'Resend (resend.com) — used to deliver transactional emails (e.g. purchase confirmation). Only your email address and relevant email content are shared.',
         'Payment processor — processes card payments. They receive your payment details directly; we receive only a transaction confirmation and anonymised record.',
         'Law enforcement or government authorities — when we are legally required to disclose data, or when necessary to protect the safety of our users or the public.',

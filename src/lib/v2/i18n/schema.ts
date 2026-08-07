@@ -141,8 +141,8 @@ export type Dict = {
     curriculumTitle: string;
     prerequisitesLabel: string;
     whatsIncludedLabel: string;
-    walliEyebrow: string;
-    walliTitle: string;
+    walleEyebrow: string;
+    walleTitle: string;
     relatedEyebrow: string;
     relatedTitle: string;
     purchaseTitle: string;
@@ -172,8 +172,8 @@ export type Dict = {
     heroFreePreview: string;
     yourProgress: string;
     aiTeacher: string;
-    walliIntro: string;
-    walliIntroEnd: string;
+    walleIntro: string;
+    walleIntroEnd: string;
     modulesLabel: string;
     curriculumDescription: string;
     lessonReview: string;

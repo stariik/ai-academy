@@ -121,7 +121,7 @@ export default async function AdminStudentDetailPage({
           <header className="flex flex-col gap-2 border-b border-gray-100 bg-teal-50/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-teal">
-                WALL-E onboarding
+                Walle onboarding
               </p>
               <h2 className="mt-0.5 text-sm font-semibold text-gray-900">
                 What this student wants

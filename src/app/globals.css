@@ -32,7 +32,7 @@
   --ring: #06B6D4;
   --radius: 1rem;                 /* 16px — kid-friendly rounded */
 
-  /* Eve aliases — for Walli flair / glow effects */
+  /* Eve aliases — for Walle flair / glow effects */
   --canvas: var(--background);
   --surface: var(--card);
   --hull: #FFFFFF;
@@ -193,10 +193,10 @@
 
 ::view-transition-new(root) {
   z-index: 999;
-  animation: walli-reveal 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  animation: walle-reveal 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes walli-reveal {
+@keyframes walle-reveal {
   from {
     clip-path: circle(0% at var(--toggle-x, 100%) var(--toggle-y, 0%));
   }
@@ -212,15 +212,15 @@
 }
 
 /* ============================================================
-   Walli — mascot helpers + glow utilities
+   Walle — mascot helpers + glow utilities
    ============================================================ */
 
-@keyframes walli-blink {
+@keyframes walle-blink {
   0%, 88%, 100% { transform: scaleY(1); }
   92%, 96% { transform: scaleY(0.05); }
 }
 
-@keyframes walli-float {
+@keyframes walle-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
@@ -230,13 +230,13 @@
   50% { box-shadow: 0 0 0 8px transparent, 0 0 36px 4px var(--pulse-glow); }
 }
 
-.walli-eye {
+.walle-eye {
   transform-origin: center;
-  animation: walli-blink 4s ease-in-out infinite;
+  animation: walle-blink 4s ease-in-out infinite;
 }
 
-.walli-float {
-  animation: walli-float 4s ease-in-out infinite;
+.walle-float {
+  animation: walle-float 4s ease-in-out infinite;
 }
 
 .glow-pulse {

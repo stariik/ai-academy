@@ -13,7 +13,7 @@ import type { Category } from '@/lib/v2/data';
 import type { AuthUser } from '@/lib/auth';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { Navbar, Footer } from '../../_components/LandingClient';
 
 const CONTACT_EMAIL = 'walle.academy.2026@gmail.com';
@@ -292,7 +292,7 @@ function ContactSections() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-14 pb-20 sm:pt-20 sm:pb-28">
           <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
 
-            {/* left — Walli leads, one line of copy under the wave */}
+            {/* left — Walle leads, one line of copy under the wave */}
             <div className="flex flex-col items-center text-center gap-5 sm:gap-7">
               <Reveal>
                 <div className="relative">
@@ -300,8 +300,8 @@ function ContactSections() {
                     aria-hidden
                     className="absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-pulse/20 to-transparent blur-2xl scale-125"
                   />
-                  <Walli size={168} state="wave" className="sm:hidden" />
-                  <Walli size={230} state="wave" className="hidden sm:block" />
+                  <Walle size={168} state="wave" className="sm:hidden" />
+                  <Walle size={230} state="wave" className="hidden sm:block" />
                 </div>
               </Reveal>
 
