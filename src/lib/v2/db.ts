@@ -225,6 +225,20 @@ export type V2CoursePayload = {
   related: Course[];
 };
 
+/**
+ * The one genuinely free lesson on the platform — the opening lesson of
+ * "AI ინსტრუმენტები პრაქტიკაში: ChatGPT, Claude და Gemini". It is the only
+ * lesson a signed-out visitor may open.
+ *
+ * Every other course's first lesson still *presents* as startable in the
+ * curriculum (see LessonCard's `isTeaser`), but clicking it opens the purchase
+ * rail instead of the lesson, and the server guards reject it outright.
+ *
+ * ponytail: one hardcoded id beats a schema change for a single row. Promote
+ * this to a `lessons.is_free` column the moment a second free lesson is wanted.
+ */
+export const FREE_LESSON_ID = 'lesson_1776730632601_t3jqpim';
+
 function lessonsAsModule(
   courseSlug: string,
   locale: Locale,
@@ -240,7 +254,7 @@ function lessonsAsModule(
     numberLabel: (idx + 1).toString().padStart(2, '0'),
     title: pickLocale(locale, l.title, l.titleEn ?? undefined),
     durationMin: l.estimatedDurationMinutes ?? 15,
-    isFree: idx === 0,
+    isFree: l.id === FREE_LESSON_ID,
     description: pickLocale(locale, l.description, l.descriptionEn ?? undefined),
   }));
   return [
@@ -329,7 +343,7 @@ export async function getCoursePayload(
         ]
       : [
           `${course.lessons} ${dict.courseDetail.lessonsLabel} — სამუდამო წვდომა`,
-          'AI მასწავლებელი 24/7 — Walle არ იღლება',
+          'AI მასწავლებელი 24/7',
           'პრაქტიკული სავარჯიშოები ყოველი გაკვეთილის ბოლოს',
           'ციფრული სერთიფიკატი დასრულების შემდეგ',
         ],

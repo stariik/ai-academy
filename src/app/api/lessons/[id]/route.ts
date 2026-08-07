@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getLesson, updateLesson, deleteLesson } from '@/lib/supabase/db';
 import { isAdmin } from '@/lib/admin-auth';
+import { isCurrentUserEnrolled } from '@/lib/enrollments';
+import { FREE_LESSON_ID } from '@/lib/v2/db';
 import { Lesson } from '@/types';
 
 type RouteContext = {
@@ -22,6 +24,18 @@ export async function GET(
       { error: 'Lesson not found' },
       { status: 404 }
     );
+  }
+
+  // Paywall — this is the lesson player's only content source, so the check
+  // has to live here and not just on the page. The one free lesson stays open
+  // to everyone; everything else needs an enrollment on the owning course.
+  if (id !== FREE_LESSON_ID) {
+    const allowed =
+      (lesson.courseId ? await isCurrentUserEnrolled(lesson.courseId) : false) ||
+      (await isAdmin());
+    if (!allowed) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
   }
 
   return NextResponse.json(lesson);

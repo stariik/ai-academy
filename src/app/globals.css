@@ -275,6 +275,29 @@ html {
   }
 }
 
+/* Course page: a locked first lesson links to #buy, so the purchase rail
+   flashes once when it is jumped to. :target keeps this CSS-only. */
+@keyframes buy-rail-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  35% {
+    box-shadow: 0 0 0 5px var(--pulse-glow);
+  }
+}
+
+#buy:target {
+  border-radius: 1.5rem;
+  animation: buy-rail-flash 1.1s ease-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #buy:target {
+    animation: none;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

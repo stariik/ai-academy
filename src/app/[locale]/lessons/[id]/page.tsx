@@ -1,14 +1,15 @@
-import { use } from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import LessonClient from './_components/LessonClient';
 import { getDict, isLocale, type Locale } from '@/lib/v2/i18n';
-import { getLessonMetadata } from '@/lib/v2/db';
+import { getLessonMetadata, FREE_LESSON_ID } from '@/lib/v2/db';
+import { isCurrentUserEnrolled } from '@/lib/enrollments';
+import { isAdmin } from '@/lib/admin-auth';
 import { localizedAlternates, SITE_URL } from '@/lib/seo';
 
-// No force-dynamic: this route ships a client shell and fetches the lesson,
-// progress and session from the browser, so the server render holds nothing
-// user-specific and can be cached per lesson+locale.
+// force-dynamic: the access check below reads the signed-in user, so this
+// render is user-specific and must not be cached per lesson+locale.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
@@ -40,14 +41,25 @@ export async function generateMetadata({
   };
 }
 
-export default function LessonPage({
+export default async function LessonPage({
   params,
 }: {
   params: Promise<{ locale: string; id: string }>;
 }) {
-  const { locale: localeParam, id } = use(params);
+  const { locale: localeParam, id } = await params;
   if (!isLocale(localeParam)) notFound();
   const locale: Locale = localeParam;
+
+  // Paywall. The single free lesson is open to everyone; everything else needs
+  // an enrollment on the owning course. Anyone else is sent to the course page,
+  // which is where they can buy it.
+  if (id !== FREE_LESSON_ID) {
+    const meta = await getLessonMetadata(id, locale);
+    if (!meta) notFound();
+    const allowed = (await isCurrentUserEnrolled(meta.courseId)) || (await isAdmin());
+    if (!allowed) redirect(`/${locale}/courses/${meta.courseId}#buy`);
+  }
+
   const dict = getDict(locale);
   return <LessonClient lessonId={id} dict={dict} locale={locale} />;
 }
