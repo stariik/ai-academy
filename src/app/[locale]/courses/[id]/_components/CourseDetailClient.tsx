@@ -36,6 +36,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import { Navbar } from '../../../_components/LandingClient';
 import type { AuthUser } from '@/lib/auth';
 import type { Dict, Locale } from '@/lib/v2/i18n';
+import { FREE_COURSE_PATH } from '@/lib/v2/routes';
 import Link from 'next/link';
 import {
   redeemPromoCode,
@@ -271,8 +272,8 @@ function CoursePage({
   const completedCount = progress.size;
   const progressPct = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
 
-  // First free lesson — used by every "preview" CTA on this page.
-  // Falls back to the very first lesson if no `isFree` flag was set.
+  // Only the designated course has a genuinely free lesson. Its preview CTAs
+  // lead to the course detail page, matching every other free-learning CTA.
   const previewLessonId = React.useMemo(() => {
     for (const m of detail.modules) {
       for (const l of m.lessons) {
@@ -281,10 +282,7 @@ function CoursePage({
     }
     return null;
   }, [detail.modules]);
-  // null when this course has no genuinely free lesson. Every "free preview"
-  // CTA is hidden in that case rather than pointed at the buy rail — the label
-  // promises a free lesson, and the server would only redirect back here.
-  const previewHref = previewLessonId ? localeHref(`lessons/${previewLessonId}`) : null;
+  const previewHref = previewLessonId ? localeHref(FREE_COURSE_PATH) : null;
 
   // --- render ---------------------------------------------------------------
   // overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
@@ -321,6 +319,8 @@ function CoursePage({
                 isLoggedIn={isLoggedIn}
                 progress={progress}
                 onToggleLesson={toggleLessonComplete}
+                onEnroll={toggleEnrollment}
+                enrollBusy={busy}
               />
               <RelatedCoursesSection related={related} category={category} />
             </div>
@@ -489,11 +489,10 @@ function Hero({
               </div>
             )}
 
-            <h1
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {course.title}
+            <h1 className="caps text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight">
+              <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
+                {course.title}
+              </span>
             </h1>
 
             <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
@@ -675,6 +674,8 @@ function CurriculumSection({
   isEnrolled,
   progress,
   onToggleLesson,
+  onEnroll,
+  enrollBusy,
 }: {
   course: Course;
   category: Category;
@@ -683,6 +684,8 @@ function CurriculumSection({
   isLoggedIn: boolean;
   progress: Set<string>;
   onToggleLesson: (lessonId: string) => void;
+  onEnroll: () => void;
+  enrollBusy: boolean;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -715,9 +718,9 @@ function CurriculumSection({
   // Pair the real lesson chunks with the foundations → practice → project
   // narrative, keeping a running global lesson number across chapters.
   const phaseMeta = [
-    { Icon: BookOpen, title: dict.courseDetail.pathFoundationsTitle, tagline: dict.courseDetail.pathFoundationsTagline },
-    { Icon: Zap, title: dict.courseDetail.pathPracticeTitle, tagline: dict.courseDetail.pathPracticeTagline },
-    { Icon: GraduationCap, title: dict.courseDetail.pathProjectTitle, tagline: dict.courseDetail.pathProjectTagline },
+    { Icon: BookOpen, title: dict.courseDetail.pathFoundationsTitle },
+    { Icon: Zap, title: dict.courseDetail.pathPracticeTitle },
+    { Icon: GraduationCap, title: dict.courseDetail.pathProjectTitle },
   ];
   const chunks = splitIntoPhases(lessons);
   const meta =
@@ -772,6 +775,8 @@ function CurriculumSection({
             nextUpId={nextUpId}
             teaserId={teaserId}
             onToggleLesson={onToggleLesson}
+            onEnroll={onEnroll}
+            enrollBusy={enrollBusy}
           />
         ))}
 
@@ -837,9 +842,11 @@ function PhaseBlock({
   nextUpId,
   teaserId,
   onToggleLesson,
+  onEnroll,
+  enrollBusy,
 }: {
   roman: string;
-  meta: { Icon: typeof BookOpen; title: string; tagline: string };
+  meta: { Icon: typeof BookOpen; title: string };
   lessons: Lesson[];
   startNumber: number;
   category: Category;
@@ -848,11 +855,12 @@ function PhaseBlock({
   nextUpId: string | null;
   teaserId: string | null;
   onToggleLesson: (lessonId: string) => void;
+  onEnroll: () => void;
+  enrollBusy: boolean;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const { Icon } = meta;
-  const phaseMin = lessons.reduce((acc, l) => acc + l.durationMin, 0);
   const phaseDone = lessons.filter((l) => progress.has(l.id)).length;
   const allDone = lessons.length > 0 && phaseDone === lessons.length;
 
@@ -879,13 +887,8 @@ function PhaseBlock({
         <span className="hidden shrink-0 text-right text-[11px] text-muted-foreground sm:block">
           <span className="font-semibold tabular-nums text-foreground/80">{lessons.length}</span>{' '}
           {dict.courseDetail.lessonsLabel}
-          <span className="px-1 opacity-40">·</span>~
-          <span className="font-semibold tabular-nums text-foreground/80">{phaseMin}</span>{' '}
-          {dict.courseDetail.durationMinutes}
         </span>
       </div>
-      <p className="mt-1.5 pl-[3.625rem] text-sm text-muted-foreground">{meta.tagline}</p>
-
       {/* Lessons along the spine */}
       <ol className="mt-3">
         {lessons.map((l, i) => (
@@ -901,6 +904,8 @@ function PhaseBlock({
             isNextUp={l.id === nextUpId}
             isTeaser={l.id === teaserId}
             onToggleComplete={() => onToggleLesson(l.id)}
+            onEnroll={onEnroll}
+            enrollBusy={enrollBusy}
           />
         ))}
       </ol>
@@ -921,6 +926,8 @@ function LessonCard({
   isNextUp,
   isTeaser,
   onToggleComplete,
+  onEnroll,
+  enrollBusy,
 }: {
   lesson: Lesson;
   number: number;
@@ -932,6 +939,8 @@ function LessonCard({
   isNextUp: boolean;
   isTeaser: boolean;
   onToggleComplete: () => void;
+  onEnroll: () => void;
+  enrollBusy: boolean;
 }) {
   const { href, dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -971,7 +980,9 @@ function LessonCard({
             )}
             aria-hidden
           >
-            {isPreview || isTeaser ? (
+            {isTeaser && enrollBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : isPreview || isTeaser ? (
               <Play className="h-3.5 w-3.5 fill-current" />
             ) : (
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -1003,8 +1014,16 @@ function LessonCard({
         )}
         {presentsOpen && (
           <span className={cn('ml-auto inline-flex items-center gap-1 font-bold transition-all group-hover:gap-1.5', isCompleted ? t.text : 'text-foreground')}>
-            {isCompleted ? dict.courseDetail.lessonReview : dict.courseDetail.lessonStart}
-            <ChevronRight className="h-3.5 w-3.5" />
+            {isTeaser && enrollBusy
+              ? dict.catalog.bundleRedirecting
+              : isCompleted
+                ? dict.courseDetail.lessonReview
+                : dict.courseDetail.lessonStart}
+            {isTeaser && enrollBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5" />
+            )}
           </span>
         )}
       </div>
@@ -1059,11 +1078,19 @@ function LessonCard({
           {card}
         </Link>
       ) : isTeaser ? (
-        // Plain <a>, not next/link: we want the browser's native hash jump so
-        // #buy also fires the :target flash on the purchase rail.
-        <a href="#buy" className={cardShell}>
+        // Goes straight to checkout — the same handler the Buy button uses, so
+        // guests still get routed through login first and paid courses land on
+        // the BOG page. Disabled while in flight so a second tap can't open a
+        // second order.
+        <button
+          type="button"
+          onClick={onEnroll}
+          disabled={enrollBusy}
+          aria-busy={enrollBusy}
+          className={cn(cardShell, 'w-full text-left disabled:cursor-wait')}
+        >
           {card}
-        </a>
+        </button>
       ) : (
         <div className="my-1.5 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3.5 sm:p-4">
           {card}
@@ -1513,7 +1540,7 @@ function BuyRailContent({
   enrollBusy: boolean;
   onPromoRedeemed: (courseId: string) => void;
 }) {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[tone];
   return (
     <div className="relative px-5 sm:px-6 pt-6 pb-5">
@@ -1553,7 +1580,11 @@ function BuyRailContent({
       {/* Primary CTA — full-bleed, glow, prominent */}
       <button
         type="button"
-        onClick={onEnroll}
+        onClick={
+          !hasPrice && !isLoggedIn
+            ? () => { window.location.href = href(FREE_COURSE_PATH); }
+            : onEnroll
+        }
         disabled={enrollBusy}
         className="group/cta mt-5 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-pulse text-primary-foreground h-14 text-base font-bold shadow-[0_12px_30px_var(--pulse-glow)] hover:shadow-[0_18px_45px_var(--pulse-glow)] hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-70 disabled:translate-y-0 disabled:active:scale-100"
       >
@@ -1686,7 +1717,7 @@ function CtaBanner({
   enrollBusy: boolean;
   previewHref: string | null;
 }) {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   return (
     <section className="px-4 sm:px-6 pb-16 sm:pb-24">
       <div className="mx-auto max-w-5xl">
@@ -1720,7 +1751,11 @@ function CtaBanner({
                 ) : (
                   <>
                     <button
-                      onClick={onEnroll}
+                      onClick={
+                        course.price && course.price > 0
+                          ? onEnroll
+                          : () => { window.location.href = href(FREE_COURSE_PATH); }
+                      }
                       disabled={enrollBusy}
                       className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:translate-y-0"
                     >
