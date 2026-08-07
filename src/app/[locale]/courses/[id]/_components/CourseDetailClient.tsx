@@ -285,10 +285,10 @@ function CoursePage({
   const previewHref = previewLessonId ? localeHref(`lessons/${previewLessonId}`) : '#curriculum';
 
   // --- render ---------------------------------------------------------------
+  // overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
+  // container, which silently breaks the sticky purchase rail below. `clip`
+  // contains the hero's blur blobs the same way without that side effect.
   return (
-    {/* overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
-        container, which silently breaks the sticky purchase rail below. `clip`
-        contains the hero's blur blobs the same way without that side effect. */}
     <div className="relative min-h-screen bg-background text-foreground overflow-x-clip">
       {/* homeAnchors={false}: this page has no #categories/#courses sections,
           so the bare hashes did nothing when tapped. */}
