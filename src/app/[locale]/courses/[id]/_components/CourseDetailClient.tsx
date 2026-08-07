@@ -22,7 +22,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check, ChevronRight, Clock, Lock, Play, Sparkles,
   ArrowRight, ArrowLeft, Heart, BookOpen,
-  CircleDot, Trophy, Eye, Zap, Loader2,
+  Trophy, Eye, Zap, Loader2,
   Award, MessageCircle, GraduationCap, Ticket,
 } from 'lucide-react';
 
@@ -1366,73 +1366,11 @@ function PurchaseCard({
         </ul>
       </div>
 
-      {/* Prerequisites */}
-      {detail.prerequisites.length > 0 && (
-        <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-border pt-5">
-          <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-bold mb-2">
-            {dict.courseDetail.prerequisitesLabel}
-          </p>
-          <ul className="space-y-1.5">
-            {detail.prerequisites.map((p) => (
-              <li key={p} className="flex items-start gap-2 text-xs text-foreground/80">
-                <CircleDot className="flex-shrink-0 w-3 h-3 mt-0.5 text-muted-foreground" />
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Bundle cross-sell */}
-      {!isEnrolled && <BundleCrossSell category={category} />}
     </div>
   );
 }
 
 const INCLUDED_ICONS = [BookOpen, MessageCircle, Sparkles, GraduationCap, Zap];
-
-function BundleCrossSell({ category }: { category: Category }) {
-  const { dict, href } = useV2Locale();
-  const t = TONE_CLASSES[category.tone];
-  return (
-    <Link
-      href={`${href()}#cat-${category.id}`}
-      className={cn(
-        'group block mx-5 sm:mx-6 mb-5 sm:mb-6 rounded-2xl border-2 border-dashed p-4 transition-all duration-300 ease-out',
-        t.ring,
-        'hover:-translate-y-1 hover:shadow-[0_14px_32px_-16px_var(--pulse-glow)]',
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <span className={cn('flex-shrink-0 w-10 h-10 rounded-xl text-xl flex items-center justify-center', t.iconBg)}>
-          {category.icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-muted-foreground">
-              {dict.courseDetail.bundleLabel}
-            </p>
-            <span className={cn('inline-flex items-center rounded-full text-[10px] font-bold px-1.5 py-0.5 border', t.chip)}>
-              −40%
-            </span>
-          </div>
-          <p
-            className="mt-0.5 text-sm font-bold leading-tight truncate"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            {dict.courseDetail.bundleWholeCategory}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            <span className="font-bold text-foreground tabular-nums">{category.courses}</span> {dict.courseDetail.bundleCoursesUnit}
-            <span className="opacity-50"> · </span>
-            {dict.courseDetail.bundleForever}
-          </p>
-        </div>
-        <ArrowRight className={cn('flex-shrink-0 w-4 h-4 transition-transform group-hover:translate-x-1', t.text)} />
-      </div>
-    </Link>
-  );
-}
 
 function CoursePromoExpandable({
   courseId,
