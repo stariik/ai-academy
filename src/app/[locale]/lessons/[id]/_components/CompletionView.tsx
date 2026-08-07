@@ -4,7 +4,7 @@ import * as React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import type { Lesson } from '@/types';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { useV2Locale } from '@/lib/v2/i18n/context';
 
 export function CompletionView({
@@ -41,7 +41,7 @@ export function CompletionView({
 
         <div className="relative px-6 sm:px-8 pt-8 pb-6 text-center space-y-4">
           <div className="flex justify-center">
-            <Walli size={140} state="dance" />
+            <Walle size={140} state="dance" />
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">

@@ -1,7 +1,7 @@
 // ============================================================
-// API: POST /api/onboarding — Walli's discovery interview.
+// API: POST /api/onboarding — Walle's discovery interview.
 //
-// Drives the floating Walli bot: one AI-written question per turn, then a
+// Drives the floating Walle bot: one AI-written question per turn, then a
 // roadmap of real catalog courses. Open to logged-out visitors and stateless —
 // the client holds the transcript, nothing is written to the database.
 // ============================================================
@@ -113,7 +113,7 @@ function systemPrompt(
   courses: OnboardingCatalogCourse[],
 ): string {
   const language = locale === 'ka' ? 'natural, modern Georgian' : 'warm, concise English';
-  return `You are WALL-E, the curious AI learning companion at walle.academy. A visitor just opened
+  return `You are Walle, the curious AI learning companion at walle.academy. A visitor just opened
 you from the corner of the site. Run a short conversation whose single purpose is to build them a
 personal learning plan: which of our real courses they should take, in what order, at what pace.
 Every question you ask must earn its place by making that plan better.

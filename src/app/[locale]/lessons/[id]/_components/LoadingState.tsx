@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { useV2Locale } from '@/lib/v2/i18n/context';
 
 export function LoadingState({ label = 'გაკვეთილი იტვირთება…' }: { label?: string }) {
@@ -17,7 +17,7 @@ export function LoadingState({ label = 'გაკვეთილი იტვი
           transition={{ duration: 0.5, ease: [0.34, 1.36, 0.64, 1] }}
           className="flex justify-center"
         >
-          <Walli size={120} state="idle" />
+          <Walle size={120} state="idle" />
         </motion.div>
         <div className="space-y-2">
           <p
@@ -49,7 +49,7 @@ export function ErrorState({ message }: { message: string }) {
       <div className="bg-starfield absolute inset-0 -z-10 opacity-30" aria-hidden />
       <div className="max-w-md w-full rounded-3xl border border-border bg-card p-8 text-center space-y-5 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.10)]">
         <div className="flex justify-center">
-          <Walli size={100} state="tilt" />
+          <Walle size={100} state="tilt" />
         </div>
         <div className="space-y-2">
           <h2

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, PanelRightClose, PanelRightOpen, BookOpen } from 'lucide-react';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { useV2Locale } from '@/lib/v2/i18n/context';
@@ -46,7 +46,7 @@ export function LessonHeader({
         </a>
 
         <div className="shrink-0">
-          <Walli size={32} state="idle" noShadow />
+          <Walle size={32} state="idle" noShadow />
         </div>
 
         <div className="flex-1 min-w-0">

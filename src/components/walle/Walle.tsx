@@ -4,10 +4,10 @@ import * as React from 'react';
 import { motion, type Variants } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export type WalliState = 'idle' | 'wave' | 'spin' | 'tilt' | 'dance' | 'sleep';
+export type WalleState = 'idle' | 'wave' | 'spin' | 'tilt' | 'dance' | 'sleep';
 
-interface WalliProps {
-  state?: WalliState;
+interface WalleProps {
+  state?: WalleState;
   size?: number;
   className?: string;
   label?: string;
@@ -260,13 +260,13 @@ const AURA: Variants = {
   sleep: { opacity: 0.4, scale: 1, transition: { duration: 0.6 } },
 };
 
-export function Walli({
+export function Walle({
   state = 'idle',
   size = 100,
   className,
-  label = 'Walli mascot',
+  label = 'Walle mascot',
   noShadow = false,
-}: WalliProps) {
+}: WalleProps) {
   const id = React.useId().replace(/:/g, '');
   const [blink, setBlink] = React.useState(false);
 

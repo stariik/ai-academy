@@ -5,10 +5,10 @@
  *
  * Layout
  *   1. Navbar (sticky, mirrors /v2)
- *   2. Hero — asymmetric: course identity on the left, large Walli with
+ *   2. Hero — asymmetric: course identity on the left, large Walle with
  *      orbiting badges on the right.
  *   3. Two-column body (lg+):
- *        Main col: outcomes → walli intro → curriculum → free preview →
+ *        Main col: outcomes → walle intro → curriculum → free preview →
  *                  reviews → FAQ → related
  *        Side rail: sticky purchase / progress card
  *   4. CTA banner
@@ -26,8 +26,8 @@ import {
   ShieldCheck, Award, Infinity as InfinityIcon, MessageCircle, GraduationCap,
 } from 'lucide-react';
 
-import { Walli, type WalliState } from '@/components/walli/Walli';
-import { EveCover } from '@/components/walli/EveCover';
+import { Walle, type WalleState } from '@/components/walle/Walle';
+import { EveCover } from '@/components/walle/EveCover';
 import { cn } from '@/lib/utils';
 import {
   LEVEL_DOTS, TONE_CLASSES,
@@ -308,7 +308,6 @@ function CoursePage({
           <div className="mx-auto max-w-7xl grid gap-10 lg:gap-14 lg:grid-cols-[1fr_360px]">
             {/* MAIN ───────────────────────────────────── */}
             <div className="min-w-0 space-y-16 sm:space-y-20">
-              <OutcomesSection detail={detail} category={category} />
               <CurriculumSection
                 course={course}
                 category={category}
@@ -337,7 +336,7 @@ function CoursePage({
                 onPromoRedeemed={addEnrollmentLocally}
                 previewHref={previewHref}
               />
-              <WalliIntroSection course={course} detail={detail} />
+              <WalleIntroSection course={course} detail={detail} />
             </aside>
           </div>
         </section>
@@ -395,11 +394,11 @@ function Hero({
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const reduced = useReducedMotion();
-  const [walliState, setWalliState] = React.useState<WalliState>('idle');
+  const [walleState, setWalleState] = React.useState<WalleState>('idle');
 
   React.useEffect(() => {
-    setWalliState('wave');
-    const id = setTimeout(() => setWalliState('idle'), 4200);
+    setWalleState('wave');
+    const id = setTimeout(() => setWalleState('idle'), 4200);
     return () => clearTimeout(id);
   }, []);
 
@@ -471,21 +470,14 @@ function Hero({
             transition={{ duration: 0.55, ease: 'easeOut' }}
             className="order-2 lg:order-1 space-y-5 sm:space-y-6"
           >
-            <div className="flex flex-wrap items-center gap-2">
-              <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold', t.chip)}>
-                <Sparkles className="w-3.5 h-3.5" />
-                {dict.level[course.level]}
-              </span>
-              <span className="inline-flex items-center rounded-full border border-border bg-card/80 backdrop-blur-sm px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
-                {dict.audienceTag[course.audience]}
-              </span>
-              {isEnrolled && (
+            {isEnrolled && (
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-2.5 py-1 text-[11px] font-bold">
                   <Trophy className="w-3.5 h-3.5" />
                   {dict.courseDetail.enrolledBadge}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
 
             <h1
               className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight"
@@ -502,8 +494,6 @@ function Hero({
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-1">
               <Stat icon={<BookOpen className="w-4 h-4" />} label={`${course.lessons} ${dict.courseDetail.lessonsLabel}`} />
               <Stat icon={<Clock className="w-4 h-4" />} label={`~${course.hours} ${dict.courseDetail.hoursLabel}`} />
-              <Stat icon={<LevelDots level={course.level} tone={category.tone} />} label={dict.level[course.level]} />
-              <Stat icon={<Users className="w-4 h-4" />} label={`2,400+ ${dict.courseDetail.studentsUnit}`} />
             </div>
 
             {/* Hero CTA — visible on mobile (purchase rail handles desktop) */}
@@ -540,7 +530,7 @@ function Hero({
             )}
           </motion.div>
 
-          {/* RIGHT — Walli + orbiting badges */}
+          {/* RIGHT — Walle + orbiting badges */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -555,7 +545,7 @@ function Hero({
                 )}
                 aria-hidden
               />
-              <Walli size={260} state={walliState} />
+              <Walle size={260} state={walleState} />
 
               {/* Orbiting course medallion — Eve-head cover with the course icon */}
               <motion.div
@@ -658,109 +648,12 @@ function FloatingPill({
 }
 
 /* ============================================================
-   Outcomes
+   Walle teacher intro
    ============================================================ */
 
-function OutcomesSection({ detail, category }: { detail: CourseDetail; category: Category }) {
+function WalleIntroSection({ course, detail }: { course: Course; detail: CourseDetail }) {
   const { dict } = useV2Locale();
-  const t = TONE_CLASSES[category.tone];
-  if (detail.outcomes.length === 0) return null;
-  return (
-    <section>
-      <div className="mb-4 sm:mb-5">
-        <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">{dict.courseDetail.outcomesEyebrow}</p>
-        <h2
-          className="mt-1.5 text-base sm:text-lg font-bold tracking-tight leading-snug"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          {dict.courseDetail.outcomesTitle}
-        </h2>
-      </div>
-
-      {/* Each chip is an absolutely-positioned card laid over an invisible
-          placeholder of the compact size. When it grows on hover it overlays
-          its neighbours instead of reflowing the page, so the curriculum below
-          never jumps up and down. */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-4">
-        {detail.outcomes.map((o, i) => (
-          <motion.div
-            key={o.title}
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.35, delay: i * 0.05, ease: 'easeOut' }}
-            className="group relative z-0 self-start hover:z-30"
-          >
-            {/* Placeholder — reserves the compact height; never changes size. */}
-            <div aria-hidden className="invisible">
-              <div className="flex items-center gap-2 p-2.5 sm:p-3">
-                <span className="h-6 w-6 shrink-0 rounded-md" />
-                <span
-                  className="text-[11px] font-bold leading-snug line-clamp-2 sm:text-xs"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {o.title}
-                </span>
-              </div>
-            </div>
-
-            {/* Visible card — absolutely positioned, grows over the placeholder. */}
-            <div
-              className={cn(
-                'absolute inset-x-0 top-0 flex flex-col rounded-xl border border-border bg-card p-2.5 sm:p-3',
-                'transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform',
-                'group-hover:-translate-y-1 group-hover:scale-[1.05] group-hover:border-transparent group-hover:shadow-[0_22px_48px_-18px_var(--pulse-glow)]',
-              )}
-            >
-              {/* Tone accent ring fades in on hover */}
-              <div
-                className={cn(
-                  'pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset opacity-0 transition-opacity duration-300 group-hover:opacity-100',
-                  t.ring,
-                )}
-                aria-hidden
-              />
-              <div className="relative flex items-center gap-2">
-                <span
-                  className={cn(
-                    'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-transform duration-300 group-hover:scale-110',
-                    t.iconBg,
-                    t.text,
-                  )}
-                >
-                  <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
-                </span>
-                <h3
-                  className="text-[11px] font-bold leading-snug line-clamp-2 group-hover:line-clamp-none sm:text-xs"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {o.title}
-                </h3>
-              </div>
-              {o.description && (
-                <div className="relative grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:grid-rows-[1fr]">
-                  <div className="overflow-hidden">
-                    <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-                      {o.description}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ============================================================
-   Walli teacher intro
-   ============================================================ */
-
-function WalliIntroSection({ course, detail }: { course: Course; detail: CourseDetail }) {
-  const { dict } = useV2Locale();
-  const [walliState, setWalliState] = React.useState<WalliState>('idle');
+  const [walleState, setWalleState] = React.useState<WalleState>('idle');
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -770,8 +663,8 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            setWalliState('wave');
-            setTimeout(() => setWalliState('idle'), 3200);
+            setWalleState('wave');
+            setTimeout(() => setWalleState('idle'), 3200);
             obs.disconnect();
           }
         }
@@ -790,22 +683,22 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
 
         <div className="relative flex flex-col items-center text-center gap-4">
           <div
-            onMouseEnter={() => setWalliState('tilt')}
-            onMouseLeave={() => setWalliState('idle')}
+            onMouseEnter={() => setWalleState('tilt')}
+            onMouseLeave={() => setWalleState('idle')}
             className="cursor-pointer"
           >
-            <Walli size={108} state={walliState} />
+            <Walle size={108} state={walleState} />
           </div>
 
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">
-              {dict.courseDetail.walliEyebrow}
+              {dict.courseDetail.walleEyebrow}
             </p>
             <h3
               className="mt-1 text-xl font-bold leading-tight"
               style={{ fontFamily: 'var(--font-display)' }}
             >
-              {dict.courseDetail.walliTitle}
+              {dict.courseDetail.walleTitle}
             </h3>
           </div>
 
@@ -816,12 +709,12 @@ function WalliIntroSection({ course, detail }: { course: Course; detail: CourseD
             >
               &ldquo;
             </span>
-            <span className="relative">{detail.walliQuote}</span>
+            <span className="relative">{detail.walleQuote}</span>
           </blockquote>
 
           <p className="text-xs text-muted-foreground leading-relaxed">
-            {dict.courseDetail.walliIntro}{' '}
-            <span className="text-foreground font-semibold">{course.title}</span> — {dict.courseDetail.walliIntroEnd}
+            {dict.courseDetail.walleIntro}{' '}
+            <span className="text-foreground font-semibold">{course.title}</span> — {dict.courseDetail.walleIntroEnd}
           </p>
         </div>
       </div>
@@ -2053,7 +1946,7 @@ function CtaBanner({
               </div>
             </div>
             <div className="flex justify-center md:justify-end">
-              <Walli size={180} state={isEnrolled ? 'dance' : 'wave'} />
+              <Walle size={180} state={isEnrolled ? 'dance' : 'wave'} />
             </div>
           </div>
         </div>
@@ -2150,7 +2043,7 @@ function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-12">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <Link href={href()} className="inline-flex items-center gap-2">
-            <Walli size={32} state="idle" noShadow />
+            <Walle size={32} state="idle" noShadow />
             <span className="text-base font-bold">{dict.meta.brandName}</span>
           </Link>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">

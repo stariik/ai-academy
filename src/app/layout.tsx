@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "walle.academy — პრაქტიკული AI განათლება",
     description:
-      "პრაქტიკული AI კურსები ქართულად და ინგლისურად — შენი ტემპით, Walli-სთან ერთად.",
+      "პრაქტიკული AI კურსები ქართულად და ინგლისურად — შენი ტემპით, Walle-სთან ერთად.",
     siteName: "walle.academy",
     url: SITE_URL,
     type: "website",

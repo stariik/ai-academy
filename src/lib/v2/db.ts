@@ -303,7 +303,7 @@ export async function getCoursePayload(
   const detail: CourseDetail = {
     tagline: category.tagline,
     longDescription: course.description ?? '',
-    walliQuote: isEn
+    walleQuote: isEn
       ? 'I am your tutor for this course. No rush — your pace runs the show. If something is unclear, tap "Explain more simply" and we start over, a different way.'
       : 'მე ვიქნები შენი მასწავლებელი ამ კურსში. არ ვჩქარობ — შენი ტემპი მართავს. თუ რამე გაუგებარია, ვაჭერთ "ახსენი უფრო მარტივად" და ვიწყებთ თავიდან, ახლებურად.',
     outcomes: deriveOutcomes(locale, courseLessons),
@@ -323,13 +323,13 @@ export async function getCoursePayload(
     whatsIncluded: isEn
       ? [
           `${course.lessons} lessons — lifetime access`,
-          'AI tutor 24/7 — Walli never tires',
+          'AI tutor 24/7 — Walle never tires',
           'Practical exercises after every lesson',
           'Digital certificate upon completion',
         ]
       : [
           `${course.lessons} ${dict.courseDetail.lessonsLabel} — სამუდამო წვდომა`,
-          'AI მასწავლებელი 24/7 — Walli არ იღლება',
+          'AI მასწავლებელი 24/7 — Walle არ იღლება',
           'პრაქტიკული სავარჯიშოები ყოველი გაკვეთილის ბოლოს',
           'ციფრული სერთიფიკატი დასრულების შემდეგ',
         ],

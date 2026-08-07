@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================================
-// Walli, bottom-right. A floating guide whose one job is to turn
+// Walle, bottom-right. A floating guide whose one job is to turn
 // "I don't know where to start" into an ordered plan of real courses.
 //
 // Stateless by design: the transcript lives in this component, nothing is
@@ -22,7 +22,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { Walli, type WalliState } from '@/components/walli/Walli';
+import { Walle, type WalleState } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 import { isLocale, type Locale } from '@/lib/v2/i18n';
 import type {
@@ -38,15 +38,15 @@ const MAX_QUESTIONS = 7;
 
 const COPY = {
   en: {
-    open: 'Open Walli, your learning guide',
+    open: 'Open Walle, your learning guide',
     close: 'Close',
     restart: 'Start over',
     nudge: 'New here? I’ll build your learning plan in 2 minutes.',
-    name: 'walli',
+    name: 'walle',
     roleIdle: 'your learning guide',
     roleThinking: 'thinking…',
     roleDone: 'your plan is ready',
-    greeting: 'Hi 👋 I’m Walli.',
+    greeting: 'Hi 👋 I’m Walle.',
     pitch: 'Tell me what you want to get better at, and I’ll turn it into a plan — which course to start with, and what comes next.',
     time: '2 minutes',
     questions: '4–7 questions',
@@ -58,23 +58,23 @@ const COPY = {
     continue: 'Continue',
     error: 'I lost the signal for a second. Your answers are safe — try again.',
     retry: 'Try again',
-    thinking: 'Walli is thinking…',
+    thinking: 'Walle is thinking…',
     step: (n: number) => `Question ${n} of ${MAX_QUESTIONS}`,
     roadmapTitle: 'Your roadmap',
     startStep: 'Start',
     browseAll: 'Browse all courses',
   },
   ka: {
-    open: 'გახსენი Walli, შენი სასწავლო გზამკვლევი',
+    open: 'გახსენი Walle, შენი სასწავლო გზამკვლევი',
     close: 'დახურვა',
     restart: 'თავიდან დაწყება',
     nudge: 'პირველად ხარ? 2 წუთში სასწავლო გეგმას აგიწყობ.',
-    name: 'walli',
+    name: 'walle',
     roleIdle: 'შენი სასწავლო გზამკვლევი',
     roleThinking: 'ვფიქრობ…',
     roleDone: 'შენი გეგმა მზადაა',
-    greeting: 'გამარჯობა 👋 მე Walli ვარ.',
-    pitch: 'მითხარი, რაში გინდა გაძლიერდე, და გეგმად ვაქცევ — რომელი კურსით დაიწყო და რა მოჰყვება.',
+    greeting: 'გამარჯობა 👋 მე Walle ვარ.',
+    pitch: 'მითხარი, რა გაინტერესებს და მე დაგეხმარები სასწავლო გეგმის შედგენაში',
     time: '2 წუთი',
     questions: '4–7 კითხვა',
     honest: 'არასწორი პასუხი არ არსებობს',
@@ -85,7 +85,7 @@ const COPY = {
     continue: 'გაგრძელება',
     error: 'კავშირი წამით დავკარგე. პასუხები შენახულია — გთხოვ, კიდევ სცადო.',
     retry: 'ხელახლა ცდა',
-    thinking: 'Walli ფიქრობს…',
+    thinking: 'Walle ფიქრობს…',
     step: (n: number) => `კითხვა ${n} / ${MAX_QUESTIONS}`,
     roadmapTitle: 'შენი გზამკვლევი',
     startStep: 'დაწყება',
@@ -93,7 +93,7 @@ const COPY = {
   },
 } satisfies Record<Locale, Record<string, unknown>>;
 
-const NUDGE_KEY = 'walli-bot-nudge-seen';
+const NUDGE_KEY = 'walle-bot-nudge-seen';
 
 function nowMessage(
   role: OnboardingTranscriptMessage['role'],
@@ -102,12 +102,12 @@ function nowMessage(
   return { role, content, at: new Date().toISOString() };
 }
 
-export default function WalliBot() {
+export default function WalleBot() {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);
   const locale: Locale = isLocale(segments[0] ?? '') ? (segments[0] as Locale) : 'ka';
   const section = segments[1] ?? '';
-  // Public storefront only — inside a lesson the tutor chat already is Walli.
+  // Public storefront only — inside a lesson the tutor chat already is Walle.
   const visible = ['', 'courses', 'about', 'contact'].includes(section);
   // Course detail pages carry a sticky mobile buy bar; step over it.
   const overBuyBar = section === 'courses' && Boolean(segments[2]);
@@ -291,7 +291,7 @@ export default function WalliBot() {
 
   if (!visible) return null;
 
-  const walliState: WalliState = pending
+  const walleState: WalleState = pending
     ? 'tilt'
     : phase === 'complete'
       ? 'dance'
@@ -330,7 +330,7 @@ export default function WalliBot() {
             aria-hidden
             className="absolute inset-0 rounded-full bg-pulse/10 opacity-0 transition-opacity group-hover:opacity-100"
           />
-          <Walli state={nudge || open ? 'wave' : 'idle'} size={46} noShadow label="Walli" />
+          <Walle state={nudge || open ? 'wave' : 'idle'} size={46} noShadow label="Walle" />
           {!open && (
             <span
               aria-hidden
@@ -386,7 +386,7 @@ export default function WalliBot() {
           >
             {/* Header */}
             <div className="relative flex shrink-0 items-center gap-3 border-b border-border bg-gradient-to-r from-pulse/10 via-transparent to-heart/10 px-4 py-3">
-              <Walli state={walliState} size={38} noShadow label="Walli" />
+              <Walle state={walleState} size={38} noShadow label="Walle" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-black lowercase leading-none">{T.name}</p>
                 <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -445,7 +445,7 @@ export default function WalliBot() {
                       key={`${message.at}-${index}`}
                       message={message}
                       latest={index === messages.length - 1}
-                      walliState={walliState}
+                      walleState={walleState}
                     />
                   ))}
                   {pending && <Typing label={T.thinking} />}
@@ -522,13 +522,13 @@ function Intro({
         animate={reducedMotion ? undefined : { y: [0, -6, 0] }}
         transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <Walli state="wave" size={116} label="Walli" />
+        <Walle state="wave" size={116} label="Walle" />
       </motion.div>
 
       <h2 className="mt-4 text-lg font-black">{copy.greeting}</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.pitch}</p>
 
-      <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+      {/* <div className="mt-4 flex flex-wrap justify-center gap-1.5">
         {[
           [Clock3, copy.time],
           [MessageCircleHeart, copy.questions],
@@ -545,7 +545,7 @@ function Intro({
             </span>
           );
         })}
-      </div>
+      </div> */}
 
       <button
         type="button"
@@ -564,11 +564,11 @@ function Intro({
 function Bubble({
   message,
   latest,
-  walliState,
+  walleState,
 }: {
   message: OnboardingTranscriptMessage;
   latest: boolean;
-  walliState: WalliState;
+  walleState: WalleState;
 }) {
   const assistant = message.role === 'assistant';
   return (
@@ -580,7 +580,7 @@ function Bubble({
     >
       {assistant && (
         <div className="w-7 shrink-0">
-          <Walli state={latest ? walliState : 'idle'} size={28} noShadow label="Walli" />
+          <Walle state={latest ? walleState : 'idle'} size={28} noShadow label="Walle" />
         </div>
       )}
       <div

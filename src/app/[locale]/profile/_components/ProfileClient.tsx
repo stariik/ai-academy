@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 import { TONE_CLASSES, type Tone } from '@/lib/v2/data';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
@@ -329,7 +329,7 @@ function DailyGoalCard({ payload }: { payload: ProfilePayload }) {
     >
       <div className={cn('absolute -bottom-12 -right-10 w-32 h-32 rounded-full blur-2xl opacity-30', done ? 'bg-pulse' : 'bg-pulse/40')} aria-hidden />
       <div className="relative flex items-start gap-3">
-        <Walli size={48} state={done ? 'dance' : 'wave'} noShadow />
+        <Walle size={48} state={done ? 'dance' : 'wave'} noShadow />
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-widest text-pulse font-bold">
             {dict.profile.dailyGoalTitle}

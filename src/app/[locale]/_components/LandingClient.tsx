@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Walli } from '@/components/walli/Walli';
+import { Walle } from '@/components/walle/Walle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import {
@@ -130,7 +130,7 @@ export function Navbar({
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between gap-3 h-14 sm:h-16">
           <Link href={href()} className="flex items-center gap-2 shrink-0 min-w-0">
-            <Walli size={32} state="idle" noShadow />
+            <Walle size={32} state="idle" noShadow />
             <div className="leading-tight min-w-0">
               <p className="text-base sm:text-xl font-bold tracking-tight truncate">
                 walle academy
@@ -378,7 +378,7 @@ function MobileMenu({
     >
       <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border">
         <Link href={href()} className="flex items-center gap-2" onClick={onClose}>
-          <Walli size={32} state="idle" noShadow />
+          <Walle size={32} state="idle" noShadow />
           <span className="text-sm sm:text-base font-bold tracking-tight">
             {dict.meta.brandName}
           </span>
@@ -509,7 +509,7 @@ function MobileMenu({
    Hero
    ============================================================ */
 
-function useHeroWalliSize() {
+function useHeroWalleSize() {
   const [size, setSize] = React.useState(240);
   React.useEffect(() => {
     const update = () => {
@@ -529,7 +529,7 @@ function useHeroWalliSize() {
 
 function Hero() {
   const { dict } = useV2Locale();
-  const walliSize = useHeroWalliSize();
+  const walleSize = useHeroWalleSize();
 
   return (
     <section className="relative pt-6 pb-6 sm:pt-14 sm:pb-10 lg:pt-20 lg:pb-14 px-4 sm:px-6 overflow-hidden">
@@ -550,9 +550,9 @@ function Hero() {
               className="absolute inset-0 rounded-full bg-gradient-to-br from-pulse/25 via-pulse/5 to-transparent blur-2xl scale-[1.15] -z-10"
               aria-hidden
             />
-            <Walli size={walliSize} state="wave" />
+            <Walle size={walleSize} state="wave" />
 
-            {/* On phones the chips anchor to Walli's box edge with right-full
+            {/* On phones the chips anchor to Walle's box edge with right-full
                 / left-full, then pull back 20px into it. His 240-wide viewBox
                 carries ~30px of transparent padding each side at this scale,
                 so that tightens the gap without touching the robot — and it
@@ -686,7 +686,7 @@ function FloatingChip({
     <div className={cn('absolute float', className)} style={{ animationDelay: delay }}>
       <div
         className={cn(
-          // Narrow on phones so the chip clears Walli in the ~95px beside him.
+          // Narrow on phones so the chip clears Walle in the ~95px beside him.
           'rounded-full bg-card border px-1.5 py-0.5 sm:px-3 sm:py-1.5 text-[9px] sm:text-xs font-bold flex items-center gap-1 sm:gap-1.5 whitespace-nowrap',
           ring,
           glow,
@@ -744,9 +744,9 @@ export function CtaBanner() {
               </div>
             </div>
             <div className="flex justify-center md:justify-end">
-              <Walli size={112} state="wave" className="sm:hidden" />
-              <Walli size={180} state="wave" className="hidden sm:block lg:hidden" />
-              <Walli size={210} state="wave" className="hidden lg:block" />
+              <Walle size={112} state="wave" className="sm:hidden" />
+              <Walle size={180} state="wave" className="hidden sm:block lg:hidden" />
+              <Walle size={210} state="wave" className="hidden lg:block" />
             </div>
           </div>
         </div>
@@ -767,7 +767,7 @@ export function Footer({ categories }: { categories: Category[] }) {
         <div className="grid gap-6 sm:gap-10 grid-cols-2 md:grid-cols-[2fr_1fr_1fr]">
           <div className="col-span-2 md:col-span-1">
             <Link href={href()} className="inline-flex items-center gap-2 mb-3 sm:mb-4">
-              <Walli size={32} state="idle" noShadow />
+              <Walle size={32} state="idle" noShadow />
               <span className="text-base font-bold tracking-tight">{dict.meta.brandName}</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">

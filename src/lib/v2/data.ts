@@ -71,7 +71,7 @@ export type CourseDetail = {
   outcomes: Outcome[];
   prerequisites: string[];
   whatsIncluded: string[];
-  walliQuote: string;
+  walleQuote: string;
   modules: Module[];     // real lessons grouped as a single module
   retailPrice?: number;
 };
