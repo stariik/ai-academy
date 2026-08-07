@@ -130,9 +130,19 @@ current experience, preferred learning mode, realistic time commitment, and like
 - Never finish before 4 answers. Usually finish after 5 or 6. At 7 answers you MUST finish.
 - A very rich answer can cover more than one topic; do not ask what is already clear.
 - Prefer tap-friendly single/multi options when useful (4–6 options), but use a text question for
-their desired outcome or when their own words matter. Multi-select max is 2.
+their desired outcome or when their own words matter. Multi-select max is 3.
+- Your FIRST question maps their interests: make it "multi", minSelections 1, maxSelections 3, with
+5–6 options. Nobody wants exactly one thing — let them tick a few, then continue.
+- The panel already displays the selection limit and a Continue button. Never write "pick up to 3",
+"choose two", or "select all that apply" into the question text — it wastes the line.
+- After that prefer "single": a single-choice question submits on tap, so it costs one action.
+Reach for "multi" again only when the honest answer is plural, e.g. learning style or blockers.
+- Option labels are buttons, not sentences: 1–3 words, under 22 characters. Add "description" only
+when the label alone is ambiguous — short bare labels tile two-up and save the visitor scrolling.
 - Acknowledge their latest answer in one specific, human sentence before the next question.
-- Keep every sentence short. This is read inside a narrow chat panel, not a page.
+- HARD LIMITS. This renders in a narrow phone-sized panel, so anything longer gets cut or scrolled:
+"acknowledgement" under 90 characters, question "text" under 90 characters, "helper" under 70 and
+only when it genuinely reassures, "closing" under 140 characters.
 - Do not flatter excessively, pressure, shame, diagnose, or claim to know hidden psychology.
 - Never infer sensitive traits (health, wealth, religion, politics, race, sexuality, family status).
 - Segments may only describe the goal they stated, e.g. "Business builder" or "Creative explorer".
@@ -165,7 +175,7 @@ Return ONLY valid JSON with this exact shape:
     "options": [{"id":"stable_id","label":"label","description":"optional","emoji":"optional"}],
     "placeholder": "optional",
     "minSelections": 1,
-    "maxSelections": 2
+    "maxSelections": 3
   },
   "profile": null,
   "roadmap": null,
@@ -237,11 +247,25 @@ function normalizeQuestion(
   if (next.kind !== 'text' && next.options.length < 2) {
     return getFallbackQuestion(answers.length, locale);
   }
+
+  // Product guardrail: the opening question maps their interests, and nobody
+  // wants exactly one thing. Always multi, always up to three, then continue —
+  // the model keeps proposing "single" here, so don't leave it to the prompt.
+  if (answers.length === 0 && next.kind !== 'text') {
+    return {
+      ...next,
+      kind: 'multi',
+      options: next.options.slice(0, 6),
+      minSelections: 1,
+      maxSelections: 3,
+    };
+  }
+
   return {
     ...next,
     options: next.kind === 'text' ? [] : next.options.slice(0, 6),
     minSelections: next.kind === 'multi' ? (next.minSelections ?? 1) : undefined,
-    maxSelections: next.kind === 'multi' ? Math.min(next.maxSelections ?? 2, 2) : undefined,
+    maxSelections: next.kind === 'multi' ? Math.min(next.maxSelections ?? 2, 3) : undefined,
   };
 }
 

@@ -71,10 +71,10 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     {
       id: 'progress_goal',
       text: 'What kind of progress would feel most valuable to you right now?',
-      helper: 'Pick up to two — this helps me shape your starting path.',
+      helper: 'Pick up to three — this helps me shape your starting path.',
       kind: 'multi',
       minSelections: 1,
-      maxSelections: 2,
+      maxSelections: 3,
       placeholder: 'Or tell me what you have in mind…',
       options: [
         { id: 'work_smarter', label: 'Work smarter', description: 'Save time and automate repetitive work', emoji: '⚡' },
@@ -108,7 +108,7 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     {
       id: 'learning_style',
       text: 'When something new finally “clicks” for you, what usually made the difference?',
-      helper: 'Choose up to two. WALL‑E will adapt explanations inside lessons.',
+      helper: 'Choose up to two. Walle will adapt explanations inside lessons.',
       kind: 'multi',
       minSelections: 1,
       maxSelections: 2,
@@ -154,10 +154,10 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     {
       id: 'progress_goal',
       text: 'ამ ეტაპზე როგორი პროგრესი იქნებოდა შენთვის ყველაზე ღირებული?',
-      helper: 'აირჩიე მაქსიმუმ ორი — ასე შენთვის სწორ საწყის გზას შევადგენ.',
+      helper: 'აირჩიე მაქსიმუმ სამი — ასე შენთვის სწორ საწყის გზას შევადგენ.',
       kind: 'multi',
       minSelections: 1,
-      maxSelections: 2,
+      maxSelections: 3,
       placeholder: 'ან შენი სიტყვებით მომიყევი…',
       options: [
         { id: 'work_smarter', label: 'უფრო ჭკვიანურად მუშაობა', description: 'დროის დაზოგვა და რუტინის ავტომატიზაცია', emoji: '⚡' },
@@ -191,7 +191,7 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     {
       id: 'learning_style',
       text: 'როცა ახალი თემა ბოლოს და ბოლოს „გილაგდება“, ჩვეულებრივ რა გეხმარება ყველაზე მეტად?',
-      helper: 'აირჩიე მაქსიმუმ ორი. WALL‑E გაკვეთილებში ახსნის სტილს მოგარგებს.',
+      helper: 'აირჩიე მაქსიმუმ ორი. Walle გაკვეთილებში ახსნის სტილს მოგარგებს.',
       kind: 'multi',
       minSelections: 1,
       maxSelections: 2,
