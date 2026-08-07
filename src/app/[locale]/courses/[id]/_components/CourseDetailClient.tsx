@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 
 import { Walle, type WalleState } from '@/components/walle/Walle';
-import { EveCover } from '@/components/walle/EveCover';
 import { cn } from '@/lib/utils';
 import {
   LEVEL_DOTS, TONE_CLASSES,
@@ -553,20 +552,6 @@ function Hero({
                 aria-hidden
               />
               <Walle size={260} state={walleState} />
-
-              {/* Orbiting course medallion — Eve-head cover with the course icon */}
-              <motion.div
-                aria-hidden
-                animate={reduced ? undefined : { y: [0, -10, 0] }}
-                transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -top-4 -right-4 w-28 h-24"
-              >
-                <EveCover
-                  icon={<span className="-rotate-6 inline-block">{course.icon}</span>}
-                  className="h-full w-full drop-shadow-[0_12px_30px_rgba(0,0,0,0.12)]"
-                  iconClassName="text-3xl"
-                />
-              </motion.div>
 
               {/* Floating chips */}
               <FloatingPill
