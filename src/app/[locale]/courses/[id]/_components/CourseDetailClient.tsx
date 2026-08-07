@@ -279,9 +279,12 @@ function CoursePage({
         if (l.isFree) return l.id;
       }
     }
-    return detail.modules[0]?.lessons[0]?.id ?? null;
+    return null;
   }, [detail.modules]);
-  const previewHref = previewLessonId ? localeHref(`lessons/${previewLessonId}`) : '#curriculum';
+  // null when this course has no genuinely free lesson. Every "free preview"
+  // CTA is hidden in that case rather than pointed at the buy rail — the label
+  // promises a free lesson, and the server would only redirect back here.
+  const previewHref = previewLessonId ? localeHref(`lessons/${previewLessonId}`) : null;
 
   // --- render ---------------------------------------------------------------
   // overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
@@ -325,10 +328,12 @@ function CoursePage({
             {/* RAIL ───────────────────────────────────── */}
             {/* self-start stops the grid stretching the aside to full row height,
                 which is what makes position:sticky do nothing.
+                id="buy" is the scroll target for locked first lessons; the
+                :target flash lives in globals.css.
                 ponytail: plain sticky — on viewports shorter than the card the
-                last block (prerequisites) stays below the fold; add
-                max-h/overflow-y-auto here if that turns up. */}
-            <aside className="lg:sticky lg:top-20 lg:self-start">
+                last block stays below the fold; add max-h/overflow-y-auto here
+                if that turns up. */}
+            <aside id="buy" className="scroll-mt-24 lg:sticky lg:top-20 lg:self-start">
               <PurchaseCard
                 course={course}
                 category={category}
@@ -394,7 +399,7 @@ function Hero({
   progressPct: number;
   completedCount: number;
   totalLessons: number;
-  previewHref: string;
+  previewHref: string | null;
 }) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -508,12 +513,12 @@ function Hero({
                   {dict.courseDetail.heroContinueLesson}
                   <ArrowRight className="w-4 h-4" />
                 </a>
-              ) : (
+              ) : previewHref ? (
                 <Link href={previewHref} className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
                   {dict.courseDetail.heroFreePreview}
                   <Play className="w-4 h-4 fill-current" />
                 </Link>
-              )}
+              ) : null}
             </div>
 
             {/* Enrolled progress mini */}
@@ -690,15 +695,22 @@ function CurriculumSection({
   const pct = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
   const finished = totalLessons > 0 && completed === totalLessons;
 
+  // Every course's opening lesson presents as startable even when it isn't
+  // free, so the curriculum reads the same across the catalogue. Clicking it
+  // scrolls to the purchase rail instead of opening the lesson — and the
+  // server guards reject it too, so this is presentation only, not access.
+  const teaserId =
+    !isEnrolled && lessons[0] && !lessons[0].isFree ? lessons[0].id : null;
+
   // The next actionable lesson — the first one the viewer can open and hasn't
-  // completed. For guests that's the first free preview; for enrolled students
-  // it's where they left off. Drives the pulsing "Next up" marker.
+  // completed. For guests that's the free preview (or the teaser above); for
+  // enrolled students it's where they left off. Drives the "Next up" marker.
   const nextUpId = React.useMemo(() => {
     for (const l of lessons) {
-      if ((isEnrolled || l.isFree) && !progress.has(l.id)) return l.id;
+      if ((isEnrolled || l.isFree || l.id === teaserId) && !progress.has(l.id)) return l.id;
     }
     return null;
-  }, [lessons, isEnrolled, progress]);
+  }, [lessons, isEnrolled, progress, teaserId]);
 
   // Pair the real lesson chunks with the foundations → practice → project
   // narrative, keeping a running global lesson number across chapters.
@@ -723,7 +735,6 @@ function CurriculumSection({
       <SectionHeader
         eyebrow={dict.courseDetail.curriculumEyebrow}
         title={dict.courseDetail.curriculumTitle}
-        description={dict.courseDetail.curriculumDescription}
       />
 
       {/* Overview ribbon — totals on the left, live progress on the right */}
@@ -759,6 +770,7 @@ function CurriculumSection({
             isEnrolled={isEnrolled}
             progress={progress}
             nextUpId={nextUpId}
+            teaserId={teaserId}
             onToggleLesson={onToggleLesson}
           />
         ))}
@@ -823,6 +835,7 @@ function PhaseBlock({
   isEnrolled,
   progress,
   nextUpId,
+  teaserId,
   onToggleLesson,
 }: {
   roman: string;
@@ -833,6 +846,7 @@ function PhaseBlock({
   isEnrolled: boolean;
   progress: Set<string>;
   nextUpId: string | null;
+  teaserId: string | null;
   onToggleLesson: (lessonId: string) => void;
 }) {
   const { dict } = useV2Locale();
@@ -885,6 +899,7 @@ function PhaseBlock({
             isEnrolled={isEnrolled}
             isCompleted={progress.has(l.id)}
             isNextUp={l.id === nextUpId}
+            isTeaser={l.id === teaserId}
             onToggleComplete={() => onToggleLesson(l.id)}
           />
         ))}
@@ -904,6 +919,7 @@ function LessonCard({
   isEnrolled,
   isCompleted,
   isNextUp,
+  isTeaser,
   onToggleComplete,
 }: {
   lesson: Lesson;
@@ -914,13 +930,24 @@ function LessonCard({
   isEnrolled: boolean;
   isCompleted: boolean;
   isNextUp: boolean;
+  isTeaser: boolean;
   onToggleComplete: () => void;
 }) {
   const { href, dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
-  const isLocked = !isEnrolled && !lesson.isFree;
+  // `accessible` = may actually open the lesson. `presentsOpen` = renders as
+  // startable. They differ only for the teaser (a course's first lesson when
+  // the viewer hasn't bought it): it looks startable but routes to #buy.
   const accessible = isEnrolled || lesson.isFree;
+  const presentsOpen = accessible || isTeaser;
+  const isLocked = !presentsOpen;
   const isPreview = lesson.isFree && !isEnrolled;
+
+  const cardShell = cn(
+    'group my-1.5 flex-1 rounded-2xl border bg-card p-3.5 transition-all duration-300 sm:p-4',
+    isNextUp ? cn(t.ring, 'shadow-[0_10px_30px_-18px_var(--pulse-glow)]') : 'border-border',
+    'hover:-translate-y-0.5 hover:border-transparent hover:shadow-[0_16px_36px_-22px_var(--pulse-glow)]',
+  );
 
   const card = (
     <>
@@ -936,7 +963,7 @@ function LessonCard({
             {lesson.title}
           </p>
         </div>
-        {accessible ? (
+        {presentsOpen ? (
           <span
             className={cn(
               'grid h-8 w-8 shrink-0 place-items-center rounded-full transition-all duration-300 group-hover:scale-110 group-hover:brightness-105',
@@ -944,7 +971,7 @@ function LessonCard({
             )}
             aria-hidden
           >
-            {isPreview ? (
+            {isPreview || isTeaser ? (
               <Play className="h-3.5 w-3.5 fill-current" />
             ) : (
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -974,7 +1001,7 @@ function LessonCard({
             {dict.courseDetail.freeLessonBadge}
           </span>
         )}
-        {accessible && (
+        {presentsOpen && (
           <span className={cn('ml-auto inline-flex items-center gap-1 font-bold transition-all group-hover:gap-1.5', isCompleted ? t.text : 'text-foreground')}>
             {isCompleted ? dict.courseDetail.lessonReview : dict.courseDetail.lessonStart}
             <ChevronRight className="h-3.5 w-3.5" />
@@ -1025,18 +1052,18 @@ function LessonCard({
         </button>
       </div>
 
-      {/* Card */}
+      {/* Card — the teaser reuses the open card shell so the row looks
+          identical to a real lesson; only its destination differs. */}
       {accessible ? (
-        <Link
-          href={href(`lessons/${lesson.id}`)}
-          className={cn(
-            'group my-1.5 flex-1 rounded-2xl border bg-card p-3.5 transition-all duration-300 sm:p-4',
-            isNextUp ? cn(t.ring, 'shadow-[0_10px_30px_-18px_var(--pulse-glow)]') : 'border-border',
-            'hover:-translate-y-0.5 hover:border-transparent hover:shadow-[0_16px_36px_-22px_var(--pulse-glow)]',
-          )}
-        >
+        <Link href={href(`lessons/${lesson.id}`)} className={cardShell}>
           {card}
         </Link>
+      ) : isTeaser ? (
+        // Plain <a>, not next/link: we want the browser's native hash jump so
+        // #buy also fires the :target flash on the purchase rail.
+        <a href="#buy" className={cardShell}>
+          {card}
+        </a>
       ) : (
         <div className="my-1.5 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3.5 sm:p-4">
           {card}
@@ -1657,7 +1684,7 @@ function CtaBanner({
   isEnrolled: boolean;
   onEnroll: () => void;
   enrollBusy: boolean;
-  previewHref: string;
+  previewHref: string | null;
 }) {
   const { dict } = useV2Locale();
   return (
@@ -1711,12 +1738,14 @@ function CtaBanner({
                         </>
                       )}
                     </button>
-                    <Link
-                      href={previewHref}
-                      className="text-sm font-bold text-pulse hover:underline"
-                    >
-                      {dict.courseDetail.tryFirst}
-                    </Link>
+                    {previewHref && (
+                      <Link
+                        href={previewHref}
+                        className="text-sm font-bold text-pulse hover:underline"
+                      >
+                        {dict.courseDetail.tryFirst}
+                      </Link>
+                    )}
                   </>
                 )}
               </div>

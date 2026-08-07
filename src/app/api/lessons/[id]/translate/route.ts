@@ -10,6 +10,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { createClient } from '@/lib/supabase/server';
 import { getLesson, getPageTranslation, upsertPageTranslation } from '@/lib/supabase/db';
+import { isCurrentUserEnrolled } from '@/lib/enrollments';
+import { isAdmin } from '@/lib/admin-auth';
+import { FREE_LESSON_ID } from '@/lib/v2/db';
 import {
   translatePageMaterialToEnglish,
   type PageTranslationInput,
@@ -41,6 +44,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const lesson = await getLesson(supabase, id);
   if (!lesson) {
     return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+  }
+
+  // Same paywall as GET /api/lessons/[id] — this returns the page material in
+  // English, so leaving it open would hand out the paid content verbatim. It
+  // also spends AI credits, which is reason enough not to serve strangers.
+  if (id !== FREE_LESSON_ID) {
+    const allowed =
+      (lesson.courseId ? await isCurrentUserEnrolled(lesson.courseId) : false) ||
+      (await isAdmin());
+    if (!allowed) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
   }
 
   const page = lesson.pages?.find((p) => p.pageNumber === pageNumber);
