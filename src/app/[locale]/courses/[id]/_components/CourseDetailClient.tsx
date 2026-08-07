@@ -770,9 +770,6 @@ function CurriculumSection({
   // flat list, we present them as a guided "learning path" broken into chapters.
   const lessons = detail.modules.flatMap((m) => m.lessons);
   const totalLessons = lessons.length;
-  const totalMin = lessons.reduce((acc, l) => acc + l.durationMin, 0);
-  const totalHours = Math.round((totalMin / 60) * 10) / 10;
-  const freeCount = lessons.filter((l) => l.isFree).length;
   const completed = lessons.filter((l) => progress.has(l.id)).length;
   const pct = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
   const finished = totalLessons > 0 && completed === totalLessons;
@@ -820,17 +817,6 @@ function CurriculumSection({
           <span className="tabular-nums">{totalLessons}</span>
           <span className="font-normal text-muted-foreground">{dict.courseDetail.lessonsLabel}</span>
         </span>
-        <span className="inline-flex items-center gap-2 text-sm font-semibold">
-          <Clock className={cn('h-4 w-4', t.text)} />
-          <span className="tabular-nums">~{totalHours}</span>
-          <span className="font-normal text-muted-foreground">{dict.courseDetail.hoursLabel}</span>
-        </span>
-        {freeCount > 0 && (
-          <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest', t.chip)}>
-            <Eye className="h-3 w-3" />
-            {freeCount} {dict.courseDetail.freeLessonBadge}
-          </span>
-        )}
         {isEnrolled && totalLessons > 0 && (
           <div className="ml-auto flex items-center gap-3">
             <div className="text-right leading-tight">
