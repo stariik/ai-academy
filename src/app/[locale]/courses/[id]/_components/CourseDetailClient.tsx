@@ -286,7 +286,10 @@ function CoursePage({
 
   // --- render ---------------------------------------------------------------
   return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
+    {/* overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
+        container, which silently breaks the sticky purchase rail below. `clip`
+        contains the hero's blur blobs the same way without that side effect. */}
+    <div className="relative min-h-screen bg-background text-foreground overflow-x-clip">
       {/* homeAnchors={false}: this page has no #categories/#courses sections,
           so the bare hashes did nothing when tapped. */}
       <Navbar authUser={authUser} homeAnchors={false} />
@@ -321,7 +324,12 @@ function CoursePage({
             </div>
 
             {/* RAIL ───────────────────────────────────── */}
-            <aside className="space-y-5">
+            {/* self-start stops the grid stretching the aside to full row height,
+                which is what makes position:sticky do nothing.
+                ponytail: plain sticky — on viewports shorter than the card the
+                last block (prerequisites) stays below the fold; add
+                max-h/overflow-y-auto here if that turns up. */}
+            <aside className="lg:sticky lg:top-20 lg:self-start">
               <PurchaseCard
                 course={course}
                 category={category}
@@ -336,7 +344,6 @@ function CoursePage({
                 onPromoRedeemed={addEnrollmentLocally}
                 previewHref={previewHref}
               />
-              <WalleIntroSection course={course} detail={detail} />
             </aside>
           </div>
         </section>
@@ -644,81 +651,6 @@ function FloatingPill({
         <span className="text-foreground/85">{label}</span>
       </motion.div>
     </motion.div>
-  );
-}
-
-/* ============================================================
-   Walle teacher intro
-   ============================================================ */
-
-function WalleIntroSection({ course, detail }: { course: Course; detail: CourseDetail }) {
-  const { dict } = useV2Locale();
-  const [walleState, setWalleState] = React.useState<WalleState>('idle');
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setWalleState('wave');
-            setTimeout(() => setWalleState('idle'), 3200);
-            obs.disconnect();
-          }
-        }
-      },
-      { threshold: 0.4 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  return (
-    <section ref={ref}>
-      <div className="relative overflow-hidden rounded-3xl border border-pulse/25 bg-gradient-to-br from-pulse/8 via-card to-card p-5 sm:p-6">
-        <div className="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-pulse/10 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-12 -left-12 w-44 h-44 rounded-full bg-heart/10 blur-3xl" aria-hidden />
-
-        <div className="relative flex flex-col items-center text-center gap-4">
-          <div
-            onMouseEnter={() => setWalleState('tilt')}
-            onMouseLeave={() => setWalleState('idle')}
-            className="cursor-pointer"
-          >
-            <Walle size={108} state={walleState} />
-          </div>
-
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-pulse font-bold">
-              {dict.courseDetail.walleEyebrow}
-            </p>
-            <h3
-              className="mt-1 text-xl font-bold leading-tight"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              {dict.courseDetail.walleTitle}
-            </h3>
-          </div>
-
-          <blockquote className="relative text-sm leading-relaxed text-foreground/90 px-1">
-            <span
-              className="absolute -left-1 -top-2 text-3xl text-pulse/30 leading-none select-none"
-              aria-hidden
-            >
-              &ldquo;
-            </span>
-            <span className="relative">{detail.walleQuote}</span>
-          </blockquote>
-
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {dict.courseDetail.walleIntro}{' '}
-            <span className="text-foreground font-semibold">{course.title}</span> — {dict.courseDetail.walleIntroEnd}
-          </p>
-        </div>
-      </div>
-    </section>
   );
 }
 
