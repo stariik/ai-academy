@@ -14,7 +14,7 @@ import type { AuthUser } from '@/lib/auth';
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import { Walle } from '@/components/walle/Walle';
-import { Navbar, Footer } from '../../_components/LandingClient';
+import { Navbar, Footer, FloatingChip } from '../../_components/LandingClient';
 
 const CONTACT_EMAIL = 'walle.academy.2026@gmail.com';
 
@@ -249,10 +249,7 @@ function ContactForm() {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between gap-4 pt-1">
-        <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
-          {c.formNote}
-        </p>
+      <div className="flex items-center justify-end gap-4 pt-1">
         <button
           type="submit"
           disabled={status === 'sending'}
@@ -302,6 +299,30 @@ function ContactSections() {
                   />
                   <Walle size={168} state="wave" className="sm:hidden" />
                   <Walle size={230} state="wave" className="hidden sm:block" />
+                  <FloatingChip
+                    className="-top-1 -left-10 sm:-top-2 sm:-left-14"
+                    delay="0s"
+                    tone="pulse"
+                  >
+                    <span>💬</span>
+                    <span>{c.chipQuickReply}</span>
+                  </FloatingChip>
+                  <FloatingChip
+                    className="top-1/2 -right-12 sm:-right-16"
+                    delay="0.6s"
+                    tone="heart"
+                  >
+                    <span>⚡</span>
+                    <span>{c.chipAlwaysOn}</span>
+                  </FloatingChip>
+                  <FloatingChip
+                    className="bottom-0 -left-8 sm:-bottom-1 sm:-left-12"
+                    delay="1.2s"
+                    tone="amber"
+                  >
+                    <span>✨</span>
+                    <span>{c.chipSupport}</span>
+                  </FloatingChip>
                 </div>
               </Reveal>
 

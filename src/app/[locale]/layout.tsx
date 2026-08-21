@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { isLocale, LOCALES } from '@/lib/v2/i18n';
 import IpWarnBanner from './_components/IpWarnBanner';
 import PaymentFailedBanner from './_components/PaymentFailedBanner';
+import PaymentSuccessToast from './_components/PaymentSuccessToast';
 import WalleBot from '@/components/walle/WalleBot';
 
 export async function generateStaticParams() {
@@ -22,6 +23,7 @@ export default async function LocaleLayout({
       {children}
       <IpWarnBanner locale={locale} />
       <PaymentFailedBanner locale={locale} />
+      <PaymentSuccessToast locale={locale} />
       <WalleBot />
     </div>
   );

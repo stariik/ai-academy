@@ -11,6 +11,8 @@
 export type MaterialLocale = 'ka' | 'en';
 
 export type MaterialStrings = {
+  // panel heading — deliberately generic, not the lesson title
+  panelTitle: string;
   // sub-view badges
   subMaterial: string;
   subCheck: string;
@@ -57,6 +59,7 @@ export type MaterialStrings = {
 
 export const MATERIAL_STRINGS: Record<MaterialLocale, MaterialStrings> = {
   ka: {
+    panelTitle: 'განმარტებები',
     subMaterial: '1 · მასალა',
     subCheck: '2 · შემოწმე',
     bridge: 'გავაგრძელოთ',
@@ -94,6 +97,7 @@ export const MATERIAL_STRINGS: Record<MaterialLocale, MaterialStrings> = {
     diagram: 'დიაგრამა',
   },
   en: {
+    panelTitle: 'Explanations',
     subMaterial: '1 · Material',
     subCheck: '2 · Check',
     bridge: "Let's continue",

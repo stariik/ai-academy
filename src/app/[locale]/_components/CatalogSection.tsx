@@ -789,7 +789,7 @@ function BundleCard({ category: c }: { category: Category }) {
                   ₾{price.bundle}
                 </span>
                 {price.save > 0 && (
-                  <span className="text-[12px] tabular-nums text-white/70 line-through [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+                  <span className="text-[12px] font-semibold tabular-nums text-red-400/90 line-through decoration-white [text-shadow:0_1px_4px_rgba(0,0,0,0.65)]">
                     ₾{price.retail}
                   </span>
                 )}
@@ -1107,7 +1107,7 @@ function CourseCard({
                 ₾{co.price}
               </span>
               {hasRetail && (
-                <span className="text-[12.5px] tabular-nums text-muted-foreground line-through">
+                <span className="text-[12.5px] font-semibold tabular-nums text-red-400/90 line-through decoration-white [text-shadow:0_1px_4px_rgba(0,0,0,0.65)]">
                   ₾{co.retailPrice}
                 </span>
               )}

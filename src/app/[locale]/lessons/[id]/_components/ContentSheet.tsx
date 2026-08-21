@@ -220,10 +220,10 @@ function SheetHeader({
         </div>
       </div>
       <h2
-        className="text-lg sm:text-xl font-bold tracking-tight leading-tight"
+        className="text-lg sm:text-xl font-bold tracking-tight leading-tight text-pulse uppercase"
         style={{ fontFamily: 'var(--font-display)' }}
       >
-        {page.title}
+        {s.panelTitle}
       </h2>
       {page.difficultyLevel && (
         <span

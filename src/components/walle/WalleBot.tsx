@@ -53,7 +53,6 @@ const COPY = {
     open: 'Open Walle, your learning guide',
     close: 'Close',
     restart: 'Start over',
-    nudge: 'New here? I’ll build your learning plan in 2 minutes.',
     name: 'walle',
     roleIdle: 'your learning guide',
     roleThinking: 'thinking…',
@@ -78,14 +77,13 @@ const COPY = {
     open: 'გახსენი Walle, შენი სასწავლო გზამკვლევი',
     close: 'დახურვა',
     restart: 'თავიდან დაწყება',
-    nudge: 'პირველად ხარ? 2 წუთში სასწავლო გეგმას აგიწყობ.',
     name: 'walle',
     roleIdle: 'შენი სასწავლო გზამკვლევი',
     roleThinking: 'ვფიქრობ…',
     roleDone: 'შენი გეგმა მზადაა',
     greeting: 'გამარჯობა 👋 მე Walle ვარ.',
     pitch: 'მითხარი, რა გაინტერესებს და მე დაგეხმარები სასწავლო გეგმის შედგენაში',
-    start: 'ჩემი გეგმის აწყობა',
+    start: 'მომწერე რა გაინტერესებს',
     answered: (n: number) => `${n} პასუხი`,
     pickHint: (max: number) => `აირჩიე მაქსიმუმ ${max}`,
     ownWords: 'ჩემი პასუხის აკრეფა',
@@ -103,8 +101,6 @@ const COPY = {
 
 type Copy = (typeof COPY)['en'];
 
-const NUDGE_KEY = 'walle-bot-nudge-seen';
-
 export default function WalleBot() {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);
@@ -119,7 +115,6 @@ export default function WalleBot() {
   const reducedMotion = useReducedMotion();
 
   const [open, setOpen] = React.useState(false);
-  const [nudge, setNudge] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>('intro');
   const [answers, setAnswers] = React.useState<OnboardingAnswer[]>([]);
   const [ack, setAck] = React.useState('');
@@ -139,19 +134,6 @@ export default function WalleBot() {
   const advanceRef = React.useRef(0);
 
   const textMode = question?.kind === 'text' || writing;
-
-  // One gentle wave per tab, only if they haven't opened him yet.
-  React.useEffect(() => {
-    if (!visible || open) return;
-    if (sessionStorage.getItem(NUDGE_KEY)) return;
-    const timer = window.setTimeout(() => setNudge(true), 6000);
-    return () => window.clearTimeout(timer);
-  }, [visible, open]);
-
-  const dismissNudge = React.useCallback(() => {
-    setNudge(false);
-    sessionStorage.setItem(NUDGE_KEY, '1');
-  }, []);
 
   // Escape closes; on phones the panel is full-screen, so lock the page behind it.
   React.useEffect(() => {
@@ -352,10 +334,7 @@ export default function WalleBot() {
       >
         <motion.button
           type="button"
-          onClick={() => {
-            setOpen((value) => !value);
-            dismissNudge();
-          }}
+          onClick={() => setOpen((value) => !value)}
           aria-label={open ? T.close : T.open}
           aria-expanded={open}
           whileHover={reducedMotion ? undefined : { y: -3, scale: 1.04 }}
@@ -366,7 +345,7 @@ export default function WalleBot() {
             aria-hidden
             className="absolute inset-0 rounded-full bg-pulse/10 opacity-0 transition-opacity group-hover:opacity-100"
           />
-          <Walle state={nudge || open ? 'wave' : 'idle'} size={46} noShadow label="Walle" />
+          <Walle state={open ? 'wave' : 'idle'} size={46} noShadow label="Walle" />
           {!open && (
             <span
               aria-hidden
@@ -376,29 +355,6 @@ export default function WalleBot() {
             </span>
           )}
         </motion.button>
-
-        <AnimatePresence>
-          {nudge && !open && (
-            <motion.div
-              initial={{ opacity: 0, x: 8, scale: 0.94 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 8, scale: 0.94 }}
-              className="relative mb-1 max-w-[min(15rem,calc(100vw-6.5rem))] rounded-2xl rounded-br-md border border-border bg-card/95 px-3.5 py-2.5 pr-8 text-xs font-medium leading-relaxed text-foreground shadow-xl backdrop-blur-xl"
-            >
-              <button
-                type="button"
-                onClick={dismissNudge}
-                aria-label={T.close}
-                className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              >
-                <X className="h-3 w-3" />
-              </button>
-              <button type="button" onClick={() => { setOpen(true); dismissNudge(); }} className="text-left">
-                {T.nudge}
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ---------- Panel ---------- */}

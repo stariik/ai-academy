@@ -9,6 +9,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import { Walle } from '@/components/walle/Walle';
 import { Navbar, Footer, CtaBanner } from '../../_components/LandingClient';
+import { FREE_COURSE_PATH } from '@/lib/v2/routes';
 
 export default function AboutClient({
   dict,
@@ -126,7 +127,7 @@ function AboutSections({ categories }: { categories: Category[] }) {
               <Reveal delay={0.15}>
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3 pt-1">
                   <a
-                    href={href('register')}
+                    href={href(FREE_COURSE_PATH)}
                     className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 text-sm font-bold shadow-[0_8px_28px_var(--pulse-glow)] sm:hover:-translate-y-0.5 hover:shadow-[0_14px_36px_var(--pulse-glow)] transition-all"
                   >
                     {a.heroCtaPrimary}
@@ -188,7 +189,7 @@ function AboutSections({ categories }: { categories: Category[] }) {
             <blockquote className="mt-6 sm:mt-8 rounded-3xl border border-pulse/25 bg-gradient-to-br from-pulse/8 via-card to-card px-5 py-6 sm:px-10 sm:py-9">
               {/* <Sparkles className="w-5 h-5 text-pulse mx-auto mb-3" /> */}
               <p
-                className="text-[17px] sm:text-2xl font-bold leading-snug text-foreground"
+                className="text-[17px] sm:text-2xl font-bold leading-snug text-foreground bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {a.storyPullquote}

@@ -128,11 +128,13 @@ current experience, preferred learning mode, realistic time commitment, and like
 - Ask exactly ONE question per turn. Questions must feel conversational, not like a corporate form.
 - Ask 4 to 7 questions total. This visitor has answered ${answerCount}.
 - Never finish before 4 answers. Usually finish after 5 or 6. At 7 answers you MUST finish.
+- Question one was their age band, already asked and answered. Never ask about age again. Use it
+only to pitch tone, examples and pacing, and never comment on their age back to them.
 - A very rich answer can cover more than one topic; do not ask what is already clear.
 - Prefer tap-friendly single/multi options when useful (4–6 options), but use a text question for
 their desired outcome or when their own words matter. Multi-select max is 3.
-- Your FIRST question maps their interests: make it "multi", minSelections 1, maxSelections 3, with
-5–6 options. Nobody wants exactly one thing — let them tick a few, then continue.
+- Your first question — the second one overall — maps their interests: make it "multi",
+minSelections 1, maxSelections 3, with 5–6 options. Nobody wants exactly one thing.
 - The panel already displays the selection limit and a Continue button. Never write "pick up to 3",
 "choose two", or "select all that apply" into the question text — it wastes the line.
 - After that prefer "single": a single-choice question submits on tap, so it costs one action.
@@ -248,10 +250,10 @@ function normalizeQuestion(
     return getFallbackQuestion(answers.length, locale);
   }
 
-  // Product guardrail: the opening question maps their interests, and nobody
+  // Product guardrail: the question after age maps their interests, and nobody
   // wants exactly one thing. Always multi, always up to three, then continue —
   // the model keeps proposing "single" here, so don't leave it to the prompt.
-  if (answers.length === 0 && next.kind !== 'text') {
+  if (answers.length === 1 && next.kind !== 'text') {
     return {
       ...next,
       kind: 'multi',
@@ -347,8 +349,8 @@ function fallbackTurn(
       acknowledgement:
         answers.length === 0
           ? locale === 'ka'
-            ? 'მიხარია, რომ აქ ხარ — დავიწყოთ იმით, რაც შენთვის მართლა მნიშვნელოვანია.'
-            : "I’m glad you’re here — let’s start with what would genuinely matter to you."
+            ? 'მიხარია, რომ აქ ხარ — ჯერ ერთი სწრაფი კითხვა.'
+            : 'I’m glad you’re here — one quick question first.'
           : locale === 'ka'
             ? 'გასაგებია — ეს უკვე კარგ მიმართულებას მაძლევს.'
             : 'Got it — that already gives me a useful direction.',
@@ -407,6 +409,20 @@ export async function POST(request: NextRequest) {
   }
 
   const { locale, answers } = parsed;
+
+  // Question one is always the age band — fixed, so it costs no AI call.
+  if (answers.length === 0) {
+    const turn = fallbackTurn(answers, locale);
+    return NextResponse.json({
+      ...turn,
+      assistantMessage: {
+        role: 'assistant',
+        content: assistantContent(turn, turn.question ?? null),
+        at: new Date().toISOString(),
+      },
+    });
+  }
+
   const supabase = await createClient();
   const courses = await loadCatalog(supabase, locale);
   let turn: AiTurn;

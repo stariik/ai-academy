@@ -66,8 +66,24 @@ export type OnboardingProfileSignals = {
   verbatimQuote: string;
 };
 
+// Index 0 is the age band for both locales: the API serves it without an AI
+// call, so it is question one whether or not the model is reachable.
 const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
   en: [
+    {
+      id: 'age_band',
+      text: 'How old are you?',
+      helper: 'It helps me pitch examples and pace at the right level.',
+      kind: 'single',
+      options: [
+        { id: 'under_18', label: 'Under 18' },
+        { id: '18_24', label: '18–24' },
+        { id: '25_34', label: '25–34' },
+        { id: '35_44', label: '35–44' },
+        { id: '45_54', label: '45–54' },
+        { id: '55_plus', label: '55+' },
+      ],
+    },
     {
       id: 'progress_goal',
       text: 'What kind of progress would feel most valuable to you right now?',
@@ -151,6 +167,20 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     },
   ],
   ka: [
+    {
+      id: 'age_band',
+      text: 'რამდენი წლის ხარ?',
+      helper: 'ასაკი დამეხმარება მაგალითებისა და ტემპის მორგებაში.',
+      kind: 'single',
+      options: [
+        { id: 'under_18', label: '18-მდე' },
+        { id: '18_24', label: '18–24' },
+        { id: '25_34', label: '25–34' },
+        { id: '35_44', label: '35–44' },
+        { id: '45_54', label: '45–54' },
+        { id: '55_plus', label: '55+' },
+      ],
+    },
     {
       id: 'progress_goal',
       text: 'ამ ეტაპზე როგორი პროგრესი იქნებოდა შენთვის ყველაზე ღირებული?',
@@ -284,13 +314,13 @@ export function buildFallbackProfile(
   locale: OnboardingLocale,
 ): OnboardingProfileSignals {
   // Position fallbacks also support a partially AI-generated interview whose
-  // question IDs differ from the guided safety-net IDs.
-  const goal = answerFor(answers, 'progress_goal') ?? answers[0];
-  const outcome = answerFor(answers, 'success_picture') ?? answers[1];
-  const experience = answerFor(answers, 'experience_level') ?? answers[2];
-  const style = answerFor(answers, 'learning_style') ?? answers[3];
-  const commitment = answerFor(answers, 'commitment') ?? answers[4];
-  const barriers = answerFor(answers, 'barriers') ?? answers[5];
+  // question IDs differ from the guided safety-net IDs. Index 0 is always age.
+  const goal = answerFor(answers, 'progress_goal') ?? answers[1];
+  const outcome = answerFor(answers, 'success_picture') ?? answers[2];
+  const experience = answerFor(answers, 'experience_level') ?? answers[3];
+  const style = answerFor(answers, 'learning_style') ?? answers[4];
+  const commitment = answerFor(answers, 'commitment') ?? answers[5];
+  const barriers = answerFor(answers, 'barriers') ?? answers[6];
   const interests = goal?.selectedLabels.length
     ? goal.selectedLabels
     : [answerValue(goal)].filter(Boolean);

@@ -183,11 +183,8 @@ export type Dict = {
     pathPhaseLabel: string;
     pathNextUp: string;
     pathFoundationsTitle: string;
-    pathFoundationsTagline: string;
     pathPracticeTitle: string;
-    pathPracticeTagline: string;
     pathProjectTitle: string;
-    pathProjectTagline: string;
     pathFinishTitle: string;
     pathFinishDesc: string;
     relatedEyebrowContinue: string;
@@ -422,6 +419,9 @@ export type Dict = {
 
   contact: {
     heroTitle: string;
+    chipQuickReply: string;
+    chipAlwaysOn: string;
+    chipSupport: string;
     formTitle: string;
     formSubtitle: string;
     fieldName: string;
@@ -432,7 +432,6 @@ export type Dict = {
     fieldSubjectPlaceholder: string;
     fieldMessage: string;
     fieldMessagePlaceholder: string;
-    formNote: string;
     send: string;
     sending: string;
     successTitle: string;

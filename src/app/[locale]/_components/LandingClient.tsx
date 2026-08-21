@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Walle } from '@/components/walle/Walle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,7 @@ import {
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import type { AuthUser } from '@/lib/auth';
+import { FREE_COURSE_PATH } from '@/lib/v2/routes';
 import { signOutAction } from '../(auth)/actions';
 import { CatalogSection } from './CatalogSection';
 import Link from 'next/link';
@@ -305,14 +306,6 @@ function toneFromString(s: string): Tone {
 
 export function LanguageSwitcher({ full = false }: { full?: boolean }) {
   const { locale } = useV2Locale();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const switchTo = (target: Locale) => {
-    if (target === locale) return;
-    const newPath = pathname.replace(/^\/(ka|en)(?=\/|$)/, `/${target}`);
-    router.push(newPath);
-  };
 
   return (
     <div
@@ -327,7 +320,8 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
         <button
           key={l}
           type="button"
-          onClick={() => switchTo(l)}
+          disabled
+          aria-disabled="true"
           aria-pressed={locale === l}
           className={cn(
             'h-full transition-colors',
@@ -528,7 +522,7 @@ function useHeroWalleSize() {
 }
 
 function Hero() {
-  const { dict } = useV2Locale();
+  const { dict, href } = useV2Locale();
   const walleSize = useHeroWalleSize();
 
   return (
@@ -605,10 +599,9 @@ function Hero() {
               {dict.hero.ctaPrimary}
               <span aria-hidden>→</span>
             </a>
-            {/* Jumps to the CTA banner at the foot of the page — the free
-                lesson pitch this button is promising. */}
+            {/* The free-lesson CTA opens the designated introductory course. */}
             <a
-              href="#start"
+              href={href(FREE_COURSE_PATH)}
               className="group inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
             >
               <span
@@ -663,7 +656,7 @@ function Hero() {
   );
 }
 
-function FloatingChip({
+export function FloatingChip({
   children,
   className,
   delay,
@@ -735,7 +728,7 @@ export function CtaBanner() {
               <div className="mt-5 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
                 {/* was href="#", which went nowhere */}
                 <a
-                  href={href('register')}
+                  href={href(FREE_COURSE_PATH)}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                 >
                   {dict.ctaBanner.ctaPrimary}
@@ -820,19 +813,12 @@ export function Footer({ categories }: { categories: Category[] }) {
 
 function FooterLocaleSwitch() {
   const { locale, dict } = useV2Locale();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const go = (target: Locale) => {
-    if (target === locale) return;
-    const newPath = pathname.replace(/^\/(ka|en)(?=\/|$)/, `/${target}`);
-    router.push(newPath);
-  };
 
   return (
     <div className="flex items-center gap-1.5">
       <button
-        onClick={() => go('ka')}
+        disabled
+        aria-disabled="true"
         className={cn(
           'transition-colors',
           locale === 'ka'
@@ -844,7 +830,8 @@ function FooterLocaleSwitch() {
       </button>
       <span className="opacity-50">/</span>
       <button
-        onClick={() => go('en')}
+        disabled
+        aria-disabled="true"
         className={cn(
           'transition-colors',
           locale === 'en'
