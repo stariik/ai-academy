@@ -135,6 +135,8 @@ only to pitch tone, examples and pacing, and never comment on their age back to 
 their desired outcome or when their own words matter. Multi-select max is 3.
 - Your first question — the second one overall — maps their interests: make it "multi",
 minSelections 1, maxSelections 3, with 5–6 options. Nobody wants exactly one thing.
+- Make the fourth question overall "multi" with minSelections 1 and maxSelections 3 when it has
+options. Keep the answer options focused and unchanged by this selection rule.
 - The panel already displays the selection limit and a Continue button. Never write "pick up to 3",
 "choose two", or "select all that apply" into the question text — it wastes the line.
 - After that prefer "single": a single-choice question submits on tap, so it costs one action.
@@ -254,6 +256,18 @@ function normalizeQuestion(
   // wants exactly one thing. Always multi, always up to three, then continue —
   // the model keeps proposing "single" here, so don't leave it to the prompt.
   if (answers.length === 1 && next.kind !== 'text') {
+    return {
+      ...next,
+      kind: 'multi',
+      options: next.options.slice(0, 6),
+      minSelections: 1,
+      maxSelections: 3,
+    };
+  }
+
+  // The fourth question is intentionally broader: keep the proposed options,
+  // but let visitors choose as many as three of them.
+  if (answers.length === 3 && next.kind !== 'text') {
     return {
       ...next,
       kind: 'multi',

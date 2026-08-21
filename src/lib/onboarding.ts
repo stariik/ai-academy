@@ -113,7 +113,9 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
       id: 'experience_level',
       text: 'Where are you starting from today?',
       helper: 'No judgment — I’ll use this to choose the right pace and vocabulary.',
-      kind: 'single',
+      kind: 'multi',
+      minSelections: 1,
+      maxSelections: 3,
       options: [
         { id: 'new', label: 'Brand new', description: 'I’m curious but haven’t really used AI', emoji: '🌱' },
         { id: 'exploring', label: 'I’ve experimented', description: 'A few chats or tools, nothing consistent yet', emoji: '👀' },
@@ -210,7 +212,9 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
       id: 'experience_level',
       text: 'დღეს რა ეტაპიდან იწყებ?',
       helper: 'შეფასება არ არსებობს — პასუხით ტემპსა და ახსნის ენას მოგარგებ.',
-      kind: 'single',
+      kind: 'multi',
+      minSelections: 1,
+      maxSelections: 3,
       options: [
         { id: 'new', label: 'სრულიად ახალი ვარ', description: 'მაინტერესებს, მაგრამ AI თითქმის არ გამომიყენებია', emoji: '🌱' },
         { id: 'exploring', label: 'ცოტა გამომიცდია', description: 'რამდენიმე ჩატი ან ხელსაწყო, ჯერ სისტემის გარეშე', emoji: '👀' },

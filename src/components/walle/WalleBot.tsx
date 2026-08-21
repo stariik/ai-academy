@@ -28,10 +28,11 @@ import {
 import { Walle, type WalleState } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 import { isLocale, type Locale } from '@/lib/v2/i18n';
-import type {
-  OnboardingAnswer,
-  OnboardingQuestion,
-  OnboardingRoadmapStep,
+import {
+  getFallbackQuestion,
+  type OnboardingAnswer,
+  type OnboardingQuestion,
+  type OnboardingRoadmapStep,
 } from '@/lib/onboarding';
 
 type Phase = 'intro' | 'interview' | 'complete';
@@ -61,7 +62,6 @@ const COPY = {
     pitch: 'Tell me what you want to get better at, and I’ll turn it into a plan — which course to start with, and what comes next.',
     start: 'Build my plan',
     answered: (n: number) => (n === 1 ? '1 answer so far' : `${n} answers so far`),
-    pickHint: (max: number) => `pick up to ${max}`,
     ownWords: 'Type my own answer',
     placeholder: 'In your own words…',
     sendLabel: 'Send answer',
@@ -85,7 +85,6 @@ const COPY = {
     pitch: 'მითხარი, რა გაინტერესებს და მე დაგეხმარები სასწავლო გეგმის შედგენაში',
     start: 'მომწერე რა გაინტერესებს',
     answered: (n: number) => `${n} პასუხი`,
-    pickHint: (max: number) => `აირჩიე მაქსიმუმ ${max}`,
     ownWords: 'ჩემი პასუხის აკრეფა',
     placeholder: 'შენი სიტყვებით…',
     sendLabel: 'პასუხის გაგზავნა',
@@ -117,7 +116,6 @@ export default function WalleBot() {
   const [open, setOpen] = React.useState(false);
   const [phase, setPhase] = React.useState<Phase>('intro');
   const [answers, setAnswers] = React.useState<OnboardingAnswer[]>([]);
-  const [ack, setAck] = React.useState('');
   const [closing, setClosing] = React.useState('');
   const [question, setQuestion] = React.useState<OnboardingQuestion | null>(null);
   const [roadmap, setRoadmap] = React.useState<OnboardingRoadmapStep[]>([]);
@@ -178,25 +176,11 @@ export default function WalleBot() {
     [locale],
   );
 
-  const start = async () => {
+  const start = () => {
     if (thinking) return;
-    setThinking(true);
     setError('');
     setPhase('interview');
-    try {
-      const result = await runTurn([]);
-      setAck(result.acknowledgement || '');
-      setQuestion(result.question);
-      if (result.complete) {
-        setRoadmap(result.roadmap ?? []);
-        setClosing(result.closing || '');
-        setPhase('complete');
-      }
-    } catch {
-      setError(T.error);
-    } finally {
-      setThinking(false);
-    }
+    setQuestion(getFallbackQuestion(0, locale));
   };
 
   const send = async (optionIds: string[], text: string) => {
@@ -227,11 +211,19 @@ export default function WalleBot() {
     setSelected([]);
     setFreeText('');
     setWriting(false);
-    setThinking(true);
     setError('');
+
+    const nextQuestion = getFallbackQuestion(nextAnswers.length, locale);
+    if (nextQuestion) {
+      setQuestion(nextQuestion);
+      return;
+    }
+
+    // Questions are instant and deterministic; only the final personalized
+    // roadmap needs a server round-trip.
+    setThinking(true);
     try {
       const result = await runTurn(nextAnswers);
-      setAck(result.acknowledgement || '');
       if (result.complete) {
         setRoadmap(result.roadmap ?? []);
         setClosing(result.closing || '');
@@ -288,7 +280,6 @@ export default function WalleBot() {
     window.clearTimeout(advanceRef.current);
     setPhase('intro');
     setAnswers([]);
-    setAck('');
     setClosing('');
     setQuestion(null);
     setRoadmap([]);
@@ -451,22 +442,9 @@ export default function WalleBot() {
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.22 }}
                     >
-                      {ack && (
-                        <p className="text-[11.5px] leading-relaxed text-muted-foreground">{ack}</p>
-                      )}
-                      <h3 className="mt-1.5 text-[15px] font-bold leading-snug text-foreground">
+                      <h3 className="text-[15px] font-bold leading-snug text-foreground">
                         {question.text}
                       </h3>
-                      {question.helper && (
-                        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                          {question.helper}
-                        </p>
-                      )}
-                      {question.kind === 'multi' && (
-                        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-pulse">
-                          {T.pickHint(question.maxSelections ?? 2)}
-                        </p>
-                      )}
                       {question.kind !== 'text' && (
                         <Options question={question} selected={selected} onPick={pick} />
                       )}
