@@ -30,6 +30,7 @@ export default function LandingClient({
   locale,
   authUser,
   enrolledCourseIds = [],
+  recommendedCourseIds = [],
 }: {
   categories: Category[];
   courses: Course[];
@@ -37,7 +38,32 @@ export default function LandingClient({
   locale: Locale;
   authUser: AuthUser | null;
   enrolledCourseIds?: string[];
+  recommendedCourseIds?: string[];
 }) {
+  // Reorder courses to show recommended courses first
+  const reorderedCourses = React.useMemo(() => {
+    if (!recommendedCourseIds || recommendedCourseIds.length === 0) return courses;
+
+    // Separate recommended and non-recommended courses
+    const recommended: Course[] = [];
+    const other: Course[] = [];
+
+    courses.forEach(course => {
+      if (recommendedCourseIds.includes(course.id)) {
+        recommended.push(course);
+      } else {
+        other.push(course);
+      }
+    });
+
+    // Sort recommended courses by their position in recommendedCourseIds
+    recommended.sort((a, b) => {
+      return recommendedCourseIds.indexOf(a.id) - recommendedCourseIds.indexOf(b.id);
+    });
+
+    return [...recommended, ...other];
+  }, [courses, recommendedCourseIds]);
+
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
       <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -46,9 +72,10 @@ export default function LandingClient({
           <Hero />
           <CatalogSection
             categories={categories}
-            courses={courses}
+            courses={reorderedCourses}
             authed={Boolean(authUser)}
             enrolledCourseIds={enrolledCourseIds}
+            recommendedCourseIds={recommendedCourseIds}
           />
           <CtaBanner />
         </main>
@@ -198,24 +225,31 @@ export function Navbar({
                 onClick={() => setMobileOpen(true)}
                 aria-label={dict.navbar.menu}
                 aria-expanded={mobileOpen}
-                className="grid h-10 w-10 place-items-center rounded-xl text-foreground hover:bg-muted active:bg-muted transition-colors"
+                className="group grid h-10 w-10 place-items-center rounded-xl text-foreground hover:bg-muted active:bg-muted transition-colors"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                {/* Three bars that squeeze together on press — the sheet's own
+                    close button takes over once it is up. */}
+                <span className="relative block h-[14px] w-[22px]" aria-hidden>
+                  {[0, 6, 12].map((top) => (
+                    <span
+                      key={top}
+                      className="absolute left-0 block h-[2px] w-full rounded-full bg-current transition-transform duration-200 ease-out group-active:scale-x-90 motion-reduce:transition-none"
+                      style={{ top }}
+                    />
+                  ))}
+                </span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {mobileOpen && (
-        <MobileMenu
-          links={NAV_LINKS}
-          authUser={authUser}
-          onClose={() => setMobileOpen(false)}
-        />
-      )}
+      <MobileMenu
+        open={mobileOpen}
+        links={NAV_LINKS}
+        authUser={authUser}
+        onClose={() => setMobileOpen(false)}
+      />
     </>
   );
 }
@@ -306,6 +340,25 @@ function toneFromString(s: string): Tone {
 
 export function LanguageSwitcher({ full = false }: { full?: boolean }) {
   const { locale } = useV2Locale();
+  const pathname = usePathname();
+
+  const switchLocale = (newLocale: 'ka' | 'en') => {
+    if (newLocale === locale) return;
+
+    // Get current path segments
+    const segments = pathname.split('/').filter(Boolean);
+
+    // Replace the first segment (locale) or add it if missing
+    if (segments.length > 0 && (segments[0] === 'ka' || segments[0] === 'en')) {
+      segments[0] = newLocale;
+    } else {
+      segments.unshift(newLocale);
+    }
+
+    // Navigate to the new locale path
+    const newPath = '/' + segments.join('/');
+    window.location.assign(newPath);
+  };
 
   return (
     <div
@@ -320,15 +373,14 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
         <button
           key={l}
           type="button"
-          disabled
-          aria-disabled="true"
+          onClick={() => switchLocale(l)}
           aria-pressed={locale === l}
           className={cn(
-            'h-full transition-colors',
+            'h-full transition-colors cursor-pointer',
             full ? 'px-4' : 'px-2.5',
             locale === l
               ? 'bg-pulse text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground',
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
           )}
         >
           {l.toUpperCase()}
@@ -338,20 +390,54 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
   );
 }
 
+/** Duration of the sheet's exit transition, in ms. Drives both the unmount
+    timer and the inline `transitionDuration` below, so they cannot drift. */
+const MENU_EXIT_MS = 220;
+const MENU_ENTER_MS = 340;
+/** Gentle decelerate on the way in, gentle accelerate on the way out. */
+const EASE_ENTER = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+const EASE_EXIT = 'cubic-bezier(0.4, 0, 0.6, 1)';
+
 function MobileMenu({
+  open,
   links,
   authUser,
   onClose,
 }: {
+  open: boolean;
   links: { label: string; href: string; active?: boolean }[];
   authUser: AuthUser | null;
   onClose: () => void;
 }) {
   const { dict, locale, href } = useV2Locale();
   const closeRef = React.useRef<HTMLButtonElement>(null);
+  // `mounted` outlives `open` by one transition so the sheet can animate out;
+  // `shown` flips a frame after mount so the enter transition has a start state.
+  const [mounted, setMounted] = React.useState(open);
+  const [shown, setShown] = React.useState(false);
 
   React.useEffect(() => {
+    if (open) {
+      setMounted(true);
+      return;
+    }
+    setShown(false);
+    const timer = window.setTimeout(() => setMounted(false), MENU_EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!mounted || !open) return;
+    const frame = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(frame);
+  }, [mounted, open]);
+
+  React.useEffect(() => {
+    if (!mounted) return;
     document.body.style.overflow = 'hidden';
+    // Tells the support chat (mounted in the locale layout, outside this tree)
+    // to step aside while the sheet owns the screen.
+    document.body.dataset.menuOpen = 'true';
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -359,18 +445,54 @@ function MobileMenu({
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = '';
+      delete document.body.dataset.menuOpen;
       window.removeEventListener('keydown', onKey);
     };
-  }, [onClose]);
+  }, [mounted, onClose]);
+
+  if (!mounted) return null;
+
+  // Shared motion for everything inside the sheet: staggered on the way in,
+  // moving together on the way out.
+  const contentMotion = (index: number): React.CSSProperties => ({
+    transitionProperty: 'opacity, transform',
+    transitionDuration: shown ? '380ms' : `${MENU_EXIT_MS}ms`,
+    transitionTimingFunction: shown ? EASE_ENTER : EASE_EXIT,
+    transitionDelay: shown ? `${40 + index * 55}ms` : '0ms',
+  });
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={dict.navbar.menu}
-      className="fixed inset-0 z-50 bg-background/98 backdrop-blur-md md:hidden flex flex-col"
+      className={cn(
+        'fixed inset-0 z-50 md:hidden flex flex-col',
+        // The backdrop blur lives on a child layer (below) rather than here:
+        // fading a blurred element re-rasterizes the blur every frame, which is
+        // what makes an overlay like this stutter on a phone.
+        'will-change-[opacity] motion-reduce:!transition-none',
+        shown ? 'opacity-100' : 'opacity-0',
+      )}
+      style={{
+        transitionProperty: 'opacity',
+        transitionDuration: `${shown ? MENU_ENTER_MS : MENU_EXIT_MS}ms`,
+        transitionTimingFunction: shown ? EASE_ENTER : EASE_EXIT,
+      }}
     >
-      <div className="flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border">
+      {/* Static blurred backdrop — never transitions, so it rasterizes once. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10 bg-background/98 backdrop-blur-md"
+      />
+      <div
+        className={cn(
+          'flex items-center justify-between px-4 sm:px-6 h-14 sm:h-16 border-b border-border',
+          'motion-reduce:!transform-none motion-reduce:!opacity-100',
+          shown ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1',
+        )}
+        style={contentMotion(0)}
+      >
         <Link href={href()} className="flex items-center gap-2" onClick={onClose}>
           <Walle size={32} state="idle" noShadow />
           <span className="text-sm sm:text-base font-bold tracking-tight">
@@ -390,7 +512,7 @@ function MobileMenu({
       </div>
 
       <nav className="flex-1 flex flex-col px-5 sm:px-6 py-6 gap-1 overflow-y-auto">
-        {links.map((l) => (
+        {links.map((l, i) => (
           <Link
             key={l.label}
             href={l.href}
@@ -398,9 +520,14 @@ function MobileMenu({
             aria-current={l.active ? 'true' : undefined}
             className={cn(
               'group flex items-center justify-between py-4 border-b border-border text-2xl font-bold transition-colors',
+              // Links ease up in sequence on the way in. On the way out they
+              // travel together with the sheet — a reversed stagger reads as
+              // hesitation, not polish.
+              'motion-reduce:!transform-none motion-reduce:!opacity-100',
+              shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
               l.active ? 'text-pulse' : 'hover:text-pulse',
             )}
-            style={{ fontFamily: 'var(--font-display)' }}
+            style={{ fontFamily: 'var(--font-display)', ...contentMotion(i + 1) }}
           >
             <span className="flex items-center gap-2.5">
               {l.active && (
@@ -417,7 +544,14 @@ function MobileMenu({
           </Link>
         ))}
 
-        <div className="mt-8 space-y-3">
+        <div
+          className={cn(
+            'mt-8 space-y-3',
+            'motion-reduce:!transform-none motion-reduce:!opacity-100',
+            shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
+          )}
+          style={contentMotion(links.length + 1)}
+        >
           {authUser ? (
             <>
               {/* Identity row — who you're signed in as, and the way through
@@ -480,7 +614,14 @@ function MobileMenu({
         </div>
 
         {/* Preferences strip — language and theme both live here only. */}
-        <div className="mt-auto pt-6 space-y-3 border-t border-border">
+        <div
+          className={cn(
+            'mt-auto pt-6 space-y-3 border-t border-border',
+            'motion-reduce:!transform-none motion-reduce:!opacity-100',
+            shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
+          )}
+          style={contentMotion(links.length + 2)}
+        >
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground font-bold">
               {dict.navbar.language}

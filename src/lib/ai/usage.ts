@@ -28,7 +28,8 @@ export type AiFeature =
   | 'metadata_generation'
   | 'onboarding_interview'
   | 'ui_translation'
-  | 'category_image';
+  | 'category_image'
+  | 'support_chat';
 
 /** Optional request context passed down from routes into AI helpers. */
 export type UsageMeta = {

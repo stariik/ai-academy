@@ -78,6 +78,10 @@ type BundleStore = {
 const BundleCtx = React.createContext<BundleStore | null>(null);
 const useBundle = () => React.useContext(BundleCtx);
 
+/* Recommendations context — lets course cards know if they're recommended */
+const RecommendationsCtx = React.createContext<string[]>([]);
+const useRecommendations = () => React.useContext(RecommendationsCtx);
+
 /* ============================================================
    Section shell
    ============================================================ */
@@ -87,11 +91,13 @@ export function CatalogSection({
   courses,
   authed = false,
   enrolledCourseIds = [],
+  recommendedCourseIds = [],
 }: {
   categories: Category[];
   courses: Course[];
   authed?: boolean;
   enrolledCourseIds?: string[];
+  recommendedCourseIds?: string[];
 }) {
   const { dict, href } = useV2Locale();
   const withCourses = categories.filter((c) => c.courses > 0);
@@ -215,6 +221,7 @@ export function CatalogSection({
 
   return (
     <BundleCtx.Provider value={store}>
+    <RecommendationsCtx.Provider value={recommendedCourseIds}>
     <section id="categories" className="pt-6 pb-12 sm:pt-12 sm:pb-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="space-y-3 max-w-3xl">
@@ -264,6 +271,7 @@ export function CatalogSection({
         onConfirm={grantBundle}
         onClose={() => setActiveBundle(null)}
       />
+    </RecommendationsCtx.Provider>
     </BundleCtx.Provider>
   );
 }
@@ -643,7 +651,7 @@ function CategorySlider({ categories }: { categories: Category[] }) {
       heading={
         <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-pulse glow-pulse" aria-hidden />
-          {dict.navbar.categories}
+          {dict.slider.recommendedCategories}
           <span className="tabular-nums opacity-60">· {pad(categories.length)}</span>
         </span>
       }
@@ -995,9 +1003,12 @@ function CourseCard({
   course: Course;
   category: Category;
 }) {
-  const { dict, href } = useV2Locale();
+  const { dict, href, locale } = useV2Locale();
   const t = TONE_CLASSES[c.tone];
   const owned = useBundle()?.isCourseOwned(co.id) ?? false;
+  const recommendedCourseIds = useRecommendations();
+  const isRecommended = recommendedCourseIds.includes(co.id);
+  const recommendedRank = isRecommended ? recommendedCourseIds.indexOf(co.id) + 1 : 0;
   const isFree = !(typeof co.price === 'number' && co.price > 0);
   // Admin-set "was" price → struck retail + discount %, mirroring the course
   // detail page. Only shown when a retail price genuinely exceeds the current one.
@@ -1038,9 +1049,23 @@ function CourseCard({
         aria-hidden
       />
 
-      {/* Discount ribbon. Absolute, so a full-price card starts straight at
+      {/* Discount ribbon or Recommended badge. Absolute, so a full-price card starts straight at
           the title instead of reserving an empty row for it. */}
-      {!owned && discount > 0 && (
+      {!owned && isRecommended && (
+        <span
+          className={cn(
+            'absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold text-primary-foreground shadow-sm',
+            'bg-gradient-to-r from-pulse via-pulse-soft to-pulse',
+            'animate-pulse-slow'
+          )}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 17.3 6.2 21l1.5-6.6L2 9.2l6.8-.6L12 2l3.2 6.6 6.8.6-5.7 5.2L17.8 21z" />
+          </svg>
+          {locale === 'ka' ? 'შენთვის' : 'For You'}
+        </span>
+      )}
+      {!owned && !isRecommended && discount > 0 && (
         <span
           className={cn(
             'absolute right-3 top-3 z-10 inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold tabular-nums text-primary-foreground shadow-sm',
@@ -1051,6 +1076,20 @@ function CourseCard({
         </span>
       )}
 
+      {/* Recommended badge above title */}
+      {isRecommended && (
+        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-pulse">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 17.3 6.2 21l1.5-6.6L2 9.2l6.8-.6L12 2l3.2 6.6 6.8.6-5.7 5.2L17.8 21z" />
+          </svg>
+          <span>
+            {locale === 'ka'
+              ? `რეკომენდებული შენთვის ${recommendedRank > 1 ? `#${recommendedRank}` : ''}`
+              : `Recommended for You ${recommendedRank > 1 ? `#${recommendedRank}` : ''}`}
+          </span>
+        </div>
+      )}
+
       {/* Title — the anchor of the card, and now shown in full: no clamp, so
           a long name never ends in an ellipsis. The description came out to
           pay for the extra lines. The category icon chip that used to sit
@@ -1059,8 +1098,8 @@ function CourseCard({
       <h4
         className={cn(
           'relative text-[17px] sm:text-[18px] font-bold leading-snug tracking-tight',
-          // Keeps the text clear of the discount ribbon in the corner.
-          !owned && discount > 0 && 'pr-12',
+          // Keeps the text clear of the discount ribbon or recommended badge in the corner.
+          !owned && (discount > 0 || isRecommended) && 'pr-12',
         )}
       >
         {co.title}

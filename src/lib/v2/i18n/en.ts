@@ -146,6 +146,7 @@ export const en: Dict = {
     next: 'Next',
     ariaCategory: 'Category slider',
     ariaCourses: 'Course slider',
+    recommendedCategories: 'Recommended for You',
   },
 
   level: {

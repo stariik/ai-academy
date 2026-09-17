@@ -101,12 +101,23 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   const displayName = String(formData.get('displayName') ?? '').trim();
   const locale = resolveLocale(formData.get('locale') as string | null);
   const redeem = (formData.get('redeem') as string | null) ?? null;
+  const onboardingRaw = (formData.get('onboarding') as string | null) ?? null;
 
   if (!email || !password || !displayName) {
     return { error: 'EMPTY_FIELDS' };
   }
   if (password.length < 8) {
     return { error: 'PASSWORD_TOO_SHORT' };
+  }
+
+  // Parse onboarding answers if provided
+  let onboardingAnswers = null;
+  if (onboardingRaw) {
+    try {
+      onboardingAnswers = JSON.parse(onboardingRaw);
+    } catch {
+      // Invalid JSON, ignore onboarding data
+    }
   }
 
   const supabase = await createClient();
@@ -116,6 +127,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     options: {
       data: {
         display_name: displayName,
+        onboarding: onboardingAnswers,
       },
     },
   });

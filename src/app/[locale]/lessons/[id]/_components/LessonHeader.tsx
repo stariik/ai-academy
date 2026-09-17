@@ -7,6 +7,7 @@ import { Walle } from '@/components/walle/Walle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { useV2Locale } from '@/lib/v2/i18n/context';
+import { MATERIAL_STRINGS, type MaterialLocale } from './materialStrings';
 
 export function LessonHeader({
   title,
@@ -17,6 +18,7 @@ export function LessonHeader({
   contentVisible,
   onToggleContent,
   onOpenSheet,
+  teacherLocale,
 }: {
   title: string;
   courseId?: string;
@@ -26,8 +28,12 @@ export function LessonHeader({
   contentVisible: boolean;
   onToggleContent: () => void;
   onOpenSheet: () => void;
+  /** Drives the content-toggle labels — they name the material panel, whose
+   *  language the in-lesson KA/EN toggle controls, not the site locale. */
+  teacherLocale: MaterialLocale;
 }) {
   const { href } = useV2Locale();
+  const t = MATERIAL_STRINGS[teacherLocale];
   const pct = totalPages === 0 ? 0 : Math.round((completed / totalPages) * 100);
   const backHref = courseId ? href(`courses/${courseId}`) : href();
 
@@ -71,7 +77,7 @@ export function LessonHeader({
         <button
           type="button"
           onClick={onOpenSheet}
-          aria-label="გახსენი კონტენტი"
+          aria-label={t.contentOpen}
           className="lg:hidden shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted transition-colors"
         >
           <BookOpen className="w-4 h-4" />
@@ -82,7 +88,7 @@ export function LessonHeader({
           type="button"
           onClick={onToggleContent}
           aria-pressed={contentVisible}
-          aria-label={contentVisible ? 'დახურე კონტენტი' : 'გახსენი კონტენტი'}
+          aria-label={contentVisible ? t.contentClose : t.contentOpen}
           className={cn(
             'hidden lg:inline-flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-all',
             contentVisible
@@ -95,7 +101,7 @@ export function LessonHeader({
           ) : (
             <PanelRightOpen className="w-3.5 h-3.5" />
           )}
-          <span>კონტენტი</span>
+          <span>{t.contentLabel}</span>
         </button>
 
         <div className="hidden sm:block shrink-0">

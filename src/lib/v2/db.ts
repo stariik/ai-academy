@@ -8,7 +8,7 @@
 
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
-import { createClient as createAnonClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import {
   getAllCourses,
   getAllLessonsLite,
@@ -71,6 +71,9 @@ function buildCategory(
   categoryMeta: Record<string, CategoryImage>,
 ): Category {
   const visual = CATEGORY_VISUALS[nameKa];
+  if (!visual) {
+    throw new Error(`Missing CATEGORY_VISUALS entry for: ${nameKa}`);
+  }
   const display = getCategoryDisplay(nameKa, locale);
   const meta = categoryMeta[visual.slug];
   const totalLessons = coursesInCat.reduce(
@@ -132,10 +135,14 @@ function buildCourse(
 // revalidateTag('catalog') to bust it immediately (not wired yet).
 const loadCatalog = unstable_cache(
   async () => {
-    const supabase = createAnonClient(
+    const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
     );
     const [courses, lessons, categoryMeta] = await Promise.all([
       getAllCourses(supabase),

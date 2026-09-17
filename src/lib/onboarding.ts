@@ -102,14 +102,6 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
       ],
     },
     {
-      id: 'success_picture',
-      text: 'Imagine it’s 30 days from now and learning AI has genuinely paid off. What can you do then that you can’t do today?',
-      helper: 'A real task or small win is more useful than a perfect answer.',
-      kind: 'text',
-      options: [],
-      placeholder: 'For example: “I can create a week of content in one afternoon”…',
-    },
-    {
       id: 'experience_level',
       text: 'Where are you starting from today?',
       helper: 'No judgment — I’ll use this to choose the right pace and vocabulary.',
@@ -185,7 +177,7 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     },
     {
       id: 'progress_goal',
-      text: 'ამ ეტაპზე როგორი პროგრესი იქნებოდა შენთვის ყველაზე ღირებული?',
+      text: 'რა მიზანი გაქვს ამ ეტაპზე?',
       helper: 'აირჩიე მაქსიმუმ სამი — ასე შენთვის სწორ საწყის გზას შევადგენ.',
       kind: 'multi',
       minSelections: 1,
@@ -199,14 +191,6 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
         { id: 'career', label: 'კარიერული წინსვლა', description: 'ახალი უნარი, როლის შეცვლა ან გამორჩევა', emoji: '🚀' },
         { id: 'confidence', label: 'AI-ის თავდაჯერებით გაგება', description: 'მთავარის დანახვა ზედმეტი ხმაურის გარეშე', emoji: '🧭' },
       ],
-    },
-    {
-      id: 'success_picture',
-      text: 'წარმოიდგინე, რომ 30 დღე გავიდა და AI-ის სწავლამ ნამდვილად გაამართლა. რას აკეთებ უკვე ისეთს, რასაც დღეს ვერ აკეთებ?',
-      helper: 'რეალური ამოცანა ან პატარა გამარჯვება იდეალურ პასუხზე ბევრად სასარგებლოა.',
-      kind: 'text',
-      options: [],
-      placeholder: 'მაგალითად: „ერთ კვირის კონტენტს ერთ შუადღეში ვქმნი“…',
     },
     {
       id: 'experience_level',
@@ -239,7 +223,7 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     },
     {
       id: 'commitment',
-      text: 'ჩვეულებრივ კვირაში — არა იდეალურ კვირაში — როგორი ტემპი იქნება რეალისტური?',
+      text: 'როგორი ტემპი იქნება რეალისტური?',
       helper: 'მცირე გეგმა, რომელსაც შეასრულებ, სჯობს დიდ გეგმას, რომელსაც მიატოვებ.',
       kind: 'single',
       options: [
@@ -301,7 +285,9 @@ export function getFallbackQuestion(
   answerCount: number,
   locale: OnboardingLocale,
 ): OnboardingQuestion | null {
-  return FALLBACK_QUESTIONS[locale][answerCount] ?? null;
+  const questions = FALLBACK_QUESTIONS[locale];
+  if (!questions) return null;
+  return questions[answerCount] ?? null;
 }
 
 function answerFor(answers: OnboardingAnswer[], id: string): OnboardingAnswer | undefined {

@@ -116,6 +116,7 @@ export type Dict = {
     next: string;
     ariaCategory: string;
     ariaCourses: string;
+    recommendedCategories: string;
   };
   level: {
     beginner: string;

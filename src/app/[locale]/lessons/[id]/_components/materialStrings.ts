@@ -13,6 +13,11 @@ export type MaterialLocale = 'ka' | 'en';
 export type MaterialStrings = {
   // panel heading — deliberately generic, not the lesson title
   panelTitle: string;
+  // the trigger that opens this panel (mobile FAB + desktop rail toggle)
+  contentLabel: string;
+  contentOpen: string;
+  contentClose: string;
+  contentReady: string;
   // sub-view badges
   subMaterial: string;
   subCheck: string;
@@ -60,6 +65,10 @@ export type MaterialStrings = {
 export const MATERIAL_STRINGS: Record<MaterialLocale, MaterialStrings> = {
   ka: {
     panelTitle: 'განმარტებები',
+    contentLabel: 'კონტენტი',
+    contentOpen: 'გახსენი კონტენტი',
+    contentClose: 'დახურე კონტენტი',
+    contentReady: 'მზად',
     subMaterial: '1 · მასალა',
     subCheck: '2 · შემოწმე',
     bridge: 'გავაგრძელოთ',
@@ -98,6 +107,10 @@ export const MATERIAL_STRINGS: Record<MaterialLocale, MaterialStrings> = {
   },
   en: {
     panelTitle: 'Explanations',
+    contentLabel: 'Content',
+    contentOpen: 'Open content',
+    contentClose: 'Close content',
+    contentReady: 'Ready',
     subMaterial: '1 · Material',
     subCheck: '2 · Check',
     bridge: "Let's continue",
