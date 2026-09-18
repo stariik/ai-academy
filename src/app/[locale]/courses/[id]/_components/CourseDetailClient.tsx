@@ -305,12 +305,15 @@ function CoursePage({
           completedCount={completedCount}
           totalLessons={totalLessons}
           previewHref={previewHref}
+          onEnroll={toggleEnrollment}
+          enrollBusy={busy}
+          onPromoRedeemed={addEnrollmentLocally}
         />
 
-        <section className="px-4 sm:px-6 pb-20 sm:pb-28">
+        <section className="px-4 sm:px-6 pb-16 sm:pb-24">
           <div className="mx-auto max-w-7xl grid gap-10 lg:gap-14 lg:grid-cols-[1fr_360px]">
             {/* MAIN ───────────────────────────────────── */}
-            <div className="min-w-0 space-y-16 sm:space-y-20">
+            <div className="min-w-0 space-y-14 sm:space-y-20">
               <CurriculumSection
                 course={course}
                 category={category}
@@ -333,7 +336,11 @@ function CoursePage({
                 ponytail: plain sticky — on viewports shorter than the card the
                 last block stays below the fold; add max-h/overflow-y-auto here
                 if that turns up. */}
-            <aside id="buy" className="scroll-mt-24 lg:sticky lg:top-20 lg:self-start">
+            {/* Hidden below lg: on mobile the price, CTA and "what's included"
+                already live in the hero buy block, so rendering the rail here
+                too meant scrolling past the whole curriculum to reach a second
+                copy of the same card. */}
+            <aside id="buy-rail" className="hidden lg:block scroll-mt-24 lg:sticky lg:top-20 lg:self-start">
               <PurchaseCard
                 course={course}
                 category={category}
@@ -361,6 +368,10 @@ function CoursePage({
       </main>
 
       <Footer />
+
+      {/* Spacer for the fixed mobile bar, which otherwise sits on top of the
+          footer's last row. */}
+      <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" aria-hidden />
 
       <MobileBottomBar
         course={course}
@@ -390,6 +401,9 @@ function Hero({
   completedCount,
   totalLessons,
   previewHref,
+  onEnroll,
+  enrollBusy,
+  onPromoRedeemed,
 }: {
   course: Course;
   category: Category;
@@ -400,6 +414,9 @@ function Hero({
   completedCount: number;
   totalLessons: number;
   previewHref: string | null;
+  onEnroll: () => void;
+  enrollBusy: boolean;
+  onPromoRedeemed: (courseId: string) => void;
 }) {
   const { dict, href } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -413,17 +430,17 @@ function Hero({
   }, []);
 
   return (
-    <section className="relative pt-10 pb-12 sm:pt-14 sm:pb-16 lg:pt-20 lg:pb-20 px-4 sm:px-6">
+    <section className="relative pt-6 pb-10 sm:pt-14 sm:pb-16 lg:pt-20 lg:pb-20 px-4 sm:px-6">
       {/* Backdrop */}
       <div className="absolute inset-0 -z-10 bg-starfield opacity-40" aria-hidden />
       <div
         className={cn(
-          'absolute top-1/4 -left-20 w-[28rem] h-[28rem] rounded-full blur-3xl -z-10 opacity-50',
+          'absolute top-1/4 -left-24 h-72 w-72 sm:-left-20 sm:h-[28rem] sm:w-[28rem] rounded-full blur-3xl -z-10 opacity-50',
           t.gradient,
         )}
         aria-hidden
       />
-      <div className="absolute bottom-0 right-1/4 w-72 h-72 rounded-full bg-pulse/8 blur-3xl -z-10" aria-hidden />
+      <div className="absolute bottom-0 right-1/4 h-48 w-48 sm:h-72 sm:w-72 rounded-full bg-pulse/8 blur-3xl -z-10" aria-hidden />
 
       <div className="mx-auto max-w-7xl">
         {/* Breadcrumb chip */}
@@ -431,7 +448,7 @@ function Hero({
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="mb-6 sm:mb-8"
+          className="mb-4 sm:mb-8"
         >
           <Link
             href={`${href()}#cat-${category.id}`}
@@ -478,7 +495,7 @@ function Hero({
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: 'easeOut' }}
-            className="order-2 lg:order-1 space-y-5 sm:space-y-6"
+            className="order-2 lg:order-1 space-y-4 sm:space-y-6"
           >
             {isEnrolled && (
               <div className="flex flex-wrap items-center gap-2">
@@ -489,35 +506,29 @@ function Hero({
               </div>
             )}
 
-            <h1 className="caps text-[24px] min-[380px]:text-[27px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.12] tracking-tight">
-              <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
-                {course.title}
-              </span>
-            </h1>
+            {/* Mobile: title and the compact Walle share a row, so the robot
+                stays part of the identity without pushing the title — and the
+                price — below the fold on a 360px screen. */}
+            <div className="flex items-start gap-3 sm:block">
+              <h1 className="caps min-w-0 flex-1 text-[23px] min-[380px]:text-[26px] sm:text-[36px] lg:text-[42px] xl:text-5xl font-bold leading-[1.15] tracking-tight text-balance">
+                <span className="bg-gradient-to-r from-pulse via-pulse-soft to-pulse bg-clip-text text-transparent">
+                  {course.title}
+                </span>
+              </h1>
+              <div className="relative shrink-0 sm:hidden" aria-hidden>
+                <div className={cn('absolute inset-0 -m-3 rounded-full blur-xl opacity-60', t.iconBg)} />
+                <Walle size={72} state={walleState} />
+              </div>
+            </div>
 
-            <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
+            <p className="text-[15px] sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
               {detail.longDescription}
             </p>
 
             {/* Stats strip */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-1">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pt-0.5">
               <Stat icon={<BookOpen className="w-4 h-4" />} label={`${course.lessons} ${dict.courseDetail.lessonsLabel}`} />
               <Stat icon={<Clock className="w-4 h-4" />} label={`~${course.hours} ${dict.courseDetail.hoursLabel}`} />
-            </div>
-
-            {/* Hero CTA — visible on mobile (purchase rail handles desktop) */}
-            <div className="lg:hidden pt-2 flex flex-wrap gap-3">
-              {isEnrolled ? (
-                <a href="#curriculum" className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
-                  {dict.courseDetail.heroContinueLesson}
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              ) : previewHref ? (
-                <Link href={previewHref} className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)]">
-                  {dict.courseDetail.heroFreePreview}
-                  <Play className="w-4 h-4 fill-current" />
-                </Link>
-              ) : null}
             </div>
 
             {/* Enrolled progress mini */}
@@ -539,12 +550,15 @@ function Hero({
             )}
           </motion.div>
 
-          {/* RIGHT — Walle + orbiting badges */}
+          {/* RIGHT — Walle + orbiting badges.
+              Hidden on phones (a 72px Walle rides next to the title instead):
+              at 260px it owned the whole first screen and its floating pills,
+              offset past the viewport edge, were clipped mid-word. */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, ease: [0.34, 1.36, 0.64, 1] }}
-            className="order-1 lg:order-2 flex items-center justify-center"
+            className="order-1 lg:order-2 hidden sm:flex items-center justify-center"
           >
             <div className="relative">
               <div
@@ -574,9 +588,267 @@ function Hero({
             </div>
           </motion.div>
         </div>
+
+        {/* Mobile buy block — the price and CTA belong on the first screen.
+            Below lg the sticky rail is hidden, so this is the one place the
+            purchase decision is made (plus the bottom bar once you scroll). */}
+        <div className="lg:hidden mt-8">
+          <MobileBuyBlock
+            course={course}
+            category={category}
+            detail={detail}
+            isEnrolled={isEnrolled}
+            isLoggedIn={isLoggedIn}
+            progressPct={progressPct}
+            completedCount={completedCount}
+            totalLessons={totalLessons}
+            previewHref={previewHref}
+            onEnroll={onEnroll}
+            enrollBusy={enrollBusy}
+            onPromoRedeemed={onPromoRedeemed}
+          />
+        </div>
       </div>
     </section>
   );
+}
+
+/* ============================================================
+   Mobile buy block (below lg) — the phone counterpart to the sticky rail.
+   Same decision, laid out for one hand: price and CTA on one line-of-sight,
+   "what's included" collapsed underneath so it informs without burying.
+   ============================================================ */
+
+function MobileBuyBlock({
+  course,
+  category,
+  detail,
+  isEnrolled,
+  isLoggedIn,
+  progressPct,
+  completedCount,
+  totalLessons,
+  previewHref,
+  onEnroll,
+  enrollBusy,
+  onPromoRedeemed,
+}: {
+  course: Course;
+  category: Category;
+  detail: CourseDetail;
+  isEnrolled: boolean;
+  isLoggedIn: boolean;
+  progressPct: number;
+  completedCount: number;
+  totalLessons: number;
+  previewHref: string | null;
+  onEnroll: () => void;
+  enrollBusy: boolean;
+  onPromoRedeemed: (courseId: string) => void;
+}) {
+  const { dict, href } = useV2Locale();
+  const t = TONE_CLASSES[category.tone];
+  const reduced = useReducedMotion();
+  const hasPrice = typeof course.price === 'number' && course.price > 0;
+  const retail = detail.retailPrice ?? 0;
+  const discount =
+    hasPrice && retail > course.price! ? Math.round(((retail - course.price!) / retail) * 100) : 0;
+  const [showIncluded, setShowIncluded] = React.useState(false);
+
+  // id="buy" lives here as well as on the desktop rail: a locked lesson
+  // redirects to …/courses/<id>#buy and must land on whichever one is visible.
+  return (
+    <div
+      id="buy"
+      className="scroll-mt-20 overflow-hidden rounded-3xl border border-border bg-card shadow-[0_12px_32px_-16px_rgba(0,0,0,0.18)]"
+    >
+      <div className={cn('h-1.5 w-full', t.bg)} aria-hidden />
+
+      {isEnrolled ? (
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-pulse">
+                {dict.courseDetail.progressLabel}
+              </p>
+              <p className="mt-1 text-sm font-bold tabular-nums">
+                {completedCount}/{totalLessons}
+                <span className="ml-2 font-normal text-muted-foreground">{progressPct}%</span>
+              </p>
+            </div>
+            <ProgressRing pct={progressPct} tone={category.tone} />
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-pulse/15">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={reduced ? { duration: 0 } : { duration: 0.9, ease: 'easeOut' }}
+              className="h-full rounded-full bg-pulse"
+            />
+          </div>
+          <a
+            href="#curriculum"
+            className="mt-4 inline-flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-pulse px-5 text-base font-bold text-primary-foreground shadow-[0_10px_26px_var(--pulse-glow)] active:scale-[0.98] transition-transform"
+          >
+            {dict.courseDetail.heroContinueLesson}
+            <ArrowRight className="h-5 w-5" />
+          </a>
+        </div>
+      ) : (
+        <div className="p-4">
+          {/* Price line — big number, savings context beside it */}
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            {hasPrice ? (
+              <>
+                <span
+                  className="text-[40px] font-black leading-none tabular-nums"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  ₾{course.price}
+                </span>
+                {retail > course.price! && (
+                  <span className="text-sm tabular-nums text-muted-foreground line-through">
+                    ₾{retail}
+                  </span>
+                )}
+                {discount > 0 && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest',
+                      t.chip,
+                    )}
+                  >
+                    −{discount}% {dict.courseDetail.discountSuffix}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span
+                className="text-[40px] font-black leading-none"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {dict.courseDetail.free}
+              </span>
+            )}
+          </div>
+
+          {/* Primary CTA — 52px tall, full width, thumb-reachable */}
+          <button
+            type="button"
+            onClick={
+              !hasPrice && !isLoggedIn
+                ? () => {
+                    window.location.href = href(FREE_COURSE_PATH);
+                  }
+                : onEnroll
+            }
+            disabled={enrollBusy}
+            className="mt-4 inline-flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-pulse px-5 text-base font-bold text-primary-foreground shadow-[0_10px_26px_var(--pulse-glow)] transition-transform active:scale-[0.98] disabled:opacity-70 disabled:active:scale-100"
+          >
+            {enrollBusy ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>{hasPrice ? dict.catalog.bundleRedirecting : dict.catalog.bundleProcessing}</span>
+              </>
+            ) : (
+              <>
+                <span>
+                  {hasPrice
+                    ? `${dict.courseDetail.ctaBuyPrefix}₾${course.price}`
+                    : isLoggedIn
+                      ? dict.courseDetail.ctaStartLearning
+                      : dict.courseDetail.ctaStartFree}
+                </span>
+                <ArrowRight className="h-5 w-5" />
+              </>
+            )}
+          </button>
+
+          {/* Secondary: free preview, quiet so it can't compete with the CTA */}
+          {previewHref && (
+            <Link
+              href={previewHref}
+              className="mt-2.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-border text-sm font-bold text-foreground/85 transition-colors active:bg-muted/60"
+            >
+              <Play className="h-4 w-4 fill-current" />
+              {dict.courseDetail.heroFreePreview}
+            </Link>
+          )}
+
+          {isLoggedIn && <CoursePromoExpandable courseId={course.id} onSuccess={onPromoRedeemed} />}
+        </div>
+      )}
+
+      {/* What's included — collapsed by default on mobile: it's reassurance,
+          not a reason to scroll past the CTA to reach the curriculum. */}
+      {detail.whatsIncluded.length > 0 && (
+        <div className="border-t border-border/70">
+          <button
+            type="button"
+            onClick={() => setShowIncluded((v) => !v)}
+            aria-expanded={showIncluded}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left"
+          >
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              {dict.courseDetail.whatsIncludedLabel}
+            </span>
+            <ChevronRight
+              className={cn(
+                'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300',
+                showIncluded && 'rotate-90',
+              )}
+            />
+          </button>
+          {showIncluded && (
+            <ul className="space-y-2.5 px-4 pb-4">
+              {detail.whatsIncluded.map((item, i) => {
+                const Icon = INCLUDED_ICONS[i % INCLUDED_ICONS.length];
+                return (
+                  <li key={item} className="flex items-start gap-3 text-sm">
+                    <span
+                      className={cn(
+                        'mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg',
+                        t.iconBg,
+                        t.text,
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" strokeWidth={2.4} />
+                    </span>
+                    <span className="leading-snug text-foreground/90">{item}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Walle renders to a fixed pixel size, so a CSS breakpoint can't shrink it.
+// This picks the size from a media query instead, starting at `mobile` so the
+// server-rendered markup matches the first client paint on a phone.
+function WalleResponsive({
+  mobile,
+  desktop,
+  state,
+  query = '(min-width: 768px)',
+}: {
+  mobile: number;
+  desktop: number;
+  state: WalleState;
+  query?: string;
+}) {
+  const [size, setSize] = React.useState(mobile);
+  React.useEffect(() => {
+    const mq = window.matchMedia(query);
+    const sync = () => setSize(mq.matches ? desktop : mobile);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [mobile, desktop, query]);
+  return <Walle size={size} state={state} />;
 }
 
 function Stat({ icon, label }: { icon: React.ReactNode; label: string }) {
@@ -741,7 +1013,7 @@ function CurriculumSection({
       />
 
       {/* Overview ribbon — totals on the left, live progress on the right */}
-      <div className="mt-8 sm:mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-border bg-card/60 px-5 py-4 sm:px-6">
+      <div className="mt-6 sm:mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-border bg-card/60 px-4 py-3.5 sm:px-6 sm:py-4">
         <span className="inline-flex items-center gap-2 text-sm font-semibold">
           <BookOpen className={cn('h-4 w-4', t.text)} />
           <span className="tabular-nums">{totalLessons}</span>
@@ -867,20 +1139,20 @@ function PhaseBlock({
   return (
     <div>
       {/* Chapter header */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-3 sm:gap-3.5">
         <span
           className={cn(
-            'grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition-colors',
+            'grid h-10 w-10 sm:h-11 sm:w-11 shrink-0 place-items-center rounded-2xl transition-colors',
             allDone ? cn(t.bg, 'text-primary-foreground') : cn(t.iconBg, t.text),
           )}
         >
           {allDone ? <Check className="h-5 w-5" strokeWidth={2.6} /> : <Icon className="h-5 w-5" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className={cn('text-[10px] font-bold uppercase tracking-[0.22em]', t.text)}>
+          <p className={cn('text-[10px] font-bold uppercase tracking-[0.18em] sm:tracking-[0.22em]', t.text)}>
             {dict.courseDetail.pathPhaseLabel} {roman}
           </p>
-          <h3 className="text-lg font-bold leading-tight tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
+          <h3 className="text-base sm:text-lg font-bold leading-tight tracking-tight text-balance" style={{ fontFamily: 'var(--font-display)' }}>
             {meta.title}
           </h3>
         </div>
@@ -953,7 +1225,9 @@ function LessonCard({
   const isPreview = lesson.isFree && !isEnrolled;
 
   const cardShell = cn(
-    'group my-1.5 flex-1 rounded-2xl border bg-card p-3.5 transition-all duration-300 sm:p-4',
+    // min-w-0 so long lesson titles wrap instead of forcing the flex row wider
+    // than the viewport.
+    'group my-1.5 min-w-0 flex-1 rounded-2xl border bg-card p-3 transition-all duration-300 sm:p-4',
     isNextUp ? cn(t.ring, 'shadow-[0_10px_30px_-18px_var(--pulse-glow)]') : 'border-border',
     'hover:-translate-y-0.5 hover:border-transparent hover:shadow-[0_16px_36px_-22px_var(--pulse-glow)]',
   );
@@ -1001,19 +1275,19 @@ function LessonCard({
         </p>
       )}
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[11px] text-muted-foreground">
+        <span className="inline-flex shrink-0 items-center gap-1">
           <Clock className="h-3 w-3" />
           {lesson.durationMin} {dict.courseDetail.durationMinutes}
         </span>
         {lesson.isFree && (
-          <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', t.chip)}>
+          <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', t.chip)}>
             <Eye className="h-3 w-3" />
             {dict.courseDetail.freeLessonBadge}
           </span>
         )}
         {presentsOpen && (
-          <span className={cn('ml-auto inline-flex items-center gap-1 font-bold transition-all group-hover:gap-1.5', isCompleted ? t.text : 'text-foreground')}>
+          <span className={cn('ml-auto inline-flex shrink-0 items-center gap-1 font-bold transition-all group-hover:gap-1.5', isCompleted ? t.text : 'text-foreground')}>
             {isTeaser && enrollBusy
               ? dict.catalog.bundleRedirecting
               : isCompleted
@@ -1031,9 +1305,11 @@ function LessonCard({
   );
 
   return (
-    <li className="relative flex gap-3.5 sm:gap-4">
-      {/* Spine node + connector */}
-      <div className="relative flex w-11 shrink-0 items-center justify-center">
+    <li className="relative flex gap-2.5 sm:gap-4">
+      {/* Spine node + connector. Narrower on phones: at w-11 + gap-3.5 the
+          rail ate 58px of a 328px content width, squeezing lesson titles
+          into three-line wraps. */}
+      <div className="relative flex w-9 sm:w-11 shrink-0 items-center justify-center">
         <span
           aria-hidden
           className={cn(
@@ -1050,6 +1326,9 @@ function LessonCard({
           disabled={!isEnrolled}
           className={cn(
             'relative z-10 grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold tabular-nums transition-all',
+            // Enrolled users tap this to toggle completion — pad the hit area
+            // out to ~44px without growing the dot itself.
+            isEnrolled && 'after:absolute after:-inset-1.5 after:content-[""]',
             isCompleted
               ? cn(t.bg, 'text-primary-foreground')
               : isLocked
@@ -1092,7 +1371,7 @@ function LessonCard({
           {card}
         </button>
       ) : (
-        <div className="my-1.5 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3.5 sm:p-4">
+        <div className="my-1.5 min-w-0 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3 sm:p-4">
           {card}
         </div>
       )}
@@ -1138,7 +1417,10 @@ function RelatedCoursesSection({ related, category: cat }: { related: Course[]; 
         title={dict.courseDetail.relatedTitle}
       />
 
-      <div className="mt-8 sm:mt-10 -mx-4 sm:mx-0 px-4 sm:px-0 flex sm:grid gap-4 sm:gap-5 overflow-x-auto sm:overflow-visible sm:grid-cols-2 pb-2 sm:pb-0 snap-x">
+      {/* Phone: edge-to-edge snap carousel (the negative margin lets cards
+          bleed to the screen edge while keeping a 16px gutter on both ends).
+          sm+: a plain two-column grid. */}
+      <div className="mt-6 sm:mt-10 -mx-4 sm:mx-0 flex gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0">
         {related.map((co, i) => (
           <RelatedCourseCard key={co.id} course={co} category={cat} index={i} />
         ))}
@@ -1183,7 +1465,7 @@ function RelatedCourseCard({
       transition={{ duration: 0.45, delay: index * 0.06 }}
       className={cn(
         'group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-border bg-card p-4 sm:p-5',
-        'w-[260px] flex-shrink-0 snap-start sm:w-auto sm:flex-shrink',
+        'w-[78vw] max-w-[300px] flex-shrink-0 snap-start sm:w-auto sm:max-w-none sm:flex-shrink',
         'transition-all duration-300 ease-out transform-gpu',
         'hover:-translate-y-2 hover:border-transparent hover:shadow-[0_26px_52px_-22px_var(--pulse-glow)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -1721,29 +2003,29 @@ function CtaBanner({
   return (
     <section className="px-4 sm:px-6 pb-16 sm:pb-24">
       <div className="mx-auto max-w-5xl">
-        <div className="relative overflow-hidden rounded-3xl border border-pulse/40 bg-card p-8 sm:p-12">
+        <div className="relative overflow-hidden rounded-3xl border border-pulse/40 bg-card p-6 sm:p-10 lg:p-12">
           <div className="absolute inset-0 -z-10 opacity-50 bg-starfield" aria-hidden />
-          <div className="absolute -bottom-12 -right-12 w-72 h-72 rounded-full bg-pulse/20 blur-3xl" aria-hidden />
-          <div className="absolute -top-8 -left-8 w-48 h-48 rounded-full bg-heart/15 blur-3xl" aria-hidden />
+          <div className="absolute -bottom-12 -right-12 h-48 w-48 sm:h-72 sm:w-72 rounded-full bg-pulse/20 blur-3xl" aria-hidden />
+          <div className="absolute -top-8 -left-8 h-32 w-32 sm:h-48 sm:w-48 rounded-full bg-heart/15 blur-3xl" aria-hidden />
 
-          <div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
-            <div className="space-y-4 text-center md:text-left">
+          <div className="relative grid gap-6 md:gap-8 md:grid-cols-[1fr_auto] md:items-center">
+            <div className="space-y-3.5 sm:space-y-4 text-center md:text-left">
               <h2
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight"
+                className="text-2xl sm:text-4xl lg:text-5xl font-bold leading-tight tracking-tight text-balance"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
                 {isEnrolled ? dict.courseDetail.ctaBannerEnrolledTitle : dict.courseDetail.ctaBannerTitle}
               </h2>
-              <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0">
+              <p className="text-[15px] sm:text-lg text-muted-foreground max-w-lg mx-auto md:mx-0">
                 {isEnrolled
                   ? dict.courseDetail.ctaBannerEnrolledDesc
                   : dict.courseDetail.ctaBannerDesc}
               </p>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3 pt-2">
                 {isEnrolled ? (
                   <a
                     href="#curriculum"
-                    className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 sm:py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                   >
                     {dict.courseDetail.heroContinueLesson}
                     <ArrowRight className="w-4 h-4" />
@@ -1757,7 +2039,7 @@ function CtaBanner({
                           : () => { window.location.href = href(FREE_COURSE_PATH); }
                       }
                       disabled={enrollBusy}
-                      className="inline-flex items-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:translate-y-0"
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 sm:py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:translate-y-0"
                     >
                       {enrollBusy ? (
                         <>
@@ -1776,7 +2058,7 @@ function CtaBanner({
                     {previewHref && (
                       <Link
                         href={previewHref}
-                        className="text-sm font-bold text-pulse hover:underline"
+                        className="inline-flex items-center justify-center py-2 text-sm font-bold text-pulse hover:underline"
                       >
                         {dict.courseDetail.tryFirst}
                       </Link>
@@ -1786,7 +2068,7 @@ function CtaBanner({
               </div>
             </div>
             <div className="flex justify-center md:justify-end">
-              <Walle size={180} state={isEnrolled ? 'dance' : 'wave'} />
+              <WalleResponsive mobile={120} desktop={180} state={isEnrolled ? 'dance' : 'wave'} />
             </div>
           </div>
         </div>
@@ -1815,11 +2097,31 @@ function MobileBottomBar({
   enrollBusy: boolean;
 }) {
   const { dict } = useV2Locale();
+
+  // Only slide in once the hero's own buy block has scrolled away. Showing
+  // both at once put two identical CTAs on screen and covered the content
+  // the visitor was reading.
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    const target = document.getElementById('buy');
+    if (!target) {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => setVisible(!entry.isIntersecting),
+      { rootMargin: '-72px 0px 0px 0px' },
+    );
+    io.observe(target);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <motion.div
-      initial={{ y: 100 }}
-      animate={{ y: 0 }}
-      transition={{ delay: 0.4, duration: 0.5, ease: [0.34, 1.36, 0.64, 1] }}
+      initial={false}
+      animate={{ y: visible ? 0 : 120 }}
+      transition={{ duration: 0.32, ease: [0.34, 1.36, 0.64, 1] }}
+      aria-hidden={!visible}
       className="lg:hidden fixed bottom-0 inset-x-0 z-30 backdrop-blur-md bg-background/90 border-t border-border safe-area-bottom"
     >
       <div className="px-4 py-3 flex items-center gap-3">
@@ -1847,7 +2149,7 @@ function MobileBottomBar({
         {isEnrolled ? (
           <a
             href="#curriculum"
-            className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-[0_8px_24px_var(--pulse-glow)]"
+            className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-full bg-pulse px-5 text-sm font-bold whitespace-nowrap text-primary-foreground shadow-[0_8px_24px_var(--pulse-glow)] transition-transform active:scale-[0.97]"
           >
             {dict.courseDetail.continueShort}
             <ArrowRight className="w-4 h-4" />
@@ -1857,7 +2159,7 @@ function MobileBottomBar({
             type="button"
             onClick={onEnroll}
             disabled={enrollBusy}
-            className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-5 py-2.5 text-sm font-bold whitespace-nowrap shadow-[0_8px_24px_var(--pulse-glow)] disabled:opacity-70"
+            className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-full bg-pulse px-5 text-sm font-bold whitespace-nowrap text-primary-foreground shadow-[0_8px_24px_var(--pulse-glow)] transition-transform active:scale-[0.97] disabled:opacity-70"
           >
             {enrollBusy ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1880,16 +2182,18 @@ function Footer() {
   const { dict, href } = useV2Locale();
   return (
     <footer className="border-t border-border bg-muted/30 mt-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-12">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-12">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
           <Link href={href()} className="inline-flex items-center gap-2">
             <Walle size={32} state="idle" noShadow />
             <span className="text-base font-bold">{dict.meta.brandName}</span>
           </Link>
-          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <Link href={href()} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerHome}</Link>
-            <Link href={`${href()}#categories`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCategories}</Link>
-            <Link href={`${href()}#courses`} className="text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCourses}</Link>
+          {/* -my-2/py-2 keeps the links visually tight while giving each a
+              44px tap target on touch. */}
+          <nav className="-my-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            <Link href={href()} className="py-2 text-muted-foreground hover:text-foreground">{dict.courseDetail.footerHome}</Link>
+            <Link href={`${href()}#categories`} className="py-2 text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCategories}</Link>
+            <Link href={`${href()}#courses`} className="py-2 text-muted-foreground hover:text-foreground">{dict.courseDetail.footerCourses}</Link>
           </nav>
           <p className="text-xs text-muted-foreground">© 2026 {dict.meta.brandName}</p>
         </div>
@@ -1912,10 +2216,10 @@ function SectionHeader({
   description?: string;
 }) {
   return (
-    <header className="space-y-2.5 max-w-2xl">
-      <p className="text-xs uppercase tracking-[0.22em] text-pulse font-bold">{eyebrow}</p>
+    <header className="space-y-2 sm:space-y-2.5 max-w-2xl">
+      <p className="text-[11px] sm:text-xs uppercase tracking-[0.18em] sm:tracking-[0.22em] text-pulse font-bold">{eyebrow}</p>
       <h2
-        className="text-2xl sm:text-3xl font-bold tracking-tight leading-[1.15]"
+        className="text-xl sm:text-3xl font-bold tracking-tight leading-[1.18] text-balance"
         style={{ fontFamily: 'var(--font-display)' }}
       >
         {title}

@@ -16,8 +16,8 @@ import * as React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowUp, Sparkles, CheckCircle2, RotateCcw } from 'lucide-react';
-import type { Lesson, ChatMessage } from '@/types';
+import { ArrowUp, Sparkles, CheckCircle2, RotateCcw, BookOpen } from 'lucide-react';
+import type { Lesson, LessonPage, ChatMessage } from '@/types';
 import { Walle, type WalleState } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 
@@ -131,6 +131,12 @@ function pickWalleReaction(text: string): WalleState {
 export function ChatPanelV2({
   lessonId,
   lesson,
+  page,
+  materialLoading = false,
+  onOpenContent,
+  contentStrings,
+  isCheckUnlocked = false,
+  onChipsBarVisibleChange,
   pageNumber,
   teacherLocale,
   onTeacherLocaleChange,
@@ -140,6 +146,26 @@ export function ChatPanelV2({
 }: {
   lessonId: string;
   lesson: Lesson;
+  /** The page as shown in the material panel — already translated when the
+   *  teacher locale is EN. Falls back to the raw lesson page when absent. */
+  page?: LessonPage | null;
+  /** True while the EN translation for this page is still in flight. The
+   *  concept chips are lesson content, so until it lands they'd show the
+   *  Georgian source — we skeleton them instead of flashing the wrong text. */
+  materialLoading?: boolean;
+  /** Opens the material sheet. When provided, the content trigger is rendered
+   *  inline in the concept-chips bar (mobile only) instead of floating over
+   *  it — the parent falls back to its floating button when this bar is
+   *  absent. */
+  onOpenContent?: () => void;
+  /** Labels for that inline trigger, in the teacher locale. */
+  contentStrings?: { label: string; ready: string };
+  /** Whether the page's check questions are unlocked — mirrors the floating
+   *  trigger's "ready" treatment. */
+  isCheckUnlocked?: boolean;
+  /** True when the chips bar is rendering, so the parent can hide its
+   *  floating fallback and avoid showing two triggers at once. */
+  onChipsBarVisibleChange?: (visible: boolean) => void;
   pageNumber: number;
   /** Teacher language — owned by the parent so chat + material panel stay in
    *  sync. The in-panel toggle calls onTeacherLocaleChange. */
@@ -172,7 +198,8 @@ export function ChatPanelV2({
   const unlockFiredRef = React.useRef(false);
   const reduced = useReducedMotion();
 
-  const currentPageData = lesson.pages?.find((p) => p.pageNumber === pageNumber);
+  const currentPageData =
+    page ?? lesson.pages?.find((p) => p.pageNumber === pageNumber);
 
   /* ─── walle reactions ─── */
   React.useEffect(() => {
@@ -499,6 +526,14 @@ export function ChatPanelV2({
 
   const concepts = currentPageData?.keyConcepts ?? lesson.keyConcepts ?? [];
 
+  // The chips bar hosts the inline content trigger; tell the parent so it can
+  // drop its floating fallback and never show two triggers at once.
+  const chipsBarVisible = messages.length > 0 && concepts.length > 0;
+  React.useEffect(() => {
+    onChipsBarVisibleChange?.(chipsBarVisible);
+    return () => onChipsBarVisibleChange?.(false);
+  }, [chipsBarVisible, onChipsBarVisibleChange]);
+
   /* ─── render ─── */
   if (!historyLoaded) {
     return (
@@ -580,24 +615,63 @@ export function ChatPanelV2({
       </div>
 
       {/* ─── Concept chips ─── */}
-      {messages.length > 0 && concepts.length > 0 && (
+      {chipsBarVisible && (
         <div className="shrink-0 px-3 sm:px-4 pt-2 pb-1 border-t border-border bg-card/40 backdrop-blur-sm">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-bold mb-1.5">
-            {T.quickQuestions}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {concepts.slice(0, 4).map((c) => (
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground font-bold">
+              {T.quickQuestions}
+            </p>
+            {/* Mobile content trigger — lives here rather than floating over
+                the bar, so it can never cover the chips. The desktop rail
+                toggle in the header covers lg and up. */}
+            {onOpenContent && contentStrings && (
               <button
-                key={c.term}
                 type="button"
-                disabled={isStreaming}
-                onClick={() => sendMessage(T.suggestExplainDetail(c.term))}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:border-pulse/40 hover:text-pulse transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={onOpenContent}
+                className={cn(
+                  'lg:hidden shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors',
+                  isCheckUnlocked
+                    ? 'bg-pulse text-primary-foreground'
+                    : 'bg-card text-foreground border border-border hover:border-pulse/40 hover:text-pulse',
+                )}
               >
-                <Sparkles className="w-2.5 h-2.5" />
-                {c.term}
+                <BookOpen className="w-3 h-3" />
+                <span>{contentStrings.label}</span>
+                {isCheckUnlocked && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                    {contentStrings.ready}
+                  </span>
+                )}
               </button>
-            ))}
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {materialLoading
+              ? concepts.slice(0, 4).map((c, i) => (
+                  <span
+                    key={`skeleton-${i}`}
+                    aria-hidden
+                    // Width tracks the Georgian term so the row doesn't jump
+                    // when the English text arrives.
+                    style={{
+                      width: `${Math.min(Math.max(c.term.length, 6), 18) * 0.55 + 2}rem`,
+                    }}
+                    className="inline-block h-[26px] rounded-full border border-border bg-muted/60 animate-pulse"
+                  />
+                ))
+              : concepts.slice(0, 4).map((c) => (
+                  <button
+                    key={c.term}
+                    type="button"
+                    disabled={isStreaming}
+                    onClick={() => sendMessage(T.suggestExplainDetail(c.term))}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground hover:border-pulse/40 hover:text-pulse transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sparkles className="w-2.5 h-2.5" />
+                    {c.term}
+                  </button>
+                ))}
             <button
               type="button"
               disabled={isStreaming}
@@ -770,16 +844,20 @@ function MessageBubble({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className={cn('flex gap-2', isAssistant ? 'justify-start' : 'justify-end')}
+      className={cn(
+        'flex gap-2',
+        isAssistant ? 'flex-col items-start sm:flex-row' : 'justify-end',
+      )}
     >
       {isAssistant && (
-        <div className="shrink-0 mt-0.5" aria-hidden>
+        <div className="shrink-0 sm:mt-0.5" aria-hidden>
           <Walle size={28} state={walleState} noShadow />
         </div>
       )}
       <div
         className={cn(
-          'max-w-[85%] sm:max-w-[78%] rounded-2xl text-sm leading-relaxed shadow-sm',
+          'rounded-2xl text-sm leading-relaxed shadow-sm',
+          isAssistant ? 'w-full sm:w-auto sm:max-w-[78%]' : 'max-w-[85%] sm:max-w-[78%]',
           isAssistant
             ? 'bg-card border border-border text-foreground px-3.5 py-2.5'
             : 'bg-pulse text-primary-foreground px-3.5 py-2.5 rounded-br-sm',

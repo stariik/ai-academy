@@ -145,6 +145,7 @@ export const ka: Dict = {
     next: 'შემდეგი',
     ariaCategory: 'კატეგორიების სლაიდერი',
     ariaCourses: 'კურსების სლაიდერი',
+    recommendedCategories: 'რეკომენდებული',
   },
 
   level: {

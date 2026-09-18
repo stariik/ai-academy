@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getLesson, updateLesson, deleteLesson } from '@/lib/supabase/db';
 import { isAdmin } from '@/lib/admin-auth';
+import { warmLessonTranslations, keepAlive } from '@/lib/ai/warm-translations';
 import { isCurrentUserEnrolled } from '@/lib/enrollments';
 import { FREE_LESSON_ID } from '@/lib/v2/db';
 import { Lesson } from '@/types';
+
+// Publishing kicks off translation warming, which uses the Anthropic SDK.
+export const runtime = 'nodejs';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -55,12 +59,28 @@ export async function PUT(
     const body = await request.json();
     const updates = body as Partial<Lesson>;
     const supabase = await createClient();
+
+    // Read the prior status first so we can tell a genuine draft→published
+    // transition from a no-op re-save of an already published lesson.
+    const before = await getLesson(supabase, id);
     const updated = await updateLesson(supabase, id, updates);
 
     if (!updated) {
       return NextResponse.json(
         { error: 'Lesson not found' },
         { status: 404 }
+      );
+    }
+
+    // Warm the EN translation cache on publish so the first student to switch
+    // to English doesn't pay for a page-sized Claude call. Deliberately not
+    // awaited: the admin's toggle shouldn't hang on it, and already-cached
+    // pages are skipped, so this is usually cheap.
+    if (before?.status !== 'published' && updated.status === 'published') {
+      keepAlive(
+        warmLessonTranslations(supabase, updated).catch((err) => {
+          console.error('Translation warm failed:', err);
+        })
       );
     }
 

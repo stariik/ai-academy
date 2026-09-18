@@ -1,104 +1,70 @@
 'use client';
 
 // ============================================================
-// Walle, bottom-right. A floating guide whose one job is to turn
-// "I don't know where to start" into an ordered plan of real courses.
-//
-// One question on screen at a time — not a chat log. The question and its
-// answers share a single scroll box (never scroll up to re-read the ask),
-// answered questions collapse into one strip, and a single-choice tap
-// submits itself. Stateless by design: nothing is persisted, so
-// logged-out visitors get the full experience.
+// Walle Support Chat - A simple AI assistant for help and support
 // ============================================================
 
 import * as React from 'react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import {
-  ArrowRight,
-  Check,
-  ChevronDown,
-  Pencil,
-  RefreshCw,
-  Send,
-  Sparkles,
-  X,
-} from 'lucide-react';
+import { Send, Sparkles, X } from 'lucide-react';
 import { Walle, type WalleState } from '@/components/walle/Walle';
 import { cn } from '@/lib/utils';
 import { isLocale, type Locale } from '@/lib/v2/i18n';
-import {
-  getFallbackQuestion,
-  type OnboardingAnswer,
-  type OnboardingQuestion,
-  type OnboardingRoadmapStep,
-} from '@/lib/onboarding';
 
-type Phase = 'intro' | 'interview' | 'complete';
-
-type Turn = {
-  acknowledgement: string;
-  complete: boolean;
-  question: OnboardingQuestion | null;
-  roadmap: OnboardingRoadmapStep[] | null;
-  closing: string | null;
+type Message = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 };
-
-// The server runs 4–7 questions. 6 is the honest midpoint to pace the bar
-// against — it fills steadily instead of promising a count we won't hit.
-const PACE = 6;
 
 const COPY = {
   en: {
-    open: 'Open Walle, your learning guide',
+    open: 'Chat with Walle',
     close: 'Close',
-    restart: 'Start over',
     name: 'walle',
-    roleIdle: 'your learning guide',
-    roleThinking: 'thinking…',
-    roleDone: 'your plan is ready',
-    greeting: 'Hi 👋 I’m Walle.',
-    pitch: 'Tell me what you want to get better at, and I’ll turn it into a plan — which course to start with, and what comes next.',
-    start: 'Build my plan',
-    answered: (n: number) => (n === 1 ? '1 answer so far' : `${n} answers so far`),
-    ownWords: 'Type my own answer',
-    placeholder: 'In your own words…',
-    sendLabel: 'Send answer',
-    continue: 'Continue',
-    error: 'I lost the signal for a second. Your answers are safe — try again.',
-    retry: 'Try again',
-    thinking: 'Walle is thinking…',
-    roadmapTitle: 'Your roadmap',
-    startStep: 'Start',
-    browseAll: 'Browse all courses',
+    roleIdle: 'AI Support',
+    roleThinking: 'typing…',
+    greeting: 'Hi 👋 I am Walle, your AI assistant.',
+    pitch: 'Ask me anything about our courses, how to get started, or if you need help with anything!',
+    placeholder: 'Ask me anything...',
+    sendLabel: 'Send message',
+    error: 'Something went wrong. Please try again.',
   },
   ka: {
-    open: 'გახსენი Walle, შენი სასწავლო გზამკვლევი',
+    open: 'ჩატი Walle-სთან',
     close: 'დახურვა',
-    restart: 'თავიდან დაწყება',
     name: 'walle',
-    roleIdle: 'შენი სასწავლო გზამკვლევი',
-    roleThinking: 'ვფიქრობ…',
-    roleDone: 'შენი გეგმა მზადაა',
-    greeting: 'გამარჯობა 👋 მე Walle ვარ.',
-    pitch: 'მითხარი, რა გაინტერესებს და მე დაგეხმარები სასწავლო გეგმის შედგენაში',
-    start: 'მომწერე რა გაინტერესებს',
-    answered: (n: number) => `${n} პასუხი`,
-    ownWords: 'ჩემი პასუხის აკრეფა',
-    placeholder: 'შენი სიტყვებით…',
-    sendLabel: 'პასუხის გაგზავნა',
-    continue: 'გაგრძელება',
-    error: 'კავშირი წამით დავკარგე. პასუხები შენახულია — გთხოვ, კიდევ სცადო.',
-    retry: 'ხელახლა ცდა',
-    thinking: 'Walle ფიქრობს…',
-    roadmapTitle: 'შენი გზამკვლევი',
-    startStep: 'დაწყება',
-    browseAll: 'ყველა კურსი',
+    roleIdle: 'AI მხარდაჭერა',
+    roleThinking: 'ვბეჭდავ…',
+    greeting: 'გამარჯობა 👋 მე Walle ვარ, შენი AI ასისტენტი.',
+    pitch: 'შემიძლია დაგეხმარო კურსების შესახებ, ან თუ რაიმე კითხვა გაქვს!',
+    placeholder: 'მომწერე რაც გინდა...',
+    sendLabel: 'გაგზავნა',
+    error: 'რაღაც არ გამოვიდა. გთხოვ სცადე ხელახლა.',
   },
 } satisfies Record<Locale, Record<string, unknown>>;
 
 type Copy = (typeof COPY)['en'];
+
+/**
+ * True while a full-screen mobile menu owns the viewport. The navbar lives in a
+ * different tree than this bot, so it flags `<body data-menu-open>` and we watch it.
+ */
+function useMobileMenuOpen() {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const read = () => setMenuOpen(document.body.dataset.menuOpen === 'true');
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-menu-open'] });
+    return () => observer.disconnect();
+  }, []);
+
+  return menuOpen;
+}
 
 export default function WalleBot() {
   const pathname = usePathname();
@@ -112,26 +78,16 @@ export default function WalleBot() {
 
   const T = COPY[locale];
   const reducedMotion = useReducedMotion();
+  const menuOpen = useMobileMenuOpen();
 
   const [open, setOpen] = React.useState(false);
-  const [phase, setPhase] = React.useState<Phase>('intro');
-  const [answers, setAnswers] = React.useState<OnboardingAnswer[]>([]);
-  const [closing, setClosing] = React.useState('');
-  const [question, setQuestion] = React.useState<OnboardingQuestion | null>(null);
-  const [roadmap, setRoadmap] = React.useState<OnboardingRoadmapStep[]>([]);
-  const [selected, setSelected] = React.useState<string[]>([]);
-  const [freeText, setFreeText] = React.useState('');
-  const [thinking, setThinking] = React.useState(false);
+  const [messages, setMessages] = React.useState<Message[]>([]);
+  const [input, setInput] = React.useState('');
+  const [isTyping, setIsTyping] = React.useState(false);
   const [error, setError] = React.useState('');
-  const [historyOpen, setHistoryOpen] = React.useState(false);
-  // Chip questions hide the keyboard until asked for — one clear way in.
-  const [writing, setWriting] = React.useState(false);
 
   const bodyRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
-  const advanceRef = React.useRef(0);
-
-  const textMode = question?.kind === 'text' || writing;
 
   // Escape closes; on phones the panel is full-screen, so lock the page behind it.
   React.useEffect(() => {
@@ -145,171 +101,96 @@ export default function WalleBot() {
     if (phone) document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', onKey);
-      if (phone) document.body.style.overflow = previous;
+      // Don't hand scrolling back if the burger sheet has since claimed the lock.
+      if (phone && !document.body.dataset.menuOpen) {
+        document.body.style.overflow = previous;
+      }
     };
   }, [open]);
 
-  React.useEffect(() => () => window.clearTimeout(advanceRef.current), []);
-
-  // Every question is a fresh card, so land at its top — never mid-list.
+  // The burger sheet takes over the screen — fold the chat away behind it.
   React.useEffect(() => {
-    bodyRef.current?.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
-  }, [question?.id, phase, reducedMotion]);
+    if (menuOpen) setOpen(false);
+  }, [menuOpen]);
 
+  // Focus input when opened
   React.useEffect(() => {
-    if (!open || !textMode) return;
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 220);
-    return () => window.clearTimeout(timer);
-  }, [open, textMode, question?.id]);
+    if (open) {
+      const timer = window.setTimeout(() => inputRef.current?.focus(), 220);
+      return () => window.clearTimeout(timer);
+    }
+  }, [open]);
 
-  const runTurn = React.useCallback(
-    async (nextAnswers: OnboardingAnswer[]): Promise<Turn> => {
-      const response = await fetch('/api/onboarding', {
+  // Scroll to bottom when new messages arrive
+  React.useEffect(() => {
+    if (bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || isTyping) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setError('');
+    setIsTyping(true);
+
+    try {
+      const response = await fetch('/api/support-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale, answers: nextAnswers }),
+        body: JSON.stringify({ message: text, locale }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'turn_failed');
-      return data as Turn;
-    },
-    [locale],
-  );
 
-  const start = () => {
-    if (thinking) return;
-    setError('');
-    setPhase('interview');
-    setQuestion(getFallbackQuestion(0, locale));
-  };
+      if (!response.ok) throw new Error('Failed to send message');
 
-  const send = async (optionIds: string[], text: string) => {
-    if (!question || thinking) return;
-    const labels = optionIds
-      .map((id) => question.options.find((option) => option.id === id)?.label)
-      .filter((label): label is string => Boolean(label));
-    const displayText = [...labels, text.trim()].filter(Boolean).join(' · ');
-    if (!displayText) return;
+      const data = await response.json();
 
-    const answer: OnboardingAnswer = {
-      questionId: question.id,
-      question: question.text,
-      kind: question.kind,
-      selectedOptionIds: optionIds,
-      selectedLabels: labels,
-      freeText: text.trim(),
-      displayText,
-      answeredAt: new Date().toISOString(),
-    };
-    const nextAnswers = [...answers, answer];
-    const previousAnswers = answers;
-    const previousQuestion = question;
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.reply || 'I am here to help! How can I assist you?',
+        timestamp: new Date(),
+      };
 
-    // Optimistic: the strip and the bar move the instant they answer.
-    setAnswers(nextAnswers);
-    setQuestion(null);
-    setSelected([]);
-    setFreeText('');
-    setWriting(false);
-    setError('');
-
-    const nextQuestion = getFallbackQuestion(nextAnswers.length, locale);
-    if (nextQuestion) {
-      setQuestion(nextQuestion);
-      return;
-    }
-
-    // Questions are instant and deterministic; only the final personalized
-    // roadmap needs a server round-trip.
-    setThinking(true);
-    try {
-      const result = await runTurn(nextAnswers);
-      if (result.complete) {
-        setRoadmap(result.roadmap ?? []);
-        setClosing(result.closing || '');
-        setPhase('complete');
-      } else {
-        setQuestion(result.question);
-      }
-    } catch {
-      setAnswers(previousAnswers);
-      setQuestion(previousQuestion);
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err) {
       setError(T.error);
+      // Fallback response if API fails
+      const fallbackMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: locale === 'ka'
+          ? 'მადლობა შეტყობინებისთვის! ამჟამად ვერ ვუპასუხებ, მაგრამ მალე დაგიკავშირდები.'
+          : 'Thanks for reaching out! I cannot respond right now, but I will get back to you soon.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, fallbackMessage]);
     } finally {
-      setThinking(false);
+      setIsTyping(false);
     }
   };
 
-  const pick = (id: string) => {
-    if (!question || thinking) return;
-    if (question.kind === 'single') {
-      setSelected([id]);
-      // Let the tick render before the card flips — confirms what registered.
-      // freeText rides along so a tap never discards what they already typed.
-      window.clearTimeout(advanceRef.current);
-      advanceRef.current = window.setTimeout(() => send([id], freeText), 190);
-      return;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
-    setSelected((current) => {
-      if (current.includes(id)) return current.filter((value) => value !== id);
-      const max = question.maxSelections ?? 2;
-      return current.length >= max ? [...current.slice(1), id] : [...current, id];
-    });
   };
 
-  // Number keys pick options on desktop; the badge on each row is the hint.
-  const pickRef = React.useRef(pick);
-  React.useEffect(() => {
-    pickRef.current = pick;
-  });
-  React.useEffect(() => {
-    if (!open || !question || thinking || textMode) return;
-    const options = question.options;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const option = options[Number(event.key) - 1];
-      if (!option) return;
-      event.preventDefault();
-      pickRef.current(option.id);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, question, thinking, textMode]);
+  if (!visible || menuOpen) return null;
 
-  const restart = () => {
-    window.clearTimeout(advanceRef.current);
-    setPhase('intro');
-    setAnswers([]);
-    setClosing('');
-    setQuestion(null);
-    setRoadmap([]);
-    setSelected([]);
-    setFreeText('');
-    setWriting(false);
-    setHistoryOpen(false);
-    setError('');
-  };
-
-  if (!visible) return null;
-
-  const minPick = question?.kind === 'multi' ? (question.minSelections ?? 1) : 1;
-  const canSend = textMode
-    ? freeText.trim().length >= 2 || selected.length >= minPick
-    : selected.length >= minPick;
-
-  const walleState: WalleState = thinking
-    ? 'tilt'
-    : phase === 'complete'
-      ? 'dance'
-      : phase === 'intro'
-        ? 'wave'
-        : 'idle';
-  const status = thinking ? T.roleThinking : phase === 'complete' ? T.roleDone : T.roleIdle;
-  // A sliver on question one, so the bar reads as "started" rather than "empty".
-  const progress =
-    phase === 'complete' ? 1 : Math.min((answers.length + 0.4) / PACE, 0.92);
-  // The panel takes the launcher's place. Its anchor is sm-only: on phones the
-  // panel is inset-0 full-screen, and a bottom-* class would override that.
+  const walleState: WalleState = isTyping ? 'tilt' : 'idle';
+  const status = isTyping ? T.roleThinking : T.roleIdle;
   const launcherAnchor = overBuyBar ? 'bottom-24 lg:bottom-6' : 'bottom-5 sm:bottom-6';
   const panelAnchor = overBuyBar ? 'sm:bottom-24 lg:bottom-6' : 'sm:bottom-6';
 
@@ -325,8 +206,8 @@ export default function WalleBot() {
       >
         <motion.button
           type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-label={open ? T.close : T.open}
+          onClick={() => setOpen(true)}
+          aria-label={T.open}
           aria-expanded={open}
           whileHover={reducedMotion ? undefined : { y: -3, scale: 1.04 }}
           whileTap={{ scale: 0.95 }}
@@ -336,15 +217,13 @@ export default function WalleBot() {
             aria-hidden
             className="absolute inset-0 rounded-full bg-pulse/10 opacity-0 transition-opacity group-hover:opacity-100"
           />
-          <Walle state={open ? 'wave' : 'idle'} size={46} noShadow label="Walle" />
-          {!open && (
-            <span
-              aria-hidden
-              className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-pulse text-primary-foreground shadow-[0_0_0_3px_var(--background)]"
-            >
-              <Sparkles className="h-2.5 w-2.5" />
-            </span>
-          )}
+          <Walle state="idle" size={46} noShadow label="Walle" />
+          <span
+            aria-hidden
+            className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-pulse text-primary-foreground shadow-[0_0_0_3px_var(--background)]"
+          >
+            <Sparkles className="h-2.5 w-2.5" />
+          </span>
         </motion.button>
       </div>
 
@@ -373,21 +252,10 @@ export default function WalleBot() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-black lowercase leading-none">{T.name}</p>
                 <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span className={cn('h-1.5 w-1.5 rounded-full', thinking ? 'bg-heart' : 'bg-pulse')} />
+                  <span className={cn('h-1.5 w-1.5 rounded-full', isTyping ? 'bg-heart' : 'bg-pulse')} />
                   {status}
                 </p>
               </div>
-              {phase !== 'intro' && (
-                <button
-                  type="button"
-                  onClick={restart}
-                  aria-label={T.restart}
-                  title={T.restart}
-                  className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -398,407 +266,103 @@ export default function WalleBot() {
               </button>
             </div>
 
-            {/* Progress hairline — no fake "of 7", it just fills as they go */}
-            {phase !== 'intro' && (
-              <div className="h-[3px] shrink-0 bg-muted">
-                <motion.div
-                  className="h-full rounded-r-full bg-pulse"
-                  initial={false}
-                  animate={{ width: `${progress * 100}%` }}
-                  transition={{ type: 'spring', stiffness: 160, damping: 26 }}
-                />
-              </div>
-            )}
-
-            {/* Answered so far — one row, expands on demand */}
-            {phase !== 'intro' && answers.length > 0 && (
-              <History
-                answers={answers}
-                open={historyOpen}
-                label={T.answered(answers.length)}
-                onToggle={() => setHistoryOpen((value) => !value)}
-              />
-            )}
-
-            {/* Body — exactly one thing to read at a time */}
+            {/* Messages Body */}
             <div
               ref={bodyRef}
-              aria-live="polite"
-              className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5"
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5 space-y-3"
             >
-              {phase === 'intro' ? (
-                <Intro copy={T} onStart={start} pending={thinking} reducedMotion={!!reducedMotion} />
-              ) : phase === 'complete' ? (
-                <Complete copy={T} closing={closing} steps={roadmap} locale={locale} onNavigate={() => setOpen(false)} />
-              ) : (
-                <AnimatePresence mode="wait" initial={false}>
-                  {thinking ? (
-                    <Thinking key="thinking" label={T.thinking} echo={answers[answers.length - 1]?.displayText} />
-                  ) : question ? (
-                    <motion.div
-                      key={question.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.22 }}
-                    >
-                      <h3 className="text-[15px] font-bold leading-snug text-foreground">
-                        {question.text}
-                      </h3>
-                      {question.kind !== 'text' && (
-                        <Options question={question} selected={selected} onPick={pick} />
-                      )}
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
+              {/* Welcome message */}
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                  <motion.div
+                    animate={reducedMotion ? undefined : { y: [0, -6, 0] }}
+                    transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Walle state="wave" size={112} label="Walle" />
+                  </motion.div>
+                  <h2 className="mt-4 text-lg font-black">{T.greeting}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{T.pitch}</p>
+                </div>
+              )}
+
+              {/* Chat messages */}
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    'flex',
+                    msg.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
+                      msg.role === 'user'
+                        ? 'bg-pulse text-primary-foreground rounded-br-md'
+                        : 'bg-muted text-foreground rounded-bl-md'
+                    )}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-muted text-foreground rounded-2xl rounded-bl-md px-3.5 py-2.5">
+                    <div className="flex items-center gap-1">
+                      {[0, 1, 2].map((index) => (
+                        <motion.span
+                          key={index}
+                          className="h-1.5 w-1.5 rounded-full bg-pulse"
+                          animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 1, repeat: Infinity, delay: index * 0.14 }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {error && (
-                <div className="mt-3 rounded-2xl border border-heart/40 bg-heart/5 px-3.5 py-3 text-xs leading-relaxed text-foreground">
+                <div className="rounded-2xl border border-heart/40 bg-heart/5 px-3.5 py-3 text-xs leading-relaxed text-foreground">
                   {error}
-                  {!question && (
-                    <button
-                      type="button"
-                      onClick={start}
-                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-pulse"
-                    >
-                      <RefreshCw className="h-3 w-3" />
-                      {T.retry}
-                    </button>
-                  )}
                 </div>
               )}
             </div>
 
-            {/* Footer — only appears when there is something left to confirm */}
-            {phase === 'interview' && question && !thinking && (
-              <div className="shrink-0 border-t border-border bg-card px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5">
-                {textMode ? (
-                  <div className="flex items-end gap-2">
-                    <textarea
-                      ref={inputRef}
-                      rows={1}
-                      value={freeText}
-                      onChange={(event) => {
-                        onGrow(event.currentTarget);
-                        setFreeText(event.target.value);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
-                          event.preventDefault();
-                          if (canSend) send(selected, freeText);
-                        }
-                      }}
-                      placeholder={question.placeholder || T.placeholder}
-                      className="max-h-[104px] min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-3.5 py-3 text-[13px] leading-snug outline-none transition placeholder:text-muted-foreground focus:border-pulse"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => send(selected, freeText)}
-                      disabled={!canSend}
-                      aria-label={T.sendLabel}
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-pulse text-primary-foreground shadow-[0_6px_18px_var(--pulse-glow)] transition enabled:hover:-translate-y-0.5 disabled:opacity-35"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : question.kind === 'multi' ? (
-                  <button
-                    type="button"
-                    onClick={() => send(selected, freeText)}
-                    disabled={!canSend}
-                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-pulse text-sm font-bold text-primary-foreground shadow-[0_6px_18px_var(--pulse-glow)] transition enabled:hover:-translate-y-0.5 disabled:opacity-35"
-                  >
-                    {T.continue}
-                    {selected.length > 0 && (
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-primary-foreground/20 text-[11px]">
-                        {selected.length}
-                      </span>
-                    )}
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setWriting(true)}
-                    className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-full text-[11.5px] font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                  >
-                    <Pencil className="h-3 w-3" />
-                    {T.ownWords}
-                  </button>
-                )}
+            {/* Input Footer */}
+            <div className="shrink-0 border-t border-border bg-card px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5">
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  rows={1}
+                  value={input}
+                  onChange={(e) => {
+                    setInput(e.target.value);
+                    // Auto-grow
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 104)}px`;
+                  }}
+                  onKeyDown={handleKeyDown}
+                  placeholder={T.placeholder}
+                  className="max-h-[104px] min-h-11 flex-1 resize-none rounded-2xl border border-border bg-background px-3.5 py-3 text-[13px] leading-snug outline-none transition placeholder:text-muted-foreground focus:border-pulse"
+                />
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isTyping}
+                  aria-label={T.sendLabel}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-pulse text-primary-foreground shadow-[0_6px_18px_var(--pulse-glow)] transition enabled:hover:-translate-y-0.5 disabled:opacity-35"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
               </div>
-            )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
     </>
-  );
-}
-
-/* ============================================================ */
-
-function onGrow(element: HTMLTextAreaElement) {
-  element.style.height = 'auto';
-  element.style.height = `${Math.min(element.scrollHeight, 104)}px`;
-}
-
-function Intro({
-  copy,
-  onStart,
-  pending,
-  reducedMotion,
-}: {
-  copy: Copy;
-  onStart: () => void;
-  pending: boolean;
-  reducedMotion: boolean;
-}) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center px-1 text-center">
-      <motion.div
-        animate={reducedMotion ? undefined : { y: [0, -6, 0] }}
-        transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <Walle state="wave" size={112} label="Walle" />
-      </motion.div>
-
-      <h2 className="mt-4 text-lg font-black">{copy.greeting}</h2>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{copy.pitch}</p>
-
-      <button
-        type="button"
-        onClick={onStart}
-        disabled={pending}
-        className="group mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-pulse px-6 text-sm font-bold text-primary-foreground shadow-[0_10px_28px_var(--pulse-glow)] transition hover:-translate-y-0.5 disabled:opacity-60"
-      >
-        {pending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-        {copy.start}
-        {!pending && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
-      </button>
-    </div>
-  );
-}
-
-function History({
-  answers,
-  open,
-  label,
-  onToggle,
-}: {
-  answers: OnboardingAnswer[];
-  open: boolean;
-  label: string;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="shrink-0 border-b border-border bg-muted/30">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-1.5 px-4 py-1.5 text-[11px] font-semibold text-muted-foreground transition hover:text-foreground"
-      >
-        <Check className="h-3 w-3 text-pulse" strokeWidth={3} />
-        {label}
-        <ChevronDown
-          className={cn('ml-auto h-3.5 w-3.5 transition-transform', open && 'rotate-180')}
-        />
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.ul
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="max-h-44 space-y-1.5 overflow-y-auto px-4 pb-2.5"
-          >
-            {answers.map((answer) => (
-              <li key={answer.questionId} className="border-l-2 border-border pl-2.5">
-                <p className="truncate text-[10px] leading-snug text-muted-foreground">
-                  {answer.question}
-                </p>
-                <p className="text-[11.5px] font-semibold leading-snug text-foreground">
-                  {answer.displayText}
-                </p>
-              </li>
-            ))}
-          </motion.ul>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function Options({
-  question,
-  selected,
-  onPick,
-}: {
-  question: OnboardingQuestion;
-  selected: string[];
-  onPick: (id: string) => void;
-}) {
-  // Short, description-free labels tile two-up — halves the height of the list.
-  const twoUp =
-    question.options.length > 3 &&
-    question.options.every((option) => !option.description && option.label.length <= 22);
-
-  return (
-    <div className={cn('mt-3', twoUp ? 'grid grid-cols-2 gap-1.5' : 'space-y-1.5')}>
-      {question.options.map((option, index) => {
-        const active = selected.includes(option.id);
-        return (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onPick(option.id)}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition',
-              active
-                ? 'border-pulse bg-pulse/10'
-                : 'border-border bg-background hover:border-pulse/50 hover:bg-pulse/5',
-              // An odd tail tile spans the row instead of leaving a gap.
-              twoUp && index === question.options.length - 1 && question.options.length % 2 === 1
-                ? 'col-span-2'
-                : '',
-            )}
-          >
-            {option.emoji && (
-              <span className="shrink-0 text-[15px] leading-none">{option.emoji}</span>
-            )}
-            <span className="min-w-0 flex-1">
-              <span className="block text-[12.5px] font-semibold leading-snug">{option.label}</span>
-              {option.description && (
-                <span className="mt-0.5 line-clamp-2 block text-[10.5px] leading-snug text-muted-foreground">
-                  {option.description}
-                </span>
-              )}
-            </span>
-            {/* One badge, two jobs: keyboard hint until picked, then the tick. */}
-            <span
-              className={cn(
-                'grid h-4 w-4 shrink-0 place-items-center rounded-full border text-[9px] font-bold tabular-nums transition',
-                active
-                  ? 'border-pulse bg-pulse text-primary-foreground'
-                  : 'border-border text-muted-foreground',
-              )}
-            >
-              {active ? (
-                <Check className="h-2.5 w-2.5" strokeWidth={4} />
-              ) : (
-                <span className="hidden sm:block">{index + 1}</span>
-              )}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Thinking({ label, echo }: { label: string; echo?: string }) {
-  return (
-    <motion.div
-      key="thinking"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-    >
-      {echo && (
-        <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-pulse px-3 py-1.5 text-[12px] font-medium leading-snug text-primary-foreground">
-          {echo}
-        </p>
-      )}
-      <div className={cn('flex items-center gap-2 text-[11px] font-medium text-muted-foreground', echo && 'mt-3')}>
-        <span className="flex items-center gap-1" aria-hidden>
-          {[0, 1, 2].map((index) => (
-            <motion.span
-              key={index}
-              className="h-1.5 w-1.5 rounded-full bg-pulse"
-              animate={{ y: [0, -4, 0], opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 1, repeat: Infinity, delay: index * 0.14 }}
-            />
-          ))}
-        </span>
-        {label}
-      </div>
-    </motion.div>
-  );
-}
-
-function Complete({
-  copy,
-  closing,
-  steps,
-  locale,
-  onNavigate,
-}: {
-  copy: Copy;
-  closing: string;
-  steps: OnboardingRoadmapStep[];
-  locale: Locale;
-  onNavigate: () => void;
-}) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-      {closing && (
-        <p className="mb-3 text-[12px] leading-relaxed text-muted-foreground">{closing}</p>
-      )}
-
-      <p className="mb-2.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-        <Sparkles className="h-3 w-3 text-pulse" />
-        {copy.roadmapTitle}
-      </p>
-
-      <ol className="space-y-2">
-        {steps.map((step, index) => (
-          <li key={step.courseId} className="relative flex gap-2.5">
-            <div className="flex shrink-0 flex-col items-center">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-pulse text-[10px] font-black text-primary-foreground shadow-[0_0_0_3px_var(--pulse-glow)]">
-                {index + 1}
-              </span>
-              {index < steps.length - 1 && <span className="mt-1 w-px flex-1 bg-border" />}
-            </div>
-
-            <Link
-              href={`/${locale}/courses/${step.courseId}`}
-              onClick={onNavigate}
-              className="group min-w-0 flex-1 rounded-xl border border-border bg-background p-2.5 transition hover:border-pulse/60 hover:bg-pulse/5"
-            >
-              <p className="flex items-baseline gap-2 text-[13px] font-bold leading-snug">
-                <span className="min-w-0 flex-1">{step.title}</span>
-                {step.when && (
-                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {step.when}
-                  </span>
-                )}
-              </p>
-              {step.why && (
-                <p className="mt-1 line-clamp-2 text-[10.5px] leading-relaxed text-muted-foreground">
-                  {step.why}
-                </p>
-              )}
-              <span className="mt-1.5 inline-flex items-center gap-1 text-[10.5px] font-bold text-pulse">
-                {copy.startStep}
-                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ol>
-
-      <Link
-        href={`/${locale}#courses`}
-        onClick={onNavigate}
-        className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-border py-2.5 text-xs font-bold text-muted-foreground transition hover:border-pulse/50 hover:text-foreground"
-      >
-        {copy.browseAll}
-      </Link>
-    </motion.div>
   );
 }

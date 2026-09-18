@@ -176,31 +176,27 @@ const LEFT_ARM: Variants = {
 
 const EYE_SYMM: Variants = {
   idle: { scaleY: 1, scaleX: 1, y: 0 },
-  wave: { scaleY: 0.5, scaleX: 1, y: -1 },
+  wave: { scaleY: 0.6, scaleX: 1, y: 0 },
   // Correct-answer celebration — eyes squint into smile during the airborne joy
   spin: {
-    scaleY: [1, 1, 0.5, 0.55, 0.75, 1],
-    scaleX: [1, 1, 1.1, 1.08, 1.04, 1],
-    y: [0, 0, -1.5, -1, -0.5, 0],
+    scaleY: [1, 1, 0.6, 0.65, 0.8, 1],
+    scaleX: [1, 1, 1.05, 1.04, 1.02, 1],
+    y: [0, 0, 0, 0, 0, 0],
     transition: {
       duration: 1.0,
       times: [0, 0.15, 0.4, 0.65, 0.85, 1],
       ease: 'easeInOut',
     },
   },
-  dance: { scaleY: 0.55, scaleX: 1, y: -1 },
+  dance: { scaleY: 0.65, scaleX: 1, y: 0 },
   sleep: { scaleY: 0.06, scaleX: 1, y: 0 },
+  tilt: { scaleY: 1, scaleX: 1, y: 0 },
 };
 
-const leftEyeVariants: Variants = {
-  ...EYE_SYMM,
-  tilt: { scaleY: 1.15, scaleX: 1.08, y: 0 },
-};
+// Both eyes use the same symmetric variants to prevent eye desync/misalignment
+const leftEyeVariants: Variants = EYE_SYMM;
 
-const rightEyeVariants: Variants = {
-  ...EYE_SYMM,
-  tilt: { scaleY: 0.78, scaleX: 0.94, y: 0 },
-};
+const rightEyeVariants: Variants = EYE_SYMM;
 
 /* ============================================================
    Path data — kept as single-line constants so SSR and CSR emit

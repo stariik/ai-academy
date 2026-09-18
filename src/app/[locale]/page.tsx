@@ -7,6 +7,8 @@ import { getAuthUser } from '@/lib/auth';
 import { getCurrentUserEnrollments } from '@/lib/enrollments';
 import { reconcileBundlePurchase } from '@/lib/payments-fulfill';
 import { localizedAlternates, SITE_URL } from '@/lib/seo';
+import { createClient } from '@/lib/supabase/server';
+import type { OnboardingAnswer } from '@/lib/onboarding';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,6 +70,117 @@ export default async function LandingPage({
     getAuthUser(),
     getCurrentUserEnrollments(),
   ]);
+
+  // Get recommended course IDs and reorder categories if user is logged in
+  let recommendedCourseIds: string[] = [];
+  let orderedCategories = categories;
+
+  if (authUser) {
+    try {
+      // Get full user data from Supabase to access user_metadata
+      const supabase = await createClient();
+      const { data } = await supabase.auth.getUser();
+      const onboarding = data.user?.user_metadata?.onboarding;
+      if (onboarding && Array.isArray(onboarding)) {
+        // Extract interests and goals
+        const interests: string[] = [];
+        const goals: string[] = [];
+        const goalIds: string[] = [];
+        onboarding.forEach((answer: OnboardingAnswer) => {
+          if (answer.questionId === 'progress_goal') {
+            goals.push(...answer.selectedLabels);
+            goalIds.push(...answer.selectedOptionIds);
+          }
+          if (answer.selectedLabels) {
+            interests.push(...answer.selectedLabels);
+          }
+          if (answer.freeText) {
+            interests.push(answer.freeText.toLowerCase());
+          }
+        });
+
+        // Score courses
+        const scoredCourses = courses.map(course => {
+          let score = 0;
+          const courseTags = [course.categoryId];
+          const courseText = `${course.title} ${course.description}`.toLowerCase();
+
+          goals.forEach(goal => {
+            if (courseText.includes(goal.toLowerCase())) score += 3;
+            courseTags.forEach((tag: string) => {
+              if (tag.toLowerCase().includes(goal.toLowerCase()) ||
+                  goal.toLowerCase().includes(tag.toLowerCase())) score += 2;
+            });
+          });
+
+          interests.forEach(interest => {
+            if (courseText.includes(interest.toLowerCase())) score += 1;
+            courseTags.forEach((tag: string) => {
+              if (tag.toLowerCase().includes(interest.toLowerCase()) ||
+                  interest.toLowerCase().includes(tag.toLowerCase())) score += 1;
+            });
+          });
+
+          return { ...course, score };
+        });
+
+        scoredCourses.sort((a, b) => b.score - a.score);
+        // Get top 3 recommended courses with score > 0
+        recommendedCourseIds = scoredCourses
+          .filter(c => c.score > 0)
+          .slice(0, 3)
+          .map(c => c.id);
+
+        // Score and reorder categories based on user goals and interests
+        const categoryGoalMap: Record<string, string[]> = {
+          'work_smarter': ['ai-business', 'prompt-engineering', 'ai-agents'],
+          'grow_business': ['ai-marketing', 'ai-business', 'ai-agents'],
+          'create': ['ai-creative', 'ai-marketing', 'prompt-engineering'],
+          'build': ['ai-coding', 'ai-agents', 'ai-foundations'],
+          'career': ['ai-foundations', 'prompt-engineering', 'ai-coding'],
+          'confidence': ['ai-foundations', 'prompt-engineering', 'ai-business'],
+        };
+
+        const scoredCategories = categories.map(category => {
+          let score = 0;
+          const categoryText = `${category.name} ${category.tagline}`.toLowerCase();
+
+          // Match goals to category slugs using goalIds
+          goalIds.forEach(goalId => {
+            const relevantSlugs = categoryGoalMap[goalId] || [];
+            if (relevantSlugs.includes(category.id)) {
+              score += 5;
+            }
+          });
+
+          // Also check text matching with goal labels
+          goals.forEach(goal => {
+            if (categoryText.includes(goal.toLowerCase())) {
+              score += 2;
+            }
+          });
+
+          // Match interests to category
+          interests.forEach(interest => {
+            if (categoryText.includes(interest.toLowerCase())) {
+              score += 1;
+            }
+          });
+
+          return { category, score };
+        });
+
+        scoredCategories.sort((a, b) => b.score - a.score);
+        orderedCategories = scoredCategories.map(sc => sc.category);
+
+        // Debug logging
+        console.log('[landing] Onboarding goals:', goalIds);
+        console.log('[landing] Recommended category order:', scoredCategories.map(sc => ({ id: sc.category.id, name: sc.category.name, score: sc.score })));
+      }
+    } catch (error) {
+      console.error('[landing] Error getting recommendations:', error);
+    }
+  }
   const courseListJsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -112,12 +225,13 @@ export default async function LandingPage({
         }}
       />
       <LandingClient
-        categories={categories}
+        categories={orderedCategories}
         courses={courses}
         dict={dict}
         locale={locale}
         authUser={authUser}
         enrolledCourseIds={enrolledCourseIds}
+        recommendedCourseIds={recommendedCourseIds}
       />
     </>
   );

@@ -30,6 +30,7 @@ import { CompletionView } from './CompletionView';
 import type { WrongAnswer } from './CheckQuestionsV2';
 import { cn } from '@/lib/utils';
 import { V2LocaleProvider } from '@/lib/v2/i18n/context';
+import { MATERIAL_STRINGS } from './materialStrings';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 
 const CONTENT_PREF_KEY = 'walle:v2-lesson-content-visible';
@@ -114,8 +115,16 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
     [lessonId],
   );
 
+  // The content trigger's labels follow the *teacher* locale, not the site
+  // route locale — the button opens the material panel, whose language the
+  // in-lesson KA/EN toggle controls. See materialStrings.ts.
+  const t = MATERIAL_STRINGS[teacherLocale];
+
   // On-the-fly English translation of the current page's material (cached
   // server-side). Keyed by page; cleared when locale is Georgian.
+  // True while the chat's concept-chips bar is on screen — it hosts the
+  // content trigger itself, so the floating fallback stands down.
+  const [chipsBarVisible, setChipsBarVisible] = React.useState(false);
   const [translatedPage, setTranslatedPage] = React.useState<TranslatedPageOverlay | null>(null);
   const [translating, setTranslating] = React.useState(false);
 
@@ -264,6 +273,35 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
     };
   }, [teacherLocale, isQuizPage, currentPageData, currentPage, lessonId]);
 
+  /* ─── prefetch the next page's EN translation ───
+     Students read sequentially, so warming page N+1 while they're on N hides
+     the translation latency entirely for the common path. The request's only
+     purpose is to populate the server-side cache, so the response is
+     discarded. Deliberately gated on the *current* page having landed, so we
+     never compete with the translation the student is actually waiting on. */
+  React.useEffect(() => {
+    if (teacherLocale !== 'en' || translating || !translatedPage) return;
+    const nextPageNumber = currentPage + 1;
+    // Don't prefetch the synthetic final-quiz page — it has no material.
+    if (!pages.some((p) => p.pageNumber === nextPageNumber)) return;
+
+    // A short idle delay keeps the prefetch off the heels of the render that
+    // just finished, so it can't make the current page feel slower.
+    const timer = setTimeout(() => {
+      // Intentionally not abortable: the response populates a server-side
+      // cache, so a request already in flight is worth finishing even if the
+      // student has moved on — cancelling it would waste the work.
+      fetch(`/api/lessons/${lessonId}/translate?pageNumber=${nextPageNumber}&locale=en`).catch(
+        () => {
+          // Best-effort only — a failed prefetch just means the student pays
+          // the normal on-demand cost when they turn the page.
+        },
+      );
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [teacherLocale, translating, translatedPage, currentPage, pages, lessonId]);
+
   // The page handed to the material panel: translated when EN + ready,
   // Georgian otherwise. `materialLoading` covers the in-flight EN case.
   const displayPage = React.useMemo<LessonPage | null>(() => {
@@ -372,6 +410,7 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
         contentVisible={contentVisibleDesktop}
         onToggleContent={() => setContentVisibleDesktop((v) => !v)}
         onOpenSheet={() => setContentSheetOpen(true)}
+        teacherLocale={teacherLocale}
       />
 
       <LessonStepper
@@ -418,6 +457,12 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
               key={`page-${currentPage}`}
               lessonId={lessonId}
               lesson={lesson}
+              page={displayPage}
+              materialLoading={materialLoading}
+              onOpenContent={() => setContentSheetOpen(true)}
+              contentStrings={{ label: t.contentLabel, ready: t.contentReady }}
+              isCheckUnlocked={isCheckUnlocked}
+              onChipsBarVisibleChange={setChipsBarVisible}
               pageNumber={currentPage}
               teacherLocale={teacherLocale}
               onTeacherLocaleChange={setAndPersistTeacherLocale}
@@ -427,8 +472,10 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
             />
           )}
 
-          {/* Mobile "open content" floating trigger */}
-          {!isQuizPage && currentPageData && (
+          {/* Mobile "open content" floating trigger — only a fallback for
+              when the chat's chips bar (which hosts the trigger inline) isn't
+              on screen, e.g. a fresh lesson with no messages yet. */}
+          {!isQuizPage && currentPageData && !chipsBarVisible && (
             <motion.button
               key={`fab-${currentPage}-${isCheckUnlocked ? 'unlocked' : 'locked'}`}
               type="button"
@@ -443,14 +490,19 @@ function LessonClientInner({ lessonId, locale }: { lessonId: string; locale: Loc
                   ? 'bg-pulse text-primary-foreground shadow-[0_8px_28px_var(--pulse-glow)]'
                   : 'bg-card/95 text-foreground border border-border',
               )}
+              // Clears the composer (~72px) *and* the concept-chips bar
+              // (~60px for a single row of chips plus its label), so the
+              // trigger never covers the quick questions.
+              // Only has to clear the composer: this renders solely when the
+              // chips bar is absent.
               style={{ bottom: 'calc(env(safe-area-inset-bottom, 0) + 84px)' }}
             >
               <BookOpen className="w-4 h-4" />
-              <span>კონტენტი</span>
+              <span>{t.contentLabel}</span>
               {isCheckUnlocked && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 text-[10px]">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-                  მზად
+                  {t.contentReady}
                 </span>
               )}
             </motion.button>

@@ -45,3 +45,6 @@ next-env.d.ts
 
 # graphify knowledge-graph output — generated, regenerate with /graphify
 /graphify-out/
+
+# Local test seed data
+/test-data.sql
