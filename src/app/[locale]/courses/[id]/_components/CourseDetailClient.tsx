@@ -156,6 +156,101 @@ function CoursePage({
     }
   }, [course.id, authed]);
 
+  // Land the visitor on the curriculum instead of the hero: the first lesson
+  // is the thing that sells the course, and the hero above it is tall enough
+  // that nobody scrolled far enough to see it. Runs once per course.
+  //  - any incoming hash (#buy, #curriculum…) wins — it's an explicit target;
+  //  - a restored scroll position wins too, so Back doesn't yank you forward;
+  //  - rAF x2 so the hero images/rail have laid out and the offset is real.
+  //
+  // The travel is animated by hand rather than with scrollIntoView({behavior:
+  // 'smooth'}): the native curve is a fixed, fairly brisk ease that can't be
+  // tuned, and over a hero's worth of distance it reads as a snap. This runs
+  // ~1.1s on a slow ease-in-out, so the hero glides past instead of vanishing.
+  const reducedMotion = useReducedMotion();
+  React.useEffect(() => {
+    if (window.location.hash) return;
+    if (window.scrollY > 0) return;
+
+    let raf2 = 0;
+    let rafAnim = 0;
+    let cancelled = false;
+
+    // Any real input during the glide hands control back immediately — an
+    // animation that fights the wheel feels broken.
+    // globals.css sets html{scroll-behavior:smooth} for anchor links, which
+    // would make every per-frame scrollTo below its own smooth animation —
+    // they queue and fight instead of following the curve. Suspend it while
+    // we drive the scroll, and always put it back.
+    const root = document.documentElement;
+    const restoreBehavior = () => {
+      root.style.scrollBehavior = '';
+    };
+
+    const stop = () => {
+      cancelled = true;
+      cancelAnimationFrame(rafAnim);
+      restoreBehavior();
+    };
+    const inputEvents = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        // Bail if the visitor started scrolling themselves in the meantime —
+        // hijacking their scroll mid-gesture is worse than a tall hero.
+        if (window.scrollY > 0) return;
+        const target = document.getElementById('curriculum');
+        if (!target) return;
+
+        // scroll-mt-24 on the section is a CSS-only offset that the native
+        // scroller applies; animating by hand means subtracting it ourselves.
+        const NAV_OFFSET = 96; // = scroll-mt-24 (24 × 4px)
+        const start = window.scrollY;
+        const end = Math.min(
+          target.getBoundingClientRect().top + start - NAV_OFFSET,
+          document.documentElement.scrollHeight - window.innerHeight,
+        );
+        const distance = end - start;
+        if (Math.abs(distance) < 2) return;
+
+        root.style.scrollBehavior = 'auto';
+
+        if (reducedMotion) {
+          window.scrollTo(0, end);
+          restoreBehavior();
+          return;
+        }
+
+        const DURATION = 1100;
+        // easeInOutCubic — slow departure and arrival, quick through the middle.
+        const ease = (t: number) =>
+          t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+        inputEvents.forEach((e) =>
+          window.addEventListener(e, stop, { passive: true, once: true }),
+        );
+
+        const t0 = performance.now();
+        const step = (now: number) => {
+          if (cancelled) return;
+          const t = Math.min((now - t0) / DURATION, 1);
+          window.scrollTo(0, start + distance * ease(t));
+          if (t < 1) rafAnim = requestAnimationFrame(step);
+          else restoreBehavior();
+        };
+        rafAnim = requestAnimationFrame(step);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      cancelAnimationFrame(rafAnim);
+      restoreBehavior();
+      inputEvents.forEach((e) => window.removeEventListener(e, stop));
+    };
+  }, [course.id, reducedMotion]);
+
   const effectiveState: ViewerState = authed
     ? enrollments.includes(course.id)
       ? 'enrolled'
