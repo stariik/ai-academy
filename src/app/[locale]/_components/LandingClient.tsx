@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Walle } from '@/components/walle/Walle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { cn } from '@/lib/utils';
@@ -341,23 +341,15 @@ function toneFromString(s: string): Tone {
 export function LanguageSwitcher({ full = false }: { full?: boolean }) {
   const { locale } = useV2Locale();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const switchLocale = (newLocale: 'ka' | 'en') => {
-    if (newLocale === locale) return;
-
-    // Get current path segments
-    const segments = pathname.split('/').filter(Boolean);
-
-    // Replace the first segment (locale) or add it if missing
-    if (segments.length > 0 && (segments[0] === 'ka' || segments[0] === 'en')) {
-      segments[0] = newLocale;
-    } else {
-      segments.unshift(newLocale);
-    }
-
-    // Navigate to the new locale path
-    const newPath = '/' + segments.join('/');
-    window.location.assign(newPath);
+  // The locale lives in the first path segment, so switching is just the same
+  // route under the other prefix — query string included, so a course page
+  // keeps whatever it was showing (preview lesson, tab, …).
+  const hrefFor = (target: Locale) => {
+    const rest = (pathname ?? '/').replace(/^\/(ka|en)(?=\/|$)/, '');
+    const query = searchParams?.toString();
+    return `/${target}${rest}${query ? `?${query}` : ''}`;
   };
 
   return (
@@ -370,13 +362,13 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
       )}
     >
       {(['ka', 'en'] as const).map((l) => (
-        <button
+        <Link
           key={l}
-          type="button"
-          onClick={() => switchLocale(l)}
-          aria-pressed={locale === l}
+          href={hrefFor(l)}
+          hrefLang={l}
+          aria-current={locale === l ? 'true' : undefined}
           className={cn(
-            'h-full transition-colors cursor-pointer',
+            'h-full inline-flex items-center transition-colors',
             full ? 'px-4' : 'px-2.5',
             locale === l
               ? 'bg-pulse text-primary-foreground'
@@ -384,7 +376,7 @@ export function LanguageSwitcher({ full = false }: { full?: boolean }) {
           )}
         >
           {l.toUpperCase()}
-        </button>
+        </Link>
       ))}
     </div>
   );
