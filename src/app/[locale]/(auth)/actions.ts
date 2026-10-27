@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import {
   linkSessionToUser,
@@ -13,7 +13,7 @@ import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/v2/i18n';
 const SESSION_COOKIE = 'ai_academy_session';
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
-export type AuthState = { error?: string } | null;
+export type AuthState = { error?: string; sent?: boolean } | null;
 
 function resolveLocale(localeFromForm: string | null): Locale {
   if (localeFromForm && isLocale(localeFromForm)) return localeFromForm;
@@ -176,6 +176,45 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
     ? `/${locale}/login?confirm=1&redeem=${encodeURIComponent(redeem)}`
     : `/${locale}/login?confirm=1`;
   redirect(confirmDest);
+}
+
+export async function requestPasswordResetAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const email = String(formData.get('email') ?? '').trim();
+  const locale = resolveLocale(formData.get('locale') as string | null);
+  if (!email) return { error: 'EMPTY_FIELDS' };
+
+  const origin = process.env.PUBLIC_SITE_URL ?? (await headers()).get('origin') ?? '';
+  const next = `/${locale}/reset-password`;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/api/auth/confirm?next=${encodeURIComponent(next)}`,
+  });
+  if (error) {
+    console.error('[auth.resetPassword] failed', { message: error.message, status: error.status });
+    if (error.status === 429) return { error: 'RATE_LIMITED' };
+  }
+  // Always report "sent" so the form can't be used to probe which emails exist.
+  return { sent: true };
+}
+
+export async function updatePasswordAction(
+  _prev: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const password = String(formData.get('password') ?? '');
+  const locale = resolveLocale(formData.get('locale') as string | null);
+  if (password.length < 8) return { error: 'PASSWORD_TOO_SHORT' };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    console.error('[auth.updatePassword] failed', { message: error.message, status: error.status });
+    return { error: 'UPDATE_FAILED' };
+  }
+  redirect(`/${locale}`);
 }
 
 export async function signOutAction(formData: FormData): Promise<void> {

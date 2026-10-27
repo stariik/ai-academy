@@ -97,6 +97,13 @@ function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemC
           invalid={credentialsInvalid}
         />
 
+        <a
+          href={href('forgot-password')}
+          className="-mt-1 block text-right text-sm font-semibold text-pulse hover:underline"
+        >
+          {dict.auth.forgotLink}
+        </a>
+
         {errorMessage && <AuthError message={errorMessage} />}
 
         <AuthSubmit pending={pending}>

@@ -134,6 +134,7 @@ export type Dict = {
     levelLabel: string;
     lessonsLabel: string;
     hoursLabel: string;
+    updatedLabel: string;
     studentsLabel: string;
     ratingLabel: string;
     outcomesEyebrow: string;
@@ -302,6 +303,15 @@ export type Dict = {
     errorEmailTaken: string;
     errorRateLimited: string;
     errorGeneric: string;
+    forgotLink: string;
+    forgotTitle: string;
+    forgotSubtitle: string;
+    submitForgot: string;
+    forgotSentNotice: string;
+    resetTitle: string;
+    newPasswordLabel: string;
+    submitReset: string;
+    resetLinkExpired: string;
   };
   profile: {
     pageTitle: string;
