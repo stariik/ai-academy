@@ -220,6 +220,12 @@ export type Course = {
   priceCents?: number | null;
   /** Optional struck-through retail price in tetri for discount display. */
   retailPriceCents?: number | null;
+  /** AI tools this course teaches. */
+  tools?: string[];
+  /** Web sources the content was researched from. */
+  sources?: { title: string; url: string }[];
+  /** When the content was web-researched; null for PDF-made courses. */
+  researchedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };

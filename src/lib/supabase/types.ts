@@ -78,6 +78,10 @@ export type CourseRow = {
   // undefined as null so the app works before the columns exist.
   price_cents?: number | null;
   retail_price_cents?: number | null;
+  // Optional pre-migration (2026-10-26-tool-radar.sql).
+  tools?: string[];
+  sources?: { title: string; url: string }[];
+  researched_at?: string | null;
   created_at: string;
   updated_at: string;
 };

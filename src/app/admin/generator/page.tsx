@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import type { CourseGenerationProgress } from '@/types';
 import { CATEGORIES } from '@/lib/constants/categories';
 
@@ -41,6 +42,15 @@ type FullPdfJob = {
   // renames, deletes) without re-running outline detection.
   presetSections?: DetectedSection[];
   presetExtractedText?: string;
+  research?: ResearchMeta;
+};
+
+// Carried from /api/analyze-course/research into /api/analyze-course/create.
+type ResearchMeta = {
+  tools: string[];
+  sources: { title: string; url: string }[];
+  researchedAt: string;
+  radarId?: string;
 };
 
 const newJobId = () =>
@@ -49,9 +59,14 @@ const newJobId = () =>
     : `job-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function AdminPage() {
+  // /admin/radar "Create course" links here with ?tool=&field=&radar=
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<AdminStep>('upload');
   const [courseName, setCourseName] = useState('');
-  const [selectedCourseTags, setSelectedCourseTags] = useState<string[]>([]);
+  const [selectedCourseTags, setSelectedCourseTags] = useState<string[]>(() => {
+    const field = searchParams.get('field');
+    return field ? [field] : [];
+  });
   const [targetLevel, setTargetLevel] = useState('intermediate');
   const [error, setError] = useState<string | null>(null);
   const [courseGenProgress, setCourseGenProgress] = useState<CourseGenerationProgress | null>(null);
@@ -62,6 +77,12 @@ export default function AdminPage() {
   const [detectingOutline, setDetectingOutline] = useState(false);
   const [totalWords, setTotalWords] = useState(0);
   const [extractedText, setExtractedText] = useState('');
+
+  // Topic path: web-research a tool into course Markdown (no PDF)
+  const [researchTool, setResearchTool] = useState(() => searchParams.get('tool') ?? '');
+  const [researchAudience, setResearchAudience] = useState('');
+  const [researching, setResearching] = useState(false);
+  const [researchMeta, setResearchMeta] = useState<ResearchMeta | null>(null);
 
   // Queue path: multi-file batch with add-while-running
   const fullPdfAbortRef = useRef<AbortController | null>(null);
@@ -219,6 +240,7 @@ export default function AdminPage() {
               courseName: nextJob.name.trim() || nextJob.file.name.replace(/\.[^.]+$/, ''),
               sections: detectedSections,
               tags: nextJob.tags,
+              ...nextJob.research,
             }),
             signal: controller.signal,
           });
@@ -416,6 +438,7 @@ export default function AdminPage() {
         return;
       }
 
+      setResearchMeta(null);
       detectOutline(acceptedFiles[0]);
     },
     [detectOutline, selectedCourseTags]
@@ -433,6 +456,40 @@ export default function AdminPage() {
     disabled: detectingOutline || step === 'generating',
   });
 
+  // ---- Topic research → reuse the single-file review flow ----
+  const runResearch = async () => {
+    const tool = researchTool.trim();
+    if (!tool || !selectedCourseTags[0]) return;
+    setResearching(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/analyze-course/research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tool,
+          field: selectedCourseTags[0],
+          level: targetLevel,
+          audience: researchAudience,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Research failed');
+      setResearchMeta({
+        tools: tool.split(',').map((t) => t.trim()).filter(Boolean),
+        sources: data.sources,
+        researchedAt: data.researchedAt,
+        radarId: searchParams.get('radar') ?? undefined,
+      });
+      const title = /^# (.+)$/m.exec(data.markdown)?.[1]?.trim() || tool;
+      await detectOutline(new File([data.markdown], `${title}.md`, { type: 'text/markdown' }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Research failed');
+    } finally {
+      setResearching(false);
+    }
+  };
+
   const resetAll = () => {
     setStep('upload');
     setCourseName('');
@@ -443,6 +500,7 @@ export default function AdminPage() {
     setSelectedFile(null);
     setTotalWords(0);
     setExtractedText('');
+    setResearchMeta(null);
     setFullPdfJobs([]);
     setActiveFullPdfId(null);
   };
@@ -544,6 +602,42 @@ export default function AdminPage() {
                   <p className="text-xs text-gray-500">claude-sonnet-4-6 · 64K output · higher quality</p>
                 </button>
               </div>
+            </div>
+
+            {/* Topic → course via web research */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-4">
+              <label htmlFor="researchTool" className="block text-sm font-medium text-gray-700 mb-1">
+                From topic <span className="text-gray-400 font-normal">(no PDF — researches the web, uses Level + Category above)</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+                <input
+                  id="researchTool"
+                  type="text"
+                  value={researchTool}
+                  onChange={(e) => setResearchTool(e.target.value)}
+                  placeholder="Tool(s), e.g. Sora 2, Runway"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+                />
+                <input
+                  type="text"
+                  value={researchAudience}
+                  onChange={(e) => setResearchAudience(e.target.value)}
+                  placeholder="Audience (optional), e.g. lawyers"
+                  aria-label="Audience"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-teal focus:outline-none focus:ring-1 focus:ring-teal-100"
+                />
+                <button
+                  type="button"
+                  onClick={runResearch}
+                  disabled={researching || detectingOutline || !researchTool.trim() || !selectedCourseTags[0]}
+                  className="px-5 py-2 text-sm bg-navy text-white rounded-lg hover:bg-navy-light font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                >
+                  {researching ? 'Researching… (1–3 min)' : 'Research & outline'}
+                </button>
+              </div>
+              {!selectedCourseTags[0] && researchTool.trim() && (
+                <p className="text-xs text-amber-600 mt-2">Pick a Category above first.</p>
+              )}
             </div>
 
             {detectingOutline ? (
@@ -667,6 +761,23 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {researchMeta && (
+              <details className="bg-white border border-gray-200 rounded-lg p-4 mb-4 text-sm">
+                <summary className="cursor-pointer font-medium text-gray-700">
+                  Researched from {researchMeta.sources.length} web sources — check before publishing
+                </summary>
+                <ul className="mt-2 space-y-1 list-disc pl-5">
+                  {researchMeta.sources.map((s) => (
+                    <li key={s.url}>
+                      <a href={s.url} target="_blank" rel="noreferrer" className="text-teal hover:underline break-all">
+                        {s.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -768,6 +879,7 @@ export default function AdminPage() {
                     tags: selectedCourseTags,
                     presetSections: sections,
                     presetExtractedText: extractedText,
+                    research: researchMeta ?? undefined,
                   };
                   setFullPdfJobs([job]);
                   fullPdfJobsRef.current = [job];

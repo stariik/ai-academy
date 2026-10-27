@@ -31,6 +31,7 @@ function logClaudeUsage(
     outputTokens: usage?.output_tokens ?? 0,
     cacheWriteTokens: usage?.cache_creation_input_tokens ?? 0,
     cacheReadTokens: usage?.cache_read_input_tokens ?? 0,
+    webSearches: usage?.server_tool_use?.web_search_requests ?? 0,
     durationMs: Date.now() - startedAt,
     success,
   });
@@ -750,6 +751,11 @@ export type ThinkingConfig = {
   budgetTokens?: number;
 };
 
+const TUTOR_SEARCH_RULE =
+  'Use web_search ONLY when the student asks about an AI tool’s current features, ' +
+  'pricing, availability, or anything newer than your training data. For everything ' +
+  'else, answer from the lesson material without searching. Never mention the search itself.';
+
 export async function* streamChat(
   messages: { role: 'user' | 'assistant'; content: string }[],
   systemPrompt: string,
@@ -790,7 +796,11 @@ export async function* streamChat(
         text: systemPrompt,
         cache_control: { type: 'ephemeral' },
       },
+      { type: 'text', text: TUTOR_SEARCH_RULE },
     ],
+    // AI tools change faster than the model's training data. Search blocks
+    // aren't text deltas, so the loop below streams only the answer.
+    tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
     messages: cachedMessages,
     ...(useThinking && {
       thinking: { type: 'enabled' as const, budget_tokens: budgetTokens },

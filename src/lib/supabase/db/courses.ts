@@ -24,6 +24,9 @@ function mapCourseRow(row: CourseRow): Course {
     userId: row.user_id,
     priceCents: row.price_cents ?? null,
     retailPriceCents: row.retail_price_cents ?? null,
+    tools: row.tools ?? [],
+    sources: row.sources ?? [],
+    researchedAt: row.researched_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -31,7 +34,14 @@ function mapCourseRow(row: CourseRow): Course {
 
 export async function createCourse(
   supabase: SupabaseClient,
-  course: { title: string; description: string; tags?: string[] }
+  course: {
+    title: string;
+    description: string;
+    tags?: string[];
+    tools?: string[];
+    sources?: { title: string; url: string }[];
+    researchedAt?: string | null;
+  }
 ): Promise<Course> {
   const { data, error } = await supabase
     .from('courses')
@@ -39,6 +49,10 @@ export async function createCourse(
       title: course.title,
       description: course.description,
       tags: course.tags ?? [],
+      // Only sent when set, so PDF uploads keep working pre-migration.
+      ...(course.tools?.length && { tools: course.tools }),
+      ...(course.sources?.length && { sources: course.sources }),
+      ...(course.researchedAt && { researched_at: course.researchedAt }),
     })
     .select()
     .single();
@@ -74,6 +88,7 @@ export async function updateCourse(
     tags: string[];
     priceCents: number | null;
     retailPriceCents: number | null;
+    tools: string[];
   }>
 ): Promise<Course | null> {
   const rowUpdates: Record<string, unknown> = {};
@@ -84,6 +99,7 @@ export async function updateCourse(
   if (updates.tags !== undefined) rowUpdates.tags = updates.tags;
   if (updates.priceCents !== undefined) rowUpdates.price_cents = updates.priceCents;
   if (updates.retailPriceCents !== undefined) rowUpdates.retail_price_cents = updates.retailPriceCents;
+  if (updates.tools !== undefined) rowUpdates.tools = updates.tools;
 
   if (Object.keys(rowUpdates).length > 0) {
     const { error } = await supabase.from('courses').update(rowUpdates).eq('id', id);

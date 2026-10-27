@@ -45,6 +45,8 @@ export type Course = {
   retailPrice?: number;  // admin-set "was" price (courses.retail_price_cents) — struck through
   level: Level;          // most common difficulty across lessons
   icon: string;          // inherited from category
+  tools?: string[];      // AI tools taught (courses.tools)
+  researchedAt?: string; // when content was web-researched (courses.researched_at)
 };
 
 export type Lesson = {

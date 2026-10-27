@@ -21,6 +21,7 @@ import {
   Cpu,
   BarChart3,
   UploadCloud,
+  Radar,
   ExternalLink,
   Menu,
   X,
@@ -43,6 +44,7 @@ const NAV: NavItem[] = [
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },
   { href: '/admin/leads', label: 'Leads', icon: Inbox },
   { href: '/admin/onboarding', label: 'User insights', icon: MessagesSquare },
+  { href: '/admin/radar', label: 'Tool radar', icon: Radar },
   { href: '/admin/ai-usage', label: 'AI usage', icon: Cpu },
   { href: '/admin/analytics', label: 'Learning analytics', icon: BarChart3 },
 ];

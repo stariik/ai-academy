@@ -22,6 +22,7 @@ export default function AdminCourseDetailPage({
   const [description, setDescription] = useState('');
   const [descriptionEn, setDescriptionEn] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [toolsText, setToolsText] = useState('');
 
   const fetchCourse = useCallback(async () => {
     try {
@@ -34,6 +35,7 @@ export default function AdminCourseDetailPage({
       setDescription(data.description ?? '');
       setDescriptionEn(data.descriptionEn ?? '');
       setTags(Array.isArray(data.tags) ? data.tags : []);
+      setToolsText((data.tools ?? []).join(', '));
     } catch {
       setCourse(null);
     }
@@ -66,6 +68,10 @@ export default function AdminCourseDetailPage({
           description,
           descriptionEn: descriptionEn.trim() || null,
           tags,
+          // Skipped when never set, so saving works before the tool-radar migration.
+          ...((toolsText.trim() || course?.tools?.length) && {
+            tools: toolsText.split(',').map((t) => t.trim()).filter(Boolean),
+          }),
         }),
       });
       if (res.ok) {
@@ -241,6 +247,15 @@ export default function AdminCourseDetailPage({
                 />
               </div>
               <CategoryPicker selected={tags} onChange={setTags} />
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">AI tools taught (comma-separated)</label>
+                <input
+                  value={toolsText}
+                  onChange={(e) => setToolsText(e.target.value)}
+                  placeholder="e.g. Sora 2, Runway"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-2 sm:flex">
                 <button onClick={handleSave} className="px-4 py-2 sm:py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light">
                   Save
@@ -258,6 +273,9 @@ export default function AdminCourseDetailPage({
                   <p className="text-gray-500 mt-1">{course.description}</p>
                 )}
                 <CategoryBadges tags={course.tags} />
+                {!!course.tools?.length && (
+                  <p className="text-xs text-gray-500 mt-2">Tools: {course.tools.join(', ')}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
                 <Link

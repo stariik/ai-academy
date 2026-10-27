@@ -513,7 +513,7 @@ function Hero({
   enrollBusy: boolean;
   onPromoRedeemed: (courseId: string) => void;
 }) {
-  const { dict, href } = useV2Locale();
+  const { dict, href, locale } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
   const reduced = useReducedMotion();
   const [walleState, setWalleState] = React.useState<WalleState>('idle');
@@ -624,6 +624,19 @@ function Hero({
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 pt-0.5">
               <Stat icon={<BookOpen className="w-4 h-4" />} label={`${course.lessons} ${dict.courseDetail.lessonsLabel}`} />
               <Stat icon={<Clock className="w-4 h-4" />} label={`~${course.hours} ${dict.courseDetail.hoursLabel}`} />
+              {(course.tools || course.researchedAt) && (
+                <Stat
+                  icon={<Sparkles className="w-4 h-4" />}
+                  label={[
+                    course.tools?.join(', '),
+                    course.researchedAt &&
+                      `${dict.courseDetail.updatedLabel} ${new Date(course.researchedAt).toLocaleDateString(
+                        locale === 'ka' ? 'ka-GE' : 'en-US',
+                        { month: 'short', year: 'numeric' },
+                      )}`,
+                  ].filter(Boolean).join(' · ')}
+                />
+              )}
             </div>
 
             {/* Enrolled progress mini */}

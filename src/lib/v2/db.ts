@@ -119,6 +119,8 @@ function buildCourse(
       real.retailPriceCents != null ? real.retailPriceCents / 100 : undefined,
     level: inferLevel(lessonsForCourse),
     icon: visual.icon,
+    tools: real.tools?.length ? real.tools : undefined,
+    researchedAt: real.researchedAt ?? undefined,
   };
 }
 

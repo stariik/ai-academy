@@ -29,6 +29,8 @@ const FEATURE_LABELS: Record<string, string> = {
   metadata_generation: 'Metadata / review',
   ui_translation: 'UI translation',
   category_image: 'Category images',
+  course_research: 'Course research (web)',
+  tool_radar: 'Tool radar (web)',
 };
 
 export default async function AdminAiUsagePage({

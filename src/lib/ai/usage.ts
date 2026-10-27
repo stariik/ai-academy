@@ -29,7 +29,9 @@ export type AiFeature =
   | 'onboarding_interview'
   | 'ui_translation'
   | 'category_image'
-  | 'support_chat';
+  | 'support_chat'
+  | 'course_research'
+  | 'tool_radar';
 
 /** Optional request context passed down from routes into AI helpers. */
 export type UsageMeta = {
@@ -48,6 +50,8 @@ export type UsageEntry = UsageMeta & {
   outputTokens?: number;
   cacheReadTokens?: number;
   cacheWriteTokens?: number;
+  /** Anthropic server-side web searches; billed at $10 per 1k on top of tokens. */
+  webSearches?: number;
   /** Overrides the estimate when the caller knows the real cost (e.g. per-image). */
   costUsd?: number;
   durationMs?: number;
@@ -139,7 +143,7 @@ export async function logAiUsage(entry: UsageEntry): Promise<void> {
         outputTokens: entry.outputTokens,
         cacheReadTokens: entry.cacheReadTokens,
         cacheWriteTokens: entry.cacheWriteTokens,
-      });
+      }) + (entry.webSearches ?? 0) * 0.01;
 
     const { error } = await supabase.from('ai_usage').insert({
       provider: entry.provider,
@@ -157,7 +161,9 @@ export async function logAiUsage(entry: UsageEntry): Promise<void> {
       lesson_id: entry.lessonId ?? null,
       course_id: entry.courseId ?? null,
       locale: entry.locale ?? null,
-      metadata: entry.metadata ?? null,
+      metadata: entry.webSearches
+        ? { ...entry.metadata, webSearches: entry.webSearches }
+        : entry.metadata ?? null,
     });
     if (error) {
       console.warn('[ai-usage] insert failed:', error.message);

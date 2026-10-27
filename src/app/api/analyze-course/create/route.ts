@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createCourse } from '@/lib/supabase/db';
 import { isAdmin } from '@/lib/admin-auth';
+import { adminDb } from '@/lib/admin/queries';
 
 export async function POST(request: NextRequest) {
   if (!(await isAdmin())) {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json();
-    const { courseName, sections, tags } = body;
+    const { courseName, sections, tags, tools, sources, researchedAt, radarId } = body;
 
     if (!courseName?.trim()) {
       return NextResponse.json({ error: 'Course name is required' }, { status: 400 });
@@ -30,7 +31,14 @@ export async function POST(request: NextRequest) {
       title: courseName.trim(),
       description: '',
       tags: Array.isArray(tags) ? tags : [],
+      tools: Array.isArray(tools) ? tools : [],
+      sources: Array.isArray(sources) ? sources : [],
+      researchedAt: researchedAt ?? null,
     });
+
+    if (radarId) {
+      await adminDb().from('tool_radar').update({ status: 'course_created' }).eq('id', radarId);
+    }
 
     return NextResponse.json({
       courseId: course.id,
