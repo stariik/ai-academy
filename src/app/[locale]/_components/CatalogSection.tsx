@@ -764,20 +764,14 @@ function BundleCard({ category: c }: { category: Category }) {
                 any artwork, light or dark. */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/5" />
 
-            {/* Discount / soon badge */}
-            {price ? (
-              price.pct > 0 && (
-                <span className={cn('absolute left-2 top-2 inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold text-primary-foreground shadow-md', t.bg)}>
-                  −{price.pct}%
-                </span>
-              )
-            ) : (
+            {/* Soon badge */}
+            {!price && (
               <span className={cn('absolute left-2 top-2 inline-flex items-center rounded-md bg-card/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide backdrop-blur-sm', t.text)}>
                 {dict.catalog.soon}
               </span>
             )}
 
-            {/* Rating chip — moved up top now that the price owns the bottom */}
+            {/* Rating chip */}
             {rating !== null && (
               <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -785,23 +779,6 @@ function BundleCard({ category: c }: { category: Category }) {
                 </svg>
                 {rating.toFixed(1)}
               </span>
-            )}
-
-            {/* Price on the artwork — the loudest thing on the card */}
-            {price && (
-              <div className="absolute inset-x-2.5 bottom-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-                <span
-                  className="text-[23px] sm:text-[26px] font-bold leading-tight tabular-nums text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.55)]"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  ₾{price.bundle}
-                </span>
-                {price.save > 0 && (
-                  <span className="text-[12px] font-semibold tabular-nums text-red-400/90 line-through decoration-white [text-shadow:0_1px_4px_rgba(0,0,0,0.65)]">
-                    ₾{price.retail}
-                  </span>
-                )}
-              </div>
             )}
           </div>
 
