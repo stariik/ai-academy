@@ -19,6 +19,7 @@ function errorText(dict: Dict, code?: string) {
   if (!code) return null;
   if (code === 'EMPTY_FIELDS') return dict.auth.errorEmptyFields;
   if (code === 'PASSWORD_TOO_SHORT') return dict.auth.errorPasswordTooShort;
+  if (code === 'PASSWORD_MISMATCH') return dict.auth.errorPasswordMismatch;
   if (code === 'RATE_LIMITED') return dict.auth.errorRateLimited;
   return dict.auth.errorGeneric;
 }
@@ -124,6 +125,16 @@ function ResetInner({ linkValid }: { linkValid: boolean }) {
             autoComplete="new-password"
             toggleLabel={{ show: dict.auth.showPassword, hide: dict.auth.hidePassword }}
             invalid={state?.error === 'PASSWORD_TOO_SHORT'}
+            enterKeyHint="next"
+          />
+          <AuthPasswordInput
+            label={dict.auth.confirmPasswordLabel}
+            name="confirmPassword"
+            placeholder={dict.auth.passwordPlaceholder}
+            minLength={8}
+            autoComplete="new-password"
+            toggleLabel={{ show: dict.auth.showPassword, hide: dict.auth.hidePassword }}
+            invalid={state?.error === 'PASSWORD_MISMATCH'}
           />
           {errorMessage && <AuthError message={errorMessage} />}
           <AuthSubmit pending={pending}>

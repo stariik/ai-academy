@@ -344,6 +344,8 @@ export const ka: Dict = {
     forgotSentNotice: 'თუ ეს ელფოსტა რეგისტრირებულია, აღდგენის ლინკი უკვე გზაშია. შეამოწმე ელფოსტა.',
     resetTitle: 'ახალი პაროლი',
     newPasswordLabel: 'ახალი პაროლი',
+    confirmPasswordLabel: 'გაიმეორეთ პაროლი',
+    errorPasswordMismatch: 'პაროლები არ ემთხვევა. სცადეთ თავიდან.',
     submitReset: 'პაროლის შენახვა',
     resetLinkExpired: 'ლინკი არასწორია ან ვადაგასულია. მოითხოვე ახალი.',
   },
