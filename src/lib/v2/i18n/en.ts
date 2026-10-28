@@ -345,6 +345,8 @@ export const en: Dict = {
     forgotSentNotice: 'If an account exists for that email, a reset link is on its way. Check your inbox.',
     resetTitle: 'Set a new password',
     newPasswordLabel: 'New password',
+    confirmPasswordLabel: 'Repeat password',
+    errorPasswordMismatch: 'Passwords do not match. Please try again.',
     submitReset: 'Save password',
     resetLinkExpired: 'This link is invalid or has expired. Request a new one.',
   },

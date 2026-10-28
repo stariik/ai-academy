@@ -310,6 +310,8 @@ export type Dict = {
     forgotSentNotice: string;
     resetTitle: string;
     newPasswordLabel: string;
+    confirmPasswordLabel: string;
+    errorPasswordMismatch: string;
     submitReset: string;
     resetLinkExpired: string;
   };

@@ -205,8 +205,10 @@ export async function updatePasswordAction(
   formData: FormData,
 ): Promise<AuthState> {
   const password = String(formData.get('password') ?? '');
+  const confirmPassword = String(formData.get('confirmPassword') ?? '');
   const locale = resolveLocale(formData.get('locale') as string | null);
   if (password.length < 8) return { error: 'PASSWORD_TOO_SHORT' };
+  if (password !== confirmPassword) return { error: 'PASSWORD_MISMATCH' };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
