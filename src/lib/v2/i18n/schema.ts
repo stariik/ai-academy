@@ -43,6 +43,7 @@ export type Dict = {
     coursesUnit: string;
     lessonsUnit: string;
     lessonsUnitShort: string;
+    averageLessonDuration: string;
     soon: string;
     bundleEyebrow: string;
     bundleCta: string;

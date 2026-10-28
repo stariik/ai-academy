@@ -43,6 +43,7 @@ export const ka: Dict = {
     emptyState: 'ჯერ კურსები არ არის — მალე გამოჩნდება.',
     coursesUnit: 'კურსი',
     lessonsUnit: 'გაკვეთილი',
+    averageLessonDuration: 'გაკვეთილის დრო ≈ {minutes} წთ',
     lessonsUnitShort: 'გაკ.',
     soon: 'მალე',
     bundleEyebrow: 'პაკეტი',

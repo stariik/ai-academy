@@ -795,6 +795,7 @@ function BundleCard({ category: c }: { category: Category }) {
           <ul className="mt-2 sm:mt-3 space-y-1 sm:space-y-1.5 px-3 sm:px-4">
             {[
               `${c.courses} ${dict.catalog.coursesUnit}`,
+              dict.catalog.averageLessonDuration.replace('{minutes}', String(c.averageLessonMinutes)),
               dict.courseDetail.trustLifetime,
               dict.courseDetail.trustCertificate,
             ].map((item, i) => (

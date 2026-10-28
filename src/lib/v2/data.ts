@@ -26,6 +26,7 @@ export type Category = {
   audience: AudienceTag;
   courses: number;       // derived: # of real courses tagged with this category
   lessons: number;       // derived: # of published lessons across those courses
+  averageLessonMinutes: number; // estimated mean duration; 15 min for missing estimates
   price?: number;        // not in real data — kept optional for design
   retailPrice?: number;
   icon: string;

@@ -80,6 +80,16 @@ function buildCategory(
     (sum, co) => sum + (lessonsByCourse.get(co.id)?.length ?? 0),
     0,
   );
+  const estimatedMinutes = coursesInCat.reduce(
+    (sum, course) => sum + (lessonsByCourse.get(course.id) ?? []).reduce(
+      (minutes, lesson) => {
+        const duration = lesson.estimatedDurationMinutes;
+        return minutes + (Number.isFinite(duration) && duration > 0 ? duration : 15);
+      },
+      0,
+    ),
+    0,
+  );
   return {
     id: visual.slug,
     name: display.name,
@@ -88,6 +98,7 @@ function buildCategory(
     audience: visual.audience,
     courses: coursesInCat.length,
     lessons: totalLessons,
+    averageLessonMinutes: totalLessons > 0 ? Math.max(1, Math.round(estimatedMinutes / totalLessons)) : 15,
     // Admin-set bundle price override (₾); when absent the storefront
     // falls back to its derived bundle pricing.
     price: meta?.bundlePriceCents != null ? meta.bundlePriceCents / 100 : undefined,

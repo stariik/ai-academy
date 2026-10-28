@@ -44,6 +44,7 @@ export const en: Dict = {
     coursesUnit: 'courses',
     lessonsUnit: 'lessons',
     lessonsUnitShort: 'lsn',
+    averageLessonDuration: 'Avg. lesson ≈ {minutes} min',
     soon: 'soon',
     bundleEyebrow: 'Bundle deal',
     bundleCta: 'Buy',
