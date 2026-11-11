@@ -252,6 +252,7 @@ export const ka: Dict = {
     footerCourses: 'კურსები',
     continueShort: 'გააგრძელე',
     startShort: 'დაიწყე',
+    buyShort: 'შეიძინე',
   },
 
   lesson: {

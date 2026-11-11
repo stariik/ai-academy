@@ -21,19 +21,21 @@ export default function RegisterForm({
   dict,
   locale,
   redeemCode,
+  next,
 }: {
   dict: Dict;
   locale: Locale;
   redeemCode?: string;
+  next?: string;
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
-      <Inner redeemCode={redeemCode} />
+      <Inner redeemCode={redeemCode} next={next} />
     </V2LocaleProvider>
   );
 }
 
-function Inner({ redeemCode }: { redeemCode?: string }) {
+function Inner({ redeemCode, next }: { redeemCode?: string; next?: string }) {
   const { dict, locale, href } = useV2Locale();
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     signUpAction,
@@ -80,6 +82,13 @@ function Inner({ redeemCode }: { redeemCode?: string }) {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
+    // Mid-purchase: they already know what they want, so no questions.
+    if (next) {
+      formData.set('locale', locale);
+      formData.set('next', next);
+      startTransition(() => formAction(formData));
+      return;
+    }
     setDisplayName(formData.get('displayName') as string);
     setEmail(formData.get('email') as string);
     setPassword(formData.get('password') as string);
@@ -147,7 +156,9 @@ function Inner({ redeemCode }: { redeemCode?: string }) {
             href={
               redeemCode
                 ? `${href('login')}?redeem=${encodeURIComponent(redeemCode)}`
-                : href('login')
+                : next
+                  ? `${href('login')}?next=${encodeURIComponent(next)}`
+                  : href('login')
             }
           />
         }
@@ -189,7 +200,7 @@ function Inner({ redeemCode }: { redeemCode?: string }) {
 
           {errorMessage && <AuthError message={errorMessage} />}
 
-          <AuthSubmit pending={false}>
+          <AuthSubmit pending={pending}>
             {locale === 'ka' ? 'გაგრძელება' : 'Continue'}
           </AuthSubmit>
         </form>

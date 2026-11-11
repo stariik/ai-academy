@@ -22,6 +22,8 @@ import {
   pickLocale,
   getCategoryDisplay,
 } from './data';
+import { FREE_LESSON_ID } from './routes';
+import { COURSE_PITCH } from './course-pitch';
 import type {
   Category,
   Course,
@@ -117,10 +119,14 @@ function buildCourse(
   const tag = firstCanonicalTag(real.tags ?? []);
   if (!tag) return null;
   const visual = CATEGORY_VISUALS[tag];
+  const [headline, subtitle, role] = COURSE_PITCH[real.id]?.[locale] ?? [];
   return {
     id: real.id,
     title: pickLocale(locale, real.title, real.titleEn ?? undefined),
     description: pickLocale(locale, real.description, real.descriptionEn ?? undefined),
+    headline,
+    subtitle,
+    role,
     categoryId: visual.slug,
     audience: visual.audience,
     lessons: lessonsForCourse.length,
@@ -257,7 +263,7 @@ export type V2CoursePayload = {
  * ponytail: one hardcoded id beats a schema change for a single row. Promote
  * this to a `lessons.is_free` column the moment a second free lesson is wanted.
  */
-export const FREE_LESSON_ID = 'lesson_1776730632601_t3jqpim';
+export { FREE_LESSON_ID };
 
 function lessonsAsModule(
   courseSlug: string,

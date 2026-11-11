@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import LoginForm from '../_components/LoginForm';
 import { getDict, isLocale, type Locale } from '@/lib/v2/i18n';
 import { getAuthUser } from '@/lib/auth';
+import { safeAuthNext } from '@/lib/v2/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,18 +17,19 @@ export default async function LoginPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ confirm?: string; redeem?: string }>;
+  searchParams: Promise<{ confirm?: string; redeem?: string; next?: string }>;
 }) {
   const { locale: localeParam } = await params;
-  const { confirm, redeem } = await searchParams;
+  const { confirm, redeem, next: rawNext } = await searchParams;
   if (!isLocale(localeParam)) notFound();
   const locale: Locale = localeParam;
   const redeemCode = sanitizeRedeem(redeem);
+  const next = safeAuthNext(rawNext);
 
   // If already authed, fast-forward — straight to redeem if a code is in the URL.
   const authed = await getAuthUser();
   if (authed) {
-    redirect(redeemCode ? `/${locale}/redeem/${redeemCode}` : `/${locale}`);
+    redirect(redeemCode ? `/${locale}/redeem/${redeemCode}` : next ?? `/${locale}`);
   }
 
   const dict = getDict(locale);
@@ -37,6 +39,7 @@ export default async function LoginPage({
       locale={locale}
       confirmNotice={confirm === '1'}
       redeemCode={redeemCode}
+      next={next}
     />
   );
 }

@@ -220,6 +220,7 @@ export type Dict = {
     footerCourses: string;
     continueShort: string;
     startShort: string;
+    buyShort: string;
   };
   lesson: {
     backToCourse: string;

@@ -17,6 +17,7 @@
    ============================================================ */
 
 import * as React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import {
   TONE_CLASSES,
@@ -27,6 +28,22 @@ import {
 import { useV2Locale } from '@/lib/v2/i18n/context';
 
 const pad = (n: number) => String(n).padStart(2, '0');
+
+// The originals are ~2MB each. An admin can paste any URL for a category image
+// and next/image throws on hosts outside next.config, so those stay unoptimized.
+function CoverArt({ src, sizes, className }: { src: string; sizes: string; className: string }) {
+  return (
+    <Image
+      src={src}
+      alt=""
+      fill
+      sizes={sizes}
+      draggable={false}
+      unoptimized={!src.includes('.supabase.co/storage/v1/object/public/')}
+      className={className}
+    />
+  );
+}
 
 /* Bundle pricing — a category is sold as one bundle (all its courses, lifetime
    access). An admin-set price on the category (category_images.bundle_price_cents,
@@ -136,7 +153,7 @@ export function CatalogSection({
   );
 
   // Buy / grant the whole bundle:
-  //   paid + guest  → login first (they can't buy signed out)
+  //   paid + guest  → sign up first (they can't buy signed out), then back here
   //   paid + authed → BOG checkout; access is granted by the payment callback,
   //                   so we don't touch local ownership here
   //   free + authed → POST the bundle route (optimistic, rollback on failure)
@@ -151,7 +168,7 @@ export function CatalogSection({
       const paid = (category.price ?? 0) > 0;
 
       if (paid && !authed) {
-        window.location.href = href('login');
+        window.location.href = href(`register?next=${encodeURIComponent(`${href()}#categories`)}`);
         return;
       }
 
@@ -583,7 +600,8 @@ function Slider({
 
 // Edge arrow — a floating round key astride the row's outer edge. Straddles
 // the content edge on narrow screens and sits fully outside the cards from
-// ~1400px up. Always rendered; ends of the row dim it instead of hiding it.
+// ~1400px up. Ends of the row dim it instead of hiding it. Phones swipe, and
+// there it would sit on top of the card's text, so it starts at sm.
 function EdgeArrow({
   direction,
   disabled,
@@ -603,7 +621,7 @@ function EdgeArrow({
       disabled={disabled}
       className={cn(
         'absolute top-1/2 -translate-y-1/2 z-20',
-        'flex items-center justify-center h-9 w-9 sm:h-12 sm:w-12 rounded-full',
+        'hidden sm:flex items-center justify-center h-12 w-12 rounded-full',
         'bg-card/95 backdrop-blur-md border border-border',
         'shadow-[0_10px_30px_rgba(0,0,0,0.14)]',
         'text-foreground transition-all duration-200 ease-out',
@@ -684,48 +702,31 @@ function BundleCard({ category: c }: { category: Category }) {
   const bundle = useBundle();
   const owned = !disabled && (bundle?.isOwned(c) ?? false);
 
-  const cardRef = React.useRef<HTMLDivElement>(null);
   const sheenRef = React.useRef<HTMLDivElement>(null);
 
-  // Cursor-driven 3D tilt + foil position. Mutates style directly (no React
-  // state) so it stays smooth — mousemove fires constantly. Mouse-only, so it
-  // never interferes with touch scrolling or the slider's drag.
+  // Cursor-driven foil position. Mutates style directly (no React state) so it
+  // stays smooth — mousemove fires constantly. No tilt: rotating the card made
+  // the buy button vanish on some GPUs.
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const el = cardRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const px = (e.clientX - r.left) / r.width;
-    const py = (e.clientY - r.top) / r.height;
-    el.style.transform = `rotateX(${(0.5 - py) * 5}deg) rotateY(${(px - 0.5) * 5}deg) scale(1.01)`;
+    const r = e.currentTarget.getBoundingClientRect();
     const s = sheenRef.current;
     if (s) {
-      s.style.setProperty('--mx', `${px * 100}%`);
-      s.style.setProperty('--my', `${py * 100}%`);
+      s.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
+      s.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
       s.style.opacity = '1';
     }
   };
-  const onEnter = () => {
-    if (cardRef.current) cardRef.current.style.transition = 'transform 0.1s ease-out';
-  };
   const onLeave = () => {
-    const el = cardRef.current;
-    if (el) {
-      el.style.transition = 'transform 0.5s ease-out';
-      el.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
-    }
     if (sheenRef.current) sheenRef.current.style.opacity = '0';
   };
 
   return (
-    <div className="h-full [perspective:1100px]">
+    <div className="h-full">
       <div
-        ref={cardRef}
         onMouseMove={onMove}
-        onMouseEnter={onEnter}
         onMouseLeave={onLeave}
         className={cn(
           'group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card',
-          'transform-gpu will-change-transform [transform-style:preserve-3d]',
           'shadow-sm transition-shadow duration-300',
           disabled ? 'opacity-70' : 'hover:shadow-[0_26px_52px_-26px_var(--pulse-glow)]',
         )}
@@ -747,13 +748,10 @@ function BundleCard({ category: c }: { category: Category }) {
               for no extra card height. */}
           <div className={cn('relative h-28 sm:h-36 w-full overflow-hidden', !hasImage && t.iconBg, disabled && 'grayscale')}>
             {hasImage ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <CoverArt
                 src={c.imageUrl as string}
-                alt=""
-                draggable={false}
-                loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 640px) 240px, 340px"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
               <div className="grid h-full w-full place-items-center">
@@ -856,16 +854,16 @@ function BundleCard({ category: c }: { category: Category }) {
             </a>
           </div>
         ) : price ? (
-          <div className="mt-auto px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-5">
+          // Above the z-40 blended foil sheen — on some GPUs that layer paints
+          // over the button while the cursor moves.
+          <div className="relative z-50 mt-auto px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-5">
             {/* Buy button — opens the bundle dialog */}
             <button
               type="button"
               onClick={() => bundle?.openBuy(c)}
               className={cn(
                 'flex h-10 w-full items-center justify-center gap-2 rounded-xl text-[13px] font-bold text-primary-foreground',
-                'transition-all duration-200 ease-out',
                 t.bg,
-                'hover:brightness-105 active:scale-[0.99]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pulse focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               )}
             >
@@ -927,14 +925,7 @@ function CourseSliderRow({
             >
               {hasImage ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={c.imageUrl as string}
-                    alt=""
-                    draggable={false}
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
+                  <CoverArt src={c.imageUrl as string} sizes="56px" className="object-cover" />
                   <span className="absolute inset-0 bg-black/15" />
                 </>
               ) : (
@@ -1080,8 +1071,20 @@ function CourseCard({
           !owned && (discount > 0 || isRecommended) && 'pr-12',
         )}
       >
-        {co.title}
+        {co.headline ?? co.title}
       </h4>
+
+      {/* Marketing pitch — "why learn it", then "who you become". The DB
+          title stays on the course page and in SEO. */}
+      {co.subtitle && (
+        <p className="relative mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{co.subtitle}</p>
+      )}
+      {co.role && (
+        <span className={cn('relative mt-3 inline-flex w-fit items-start gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold leading-snug', t.chip)}>
+          <span aria-hidden>🎯</span>
+          {co.role}
+        </span>
+      )}
 
       {/* One readable meta line replaces three 9px uppercase chips. The
           audience chip is gone with them — it's inherited from the category,
@@ -1331,12 +1334,7 @@ function BundleDialog({
             {/* Cover banner — big, centered category image */}
             <div className={cn('relative h-40 w-full overflow-hidden', !hasImage && t.iconBg)}>
               {hasImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={c.imageUrl as string}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                <CoverArt src={c.imageUrl as string} sizes="(max-width: 640px) 100vw, 480px" className="object-cover" />
               ) : (
                 <div className="grid h-full w-full place-items-center">
                   <span className="text-6xl" aria-hidden>

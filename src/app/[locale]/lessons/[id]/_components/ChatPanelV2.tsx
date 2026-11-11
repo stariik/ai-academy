@@ -556,8 +556,9 @@ export function ChatPanelV2({
   return (
     <>
       {/* ─── Header ─── */}
-      <div className="shrink-0 px-3 sm:px-4 py-2.5 border-b border-border bg-card/60 backdrop-blur-sm flex items-center gap-3">
-        <div className="relative shrink-0">
+      <div className="shrink-0 px-3 sm:px-4 py-1.5 sm:py-2.5 border-b border-border bg-card/60 backdrop-blur-sm flex items-center gap-3">
+        {/* Phones give this height to the chat: every bubble already shows Walle. */}
+        <div className="relative shrink-0 hidden sm:block">
           <Walle key={`hdr-${walleKey}`} state={walleState} size={36} noShadow />
           {isStreaming && (
             <span
@@ -568,10 +569,10 @@ export function ChatPanelV2({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-pulse font-bold leading-none">
+          <p className="hidden sm:block text-[10px] uppercase tracking-[0.18em] text-pulse font-bold leading-none">
             {T.teacher}
           </p>
-          <p className="text-sm font-bold mt-0.5 truncate" style={{ fontFamily: 'var(--font-display)' }}>
+          <p className="text-sm font-bold sm:mt-0.5 truncate" style={{ fontFamily: 'var(--font-display)' }}>
             {currentPageData ? currentPageData.title : 'Walle'}
           </p>
         </div>
@@ -646,7 +647,8 @@ export function ChatPanelV2({
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          {/* One swipeable row on phones, so the chips can't eat into the chat. */}
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide sm:flex-wrap [&>*]:shrink-0 [&>*]:whitespace-nowrap">
             {materialLoading
               ? concepts.slice(0, 4).map((c, i) => (
                   <span

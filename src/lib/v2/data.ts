@@ -36,8 +36,11 @@ export type Category = {
 
 export type Course = {
   id: string;            // uuid from courses.id
-  title: string;         // localized
+  title: string;         // localized; the course page H1 + SEO title
   description?: string;  // localized
+  headline?: string;     // card title (COURSE_PITCH); falls back to `title`
+  subtitle?: string;     // card "why learn it" line
+  role?: string;         // card "who you become" badge
   categoryId: string;    // slug of the first matching canonical category
   audience: AudienceTag; // inherited from category
   lessons: number;       // derived count
