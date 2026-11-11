@@ -9,6 +9,7 @@ import {
   setSessionDisplayName,
 } from '@/lib/supabase/db';
 import { isLocale, DEFAULT_LOCALE, type Locale } from '@/lib/v2/i18n';
+import { safeAuthNext } from '@/lib/v2/routes';
 
 const SESSION_COOKIE = 'ai_academy_session';
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
@@ -26,16 +27,17 @@ function resolveLocale(localeFromForm: string | null): Locale {
  * If they arrived from `/redeem/CODE`, the form carries the code through
  * as a hidden field. We send them back to the redeem page so the auto-
  * apply client fires. The code is normalised + length-capped to avoid
- * abusing the redirect with arbitrary payloads.
+ * abusing the redirect with arbitrary payloads. A guest who was about to buy
+ * carries `next` the same way, so they land back on what they wanted.
  */
-function postAuthDestination(locale: Locale, rawRedeem: string | null): string {
+function postAuthDestination(locale: Locale, rawRedeem: string | null, rawNext: string | null): string {
   if (rawRedeem) {
     const code = rawRedeem.trim().toUpperCase();
     if (/^[A-Z0-9-]{4,32}$/.test(code)) {
       return `/${locale}/redeem/${encodeURIComponent(code)}`;
     }
   }
-  return `/${locale}`;
+  return safeAuthNext(rawNext) ?? `/${locale}`;
 }
 
 /** Best-effort merge of the cookie-anchored anonymous session into a user. */
@@ -72,6 +74,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   const password = String(formData.get('password') ?? '');
   const locale = resolveLocale(formData.get('locale') as string | null);
   const redeem = (formData.get('redeem') as string | null) ?? null;
+  const next = (formData.get('next') as string | null) ?? null;
 
   if (!email || !password) {
     return { error: 'EMPTY_FIELDS' };
@@ -92,7 +95,7 @@ export async function signInAction(_prev: AuthState, formData: FormData): Promis
   await attachCookieSessionToUser(data.user.id);
   await ensureCookieMatchesLinkedSession(data.user.id);
 
-  redirect(postAuthDestination(locale, redeem));
+  redirect(postAuthDestination(locale, redeem, next));
 }
 
 export async function signUpAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -101,6 +104,7 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   const displayName = String(formData.get('displayName') ?? '').trim();
   const locale = resolveLocale(formData.get('locale') as string | null);
   const redeem = (formData.get('redeem') as string | null) ?? null;
+  const next = (formData.get('next') as string | null) ?? null;
   const onboardingRaw = (formData.get('onboarding') as string | null) ?? null;
 
   if (!email || !password || !displayName) {
@@ -168,13 +172,17 @@ export async function signUpAction(_prev: AuthState, formData: FormData): Promis
   // If session is present (no email confirmation required), go straight in
   // (or auto-apply redeem if they arrived from /redeem/CODE).
   // Otherwise, route to login with a "check your email" hint — preserving
-  // the redeem code so they can pick up where they left off after confirming.
+  // the redeem code / next page so they can pick up where they left off after
+  // confirming.
   if (data.session) {
-    redirect(postAuthDestination(locale, redeem));
+    redirect(postAuthDestination(locale, redeem, next));
   }
+  const safeNext = safeAuthNext(next);
   const confirmDest = redeem
     ? `/${locale}/login?confirm=1&redeem=${encodeURIComponent(redeem)}`
-    : `/${locale}/login?confirm=1`;
+    : safeNext
+      ? `/${locale}/login?confirm=1&next=${encodeURIComponent(safeNext)}`
+      : `/${locale}/login?confirm=1`;
   redirect(confirmDest);
 }
 

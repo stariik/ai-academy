@@ -21,20 +21,22 @@ export default function LoginForm({
   locale,
   confirmNotice,
   redeemCode,
+  next,
 }: {
   dict: Dict;
   locale: Locale;
   confirmNotice?: boolean;
   redeemCode?: string;
+  next?: string;
 }) {
   return (
     <V2LocaleProvider locale={locale} dict={dict}>
-      <Inner confirmNotice={confirmNotice} redeemCode={redeemCode} />
+      <Inner confirmNotice={confirmNotice} redeemCode={redeemCode} next={next} />
     </V2LocaleProvider>
   );
 }
 
-function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemCode?: string }) {
+function Inner({ confirmNotice, redeemCode, next }: { confirmNotice?: boolean; redeemCode?: string; next?: string }) {
   const { dict, locale, href } = useV2Locale();
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     signInAction,
@@ -63,7 +65,9 @@ function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemC
           href={
             redeemCode
               ? `${href('register')}?redeem=${encodeURIComponent(redeemCode)}`
-              : href('register')
+              : next
+                ? `${href('register')}?next=${encodeURIComponent(next)}`
+                : href('register')
           }
         />
       }
@@ -77,6 +81,7 @@ function Inner({ confirmNotice, redeemCode }: { confirmNotice?: boolean; redeemC
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="locale" value={locale} />
         {redeemCode && <input type="hidden" name="redeem" value={redeemCode} />}
+        {next && <input type="hidden" name="next" value={next} />}
 
         <AuthInput
           label={dict.auth.emailLabel}

@@ -135,18 +135,7 @@ export async function saveLesson(supabase: SupabaseClient, lesson: Lesson): Prom
       sanitizeQuizQuestion(qq, lesson.id, null, qq.scope ?? 'final')
     );
     const { error: questionsError } = await supabase.from('quiz_questions').insert(questions);
-    if (questionsError && questionsError.message.includes('schema cache')) {
-      // Try without bloom_level only
-      const withoutBloom = questions.map(({ bloom_level, ...rest }) => rest);
-      const { error: retry1 } = await supabase.from('quiz_questions').insert(withoutBloom);
-      if (retry1 && retry1.message.includes('schema cache')) {
-        const minimal = withoutBloom.map(({ metadata, ...rest }) => rest);
-        const { error: retry2 } = await supabase.from('quiz_questions').insert(minimal);
-        if (retry2) throw new Error(`Failed to save quiz questions: ${retry2.message}`);
-      } else if (retry1) {
-        throw new Error(`Failed to save quiz questions: ${retry1.message}`);
-      }
-    } else if (questionsError) {
+    if (questionsError) {
       if (questionsError.message.includes('fetch failed') || questionsError.message.includes('TIMEOUT')) {
         // Network error — retry after delay
         await new Promise(r => setTimeout(r, 3000));
@@ -384,7 +373,8 @@ export async function saveLessonPages(
   lessonId: string,
   pages: LessonPage[]
 ): Promise<void> {
-  // Insert page rows — with fallback for schemas missing newer columns
+  // Insert page rows. No fallback: a missing column must fail loudly
+  // (see migrations/2026-11-07-lesson-pedagogy-columns.sql).
   const fullPageRows = pages.map((p) => ({
     id: p.id,
     lesson_id: lessonId,
@@ -403,22 +393,7 @@ export async function saveLessonPages(
     real_world_applications: p.realWorldApplications ?? null,
   }));
   const { error: pagesError } = await supabase.from('lesson_pages').insert(fullPageRows);
-  if (pagesError) {
-    // Retry with only core columns if newer columns don't exist
-    if (pagesError.message.includes('column') && pagesError.message.includes('schema cache')) {
-      const corePageRows = pages.map((p) => ({
-        id: p.id,
-        lesson_id: lessonId,
-        page_number: p.pageNumber,
-        title: p.title,
-        key_concepts: p.keyConcepts,
-      }));
-      const { error: retryError } = await supabase.from('lesson_pages').insert(corePageRows);
-      if (retryError) throw new Error(`Failed to save lesson pages: ${retryError.message}`);
-    } else {
-      throw new Error(`Failed to save lesson pages: ${pagesError.message}`);
-    }
-  }
+  if (pagesError) throw new Error(`Failed to save lesson pages: ${pagesError.message}`);
 
   // Insert content blocks per page (filter out blocks with null/empty content)
   for (const page of pages) {
@@ -443,17 +418,7 @@ export async function saveLessonPages(
         sanitizeQuizQuestion(qq, lessonId, page.id, 'check')
       );
       const { error } = await supabase.from('quiz_questions').insert(questions);
-      if (error && error.message.includes('schema cache')) {
-        const withoutBloom = questions.map(({ bloom_level, ...rest }) => rest);
-        const { error: retry1 } = await supabase.from('quiz_questions').insert(withoutBloom);
-        if (retry1 && retry1.message.includes('schema cache')) {
-          const minimal = withoutBloom.map(({ metadata, ...rest }) => rest);
-          const { error: retry2 } = await supabase.from('quiz_questions').insert(minimal);
-          if (retry2) throw new Error(`Failed to save check questions: ${retry2.message}`);
-        } else if (retry1) {
-          throw new Error(`Failed to save check questions: ${retry1.message}`);
-        }
-      } else if (error) {
+      if (error) {
         if (error.message.includes('fetch failed') || error.message.includes('TIMEOUT')) {
           await new Promise(r => setTimeout(r, 3000));
           const { error: retryFetch } = await supabase.from('quiz_questions').insert(questions);

@@ -14,7 +14,7 @@ import {
 import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import type { AuthUser } from '@/lib/auth';
-import { FREE_COURSE_PATH } from '@/lib/v2/routes';
+import { FREE_LESSON_PATH } from '@/lib/v2/routes';
 import { signOutAction } from '../(auth)/actions';
 import { CatalogSection } from './CatalogSection';
 import Link from 'next/link';
@@ -725,25 +725,19 @@ function Hero() {
           </p>
 
           <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center lg:justify-start gap-3">
+            {/* The free lesson leads: one tap and the visitor is learning. */}
             <a
-              href="#categories"
+              href={href(FREE_LESSON_PATH)}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
             >
-              {dict.hero.ctaPrimary}
+              {dict.hero.ctaSecondary}
               <span aria-hidden>→</span>
             </a>
-            {/* The free-lesson CTA opens the designated introductory course. */}
             <a
-              href={href(FREE_COURSE_PATH)}
-              className="group inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
+              href="#categories"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-card border border-border px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold text-foreground hover:border-pulse/40 hover:bg-pulse/5 transition-colors"
             >
-              <span
-                aria-hidden
-                className="flex items-center justify-center w-5 h-5 rounded-full bg-pulse/15 text-pulse text-[10px] group-hover:bg-pulse group-hover:text-primary-foreground transition-colors"
-              >
-                ▶
-              </span>
-              {dict.hero.ctaSecondary}
+              {dict.hero.ctaPrimary}
             </a>
           </div>
 
@@ -861,7 +855,7 @@ export function CtaBanner() {
               <div className="mt-5 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center md:justify-start gap-3">
                 {/* was href="#", which went nowhere */}
                 <a
-                  href={href(FREE_COURSE_PATH)}
+                  href={href(FREE_LESSON_PATH)}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 py-3 text-[13px] sm:px-6 sm:py-3.5 sm:text-[15px] font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all"
                 >
                   {dict.ctaBanner.ctaPrimary}

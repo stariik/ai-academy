@@ -36,7 +36,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import { Navbar } from '../../../_components/LandingClient';
 import type { AuthUser } from '@/lib/auth';
 import type { Dict, Locale } from '@/lib/v2/i18n';
-import { FREE_COURSE_PATH } from '@/lib/v2/routes';
+import { FREE_LESSON_PATH } from '@/lib/v2/routes';
 import Link from 'next/link';
 import {
   redeemPromoCode,
@@ -274,10 +274,11 @@ function CoursePage({
   const toggleEnrollment = React.useCallback(async () => {
     if (busy) return;
 
-    // Guests can't buy — send them to login first (paid courses only).
+    // Guests can't buy — they sign up first (paid courses only), then come
+    // back to this course's buy block instead of being dropped on the homepage.
     if (!authed && course.price && course.price > 0) {
       setBusy(true);
-      window.location.href = localeHref('login');
+      window.location.href = localeHref(`register?next=${encodeURIComponent(`${localeHref(`courses/${course.id}`)}#buy`)}`);
       return;
     }
 
@@ -368,7 +369,7 @@ function CoursePage({
   const progressPct = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
 
   // Only the designated course has a genuinely free lesson. Its preview CTAs
-  // lead to the course detail page, matching every other free-learning CTA.
+  // open that lesson directly, matching every other free-learning CTA.
   const previewLessonId = React.useMemo(() => {
     for (const m of detail.modules) {
       for (const l of m.lessons) {
@@ -377,7 +378,7 @@ function CoursePage({
     }
     return null;
   }, [detail.modules]);
-  const previewHref = previewLessonId ? localeHref(FREE_COURSE_PATH) : null;
+  const previewHref = previewLessonId ? localeHref(FREE_LESSON_PATH) : null;
 
   // --- render ---------------------------------------------------------------
   // overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
@@ -592,12 +593,22 @@ function Hero({
             transition={{ duration: 0.55, ease: 'easeOut' }}
             className="order-2 lg:order-1 space-y-4 sm:space-y-6"
           >
-            {isEnrolled && (
+            {(isEnrolled || course.role) && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-2.5 py-1 text-[11px] font-bold">
-                  <Trophy className="w-3.5 h-3.5" />
-                  {dict.courseDetail.enrolledBadge}
-                </span>
+                {isEnrolled && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-pulse text-primary-foreground px-2.5 py-1 text-[11px] font-bold">
+                    <Trophy className="w-3.5 h-3.5" />
+                    {dict.courseDetail.enrolledBadge}
+                  </span>
+                )}
+                {/* Same "who you become" badge as the card, so the card → page
+                    jump reads as one course even though the H1 is the old name. */}
+                {course.role && (
+                  <span className={cn('inline-flex items-start gap-1.5 rounded-lg border px-2.5 py-1 text-[12px] font-semibold leading-snug', t.chip)}>
+                    <span aria-hidden>🎯</span>
+                    {course.role}
+                  </span>
+                )}
               </div>
             )}
 
@@ -846,7 +857,7 @@ function MobileBuyBlock({
             onClick={
               !hasPrice && !isLoggedIn
                 ? () => {
-                    window.location.href = href(FREE_COURSE_PATH);
+                    window.location.href = href(FREE_LESSON_PATH);
                   }
                 : onEnroll
             }
@@ -1623,14 +1634,20 @@ function RelatedCourseCard({
         className="relative mt-3.5 text-[16px] sm:text-[17px] font-bold leading-snug tracking-tight line-clamp-2"
         style={{ fontFamily: 'var(--font-display)' }}
       >
-        {co.title}
+        {co.headline ?? co.title}
       </h4>
 
-      {/* Description */}
-      {co.description && (
+      {/* Subtitle ("why learn it"), falling back to the description */}
+      {(co.subtitle ?? co.description) && (
         <p className="relative mt-2 text-xs leading-relaxed text-muted-foreground line-clamp-2">
-          {co.description}
+          {co.subtitle ?? co.description}
         </p>
+      )}
+      {co.role && (
+        <span className={cn('relative mt-2.5 inline-flex w-fit items-start gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold leading-snug', t.chip)}>
+          <span aria-hidden>🎯</span>
+          {co.role}
+        </span>
       )}
 
       {/* Meta chips — audience · level · pace */}
@@ -1972,7 +1989,7 @@ function BuyRailContent({
         type="button"
         onClick={
           !hasPrice && !isLoggedIn
-            ? () => { window.location.href = href(FREE_COURSE_PATH); }
+            ? () => { window.location.href = href(FREE_LESSON_PATH); }
             : onEnroll
         }
         disabled={enrollBusy}
@@ -2144,7 +2161,7 @@ function CtaBanner({
                       onClick={
                         course.price && course.price > 0
                           ? onEnroll
-                          : () => { window.location.href = href(FREE_COURSE_PATH); }
+                          : () => { window.location.href = href(FREE_LESSON_PATH); }
                       }
                       disabled={enrollBusy}
                       className="inline-flex items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-6 py-3.5 sm:py-3 text-sm font-bold shadow-[0_8px_30px_var(--pulse-glow)] hover:shadow-[0_12px_40px_var(--pulse-glow)] hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:translate-y-0"
@@ -2274,7 +2291,7 @@ function MobileBottomBar({
             ) : (
               <Zap className="w-4 h-4" />
             )}
-            {dict.courseDetail.startShort}
+            {course.price && course.price > 0 ? dict.courseDetail.buyShort : dict.courseDetail.startShort}
           </button>
         )}
       </div>

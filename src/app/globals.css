@@ -4,6 +4,16 @@
 /* Class-based dark mode for next-themes */
 @custom-variant dark (&:is(.dark *));
 
+/* iOS zooms the page when focusing a field under 16px. Unlayered, so it beats
+   text-sm etc. without !important. */
+@media (max-width: 639px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* ============================================================
    walle.academy — Eve Design System
    Light theme (default)

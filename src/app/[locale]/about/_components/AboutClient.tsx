@@ -9,7 +9,7 @@ import { V2LocaleProvider, useV2Locale } from '@/lib/v2/i18n/context';
 import type { Dict, Locale } from '@/lib/v2/i18n';
 import { Walle } from '@/components/walle/Walle';
 import { Navbar, Footer, CtaBanner } from '../../_components/LandingClient';
-import { FREE_COURSE_PATH } from '@/lib/v2/routes';
+import { FREE_LESSON_PATH } from '@/lib/v2/routes';
 
 export default function AboutClient({
   dict,
@@ -127,7 +127,7 @@ function AboutSections({ categories }: { categories: Category[] }) {
               <Reveal delay={0.15}>
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3 pt-1">
                   <a
-                    href={href(FREE_COURSE_PATH)}
+                    href={href(FREE_LESSON_PATH)}
                     className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-pulse text-primary-foreground px-5 text-sm font-bold shadow-[0_8px_28px_var(--pulse-glow)] sm:hover:-translate-y-0.5 hover:shadow-[0_14px_36px_var(--pulse-glow)] transition-all"
                   >
                     {a.heroCtaPrimary}

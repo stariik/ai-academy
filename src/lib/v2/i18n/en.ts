@@ -253,6 +253,7 @@ export const en: Dict = {
     footerCourses: 'Courses',
     continueShort: 'Continue',
     startShort: 'Start',
+    buyShort: 'Buy',
   },
 
   lesson: {
