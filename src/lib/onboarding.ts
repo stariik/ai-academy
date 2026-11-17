@@ -37,37 +37,6 @@ export type OnboardingTranscriptMessage = {
   at: string;
 };
 
-export type OnboardingRoadmapStep = {
-  courseId: string;
-  title: string;
-  when: string;
-  why: string;
-};
-
-export type OnboardingCatalogCourse = {
-  id: string;
-  title: string;
-  description: string;
-  tags: string[];
-};
-
-export type OnboardingProfileSignals = {
-  interests: string[];
-  primaryGoal: string;
-  desiredOutcome: string;
-  experienceLevel: string;
-  learningPreferences: string[];
-  weeklyCommitment: string;
-  barriers: string[];
-  motivation: string;
-  summary: string;
-  segmentLabel: string;
-  opportunitySignals: string[];
-  verbatimQuote: string;
-};
-
-// Index 0 is the age band for both locales: the API serves it without an AI
-// call, so it is question one whether or not the model is reachable.
 const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
   en: [
     {
@@ -85,20 +54,24 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
       ],
     },
     {
+      // ponytail: id kept as progress_goal — homepage + /api/recommended-course read it.
       id: 'progress_goal',
-      text: 'What kind of progress would feel most valuable to you right now?',
-      helper: 'Pick up to three — this helps me shape your starting path.',
+      text: 'What do you want to create?',
+      helper: 'Pick up to two — this decides where your path starts.',
       kind: 'multi',
       minSelections: 1,
-      maxSelections: 3,
-      placeholder: 'Or tell me what you have in mind…',
+      maxSelections: 2,
+      placeholder: 'Or describe it in your own words…',
       options: [
-        { id: 'work_smarter', label: 'Work smarter', description: 'Save time and automate repetitive work', emoji: '⚡' },
-        { id: 'grow_business', label: 'Grow a business', description: 'Marketing, sales, operations, or strategy', emoji: '📈' },
-        { id: 'create', label: 'Create better', description: 'Content, design, video, or ideas', emoji: '✨' },
-        { id: 'build', label: 'Build with AI', description: 'Apps, agents, workflows, or no-code tools', emoji: '🛠️' },
-        { id: 'career', label: 'Move my career forward', description: 'Build skills, switch roles, or stand out', emoji: '🚀' },
-        { id: 'confidence', label: 'Understand AI confidently', description: 'Know what matters without the noise', emoji: '🧭' },
+        { id: 'design', label: 'Designs', description: 'Logos, posters, social graphics', emoji: '🎨' },
+        { id: 'video', label: 'Videos', description: 'Editing, reels, AI-generated video', emoji: '🎬' },
+        { id: 'audio', label: 'Music & audio', description: 'Songs, voiceovers, podcasts', emoji: '🎵' },
+        { id: 'social', label: 'Social content', description: 'Posts and reels that grow an audience', emoji: '📱' },
+        { id: 'copy', label: 'Words that sell', description: 'Ads, product copy, emails', emoji: '✍️' },
+        { id: 'web', label: 'Websites & apps', description: 'Sites, landing pages, simple apps', emoji: '💻' },
+        { id: 'automation', label: 'Automations', description: 'AI agents and workflows that do the work', emoji: '⚙️' },
+        { id: 'data', label: 'Data & reports', description: 'Spreadsheets, dashboards, insights', emoji: '📊' },
+        { id: 'unsure', label: 'Not sure yet', description: 'Show me the options', emoji: '🧭' },
       ],
     },
     {
@@ -116,18 +89,16 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
       ],
     },
     {
-      id: 'learning_style',
-      text: 'When something new finally “clicks” for you, what usually made the difference?',
-      helper: 'Choose up to two. Walle will adapt explanations inside lessons.',
-      kind: 'multi',
-      minSelections: 1,
-      maxSelections: 2,
+      id: 'success_picture',
+      text: 'What should AI get you?',
+      helper: 'Pick the one that matters most.',
+      kind: 'single',
       options: [
-        { id: 'projects', label: 'Building a real project', emoji: '🔧' },
-        { id: 'examples', label: 'Seeing concrete examples', emoji: '💡' },
-        { id: 'steps', label: 'Clear step-by-step guidance', emoji: '🪜' },
-        { id: 'concepts', label: 'Understanding the big picture', emoji: '🗺️' },
-        { id: 'challenge', label: 'Trying, failing, and getting feedback', emoji: '🎯' },
+        { id: 'freelance', label: 'Freelance clients', description: 'Get paid for projects', emoji: '💼' },
+        { id: 'job', label: 'A new job', description: 'Switch into a new role', emoji: '🚀' },
+        { id: 'business', label: 'Grow my business', description: 'More customers, less busywork', emoji: '📈' },
+        { id: 'faster', label: 'Do my job faster', description: 'Save hours every week', emoji: '⚡' },
+        { id: 'curious', label: 'Just curious', description: 'See what AI can do', emoji: '👀' },
       ],
     },
     {
@@ -177,19 +148,22 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
     },
     {
       id: 'progress_goal',
-      text: 'რა მიზანი გაქვს ამ ეტაპზე?',
-      helper: 'აირჩიე მაქსიმუმ სამი — ასე შენთვის სწორ საწყის გზას შევადგენ.',
+      text: 'რისი შექმნა გინდა?',
+      helper: 'აირჩიე მაქსიმუმ ორი — აქედან დაიწყება შენი გზა.',
       kind: 'multi',
       minSelections: 1,
-      maxSelections: 3,
+      maxSelections: 2,
       placeholder: 'ან შენი სიტყვებით მომიყევი…',
       options: [
-        { id: 'work_smarter', label: 'უფრო ჭკვიანურად მუშაობა', description: 'დროის დაზოგვა და რუტინის ავტომატიზაცია', emoji: '⚡' },
-        { id: 'grow_business', label: 'ბიზნესის გაზრდა', description: 'მარკეტინგი, გაყიდვები, ოპერაციები ან სტრატეგია', emoji: '📈' },
-        { id: 'create', label: 'უკეთესი კონტენტის შექმნა', description: 'ტექსტი, დიზაინი, ვიდეო ან იდეები', emoji: '✨' },
-        { id: 'build', label: 'AI-ით რაღაცის აშენება', description: 'აპები, აგენტები, პროცესები ან no-code', emoji: '🛠️' },
-        { id: 'career', label: 'კარიერული წინსვლა', description: 'ახალი უნარი, როლის შეცვლა ან გამორჩევა', emoji: '🚀' },
-        { id: 'confidence', label: 'AI-ის თავდაჯერებით გაგება', description: 'მთავარის დანახვა ზედმეტი ხმაურის გარეშე', emoji: '🧭' },
+        { id: 'design', label: 'დიზაინი', description: 'ლოგოები, პოსტერები, სოციალური გრაფიკა', emoji: '🎨' },
+        { id: 'video', label: 'ვიდეო', description: 'მონტაჟი, რილსები, AI ვიდეო', emoji: '🎬' },
+        { id: 'audio', label: 'მუსიკა და აუდიო', description: 'სიმღერები, გახმოვანება, პოდკასტები', emoji: '🎵' },
+        { id: 'social', label: 'სოციალური მედიის კონტენტი', description: 'პოსტები და რილსები აუდიტორიის გასაზრდელად', emoji: '📱' },
+        { id: 'copy', label: 'გამყიდველი ტექსტები', description: 'რეკლამა, პროდუქტის აღწერა, იმეილები', emoji: '✍️' },
+        { id: 'web', label: 'საიტები და აპები', description: 'ვებსაიტები, ლენდინგები, მარტივი აპები', emoji: '💻' },
+        { id: 'automation', label: 'ავტომატიზაცია', description: 'AI აგენტები და პროცესები, რომლებიც საქმეს შენ ნაცვლად აკეთებენ', emoji: '⚙️' },
+        { id: 'data', label: 'მონაცემები და რეპორტები', description: 'ცხრილები, დაშბორდები, ანალიზი', emoji: '📊' },
+        { id: 'unsure', label: 'ჯერ არ ვიცი', description: 'მაჩვენე ვარიანტები', emoji: '🧭' },
       ],
     },
     {
@@ -207,18 +181,16 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
       ],
     },
     {
-      id: 'learning_style',
-      text: 'როცა ახალი თემა ბოლოს და ბოლოს „გილაგდება“, ჩვეულებრივ რა გეხმარება ყველაზე მეტად?',
-      helper: 'აირჩიე მაქსიმუმ ორი. Walle გაკვეთილებში ახსნის სტილს მოგარგებს.',
-      kind: 'multi',
-      minSelections: 1,
-      maxSelections: 2,
+      id: 'success_picture',
+      text: 'AI-მ რა უნდა მოგცეს?',
+      helper: 'აირჩიე ყველაზე მნიშვნელოვანი.',
+      kind: 'single',
       options: [
-        { id: 'projects', label: 'რეალური პროექტის აწყობა', emoji: '🔧' },
-        { id: 'examples', label: 'კონკრეტული მაგალითების ნახვა', emoji: '💡' },
-        { id: 'steps', label: 'ნაბიჯ-ნაბიჯ მკაფიო ინსტრუქცია', emoji: '🪜' },
-        { id: 'concepts', label: 'დიდი სურათის გაგება', emoji: '🗺️' },
-        { id: 'challenge', label: 'ცდა, შეცდომა და უკუკავშირი', emoji: '🎯' },
+        { id: 'freelance', label: 'ფრილანს კლიენტები', description: 'ანაზღაურება პროექტებისთვის', emoji: '💼' },
+        { id: 'job', label: 'ახალი სამსახური', description: 'ახალ როლზე გადასვლა', emoji: '🚀' },
+        { id: 'business', label: 'ჩემი ბიზნესის გაზრდა', description: 'მეტი კლიენტი, ნაკლები რუტინა', emoji: '📈' },
+        { id: 'faster', label: 'სამუშაოს უფრო სწრაფად კეთება', description: 'ყოველკვირა საათების დაზოგვა', emoji: '⚡' },
+        { id: 'curious', label: 'უბრალოდ მაინტერესებს', description: 'მინდა ვნახო, რა შეუძლია AI-ს', emoji: '👀' },
       ],
     },
     {
@@ -253,34 +225,6 @@ const FALLBACK_QUESTIONS: Record<OnboardingLocale, OnboardingQuestion[]> = {
   ],
 };
 
-const PACE_LABELS: Record<OnboardingLocale, string[]> = {
-  en: ['Start here', 'Next', 'Then'],
-  ka: ['დაიწყე აქედან', 'შემდეგ', 'შემდეგ'],
-};
-
-// ponytail: tag overlap only — good enough when the AI path is unavailable.
-export function buildFallbackRoadmap(
-  courses: OnboardingCatalogCourse[],
-  profile: OnboardingProfileSignals,
-  locale: OnboardingLocale,
-): OnboardingRoadmapStep[] {
-  const wanted = profile.interests.map((interest) => interest.toLowerCase());
-  const score = (course: OnboardingCatalogCourse) =>
-    course.tags.filter((tag) => wanted.some((interest) => interest.includes(tag.toLowerCase()))).length;
-  return [...courses]
-    .sort((a, b) => score(b) - score(a))
-    .slice(0, 3)
-    .map((course, index) => ({
-      courseId: course.id,
-      title: course.title,
-      when: PACE_LABELS[locale][index] ?? PACE_LABELS[locale][2],
-      why:
-        locale === 'ka'
-          ? `დაგეხმარება აქ: ${profile.primaryGoal}`
-          : `Moves you toward: ${profile.primaryGoal}`,
-    }));
-}
-
 export function getFallbackQuestion(
   answerCount: number,
   locale: OnboardingLocale,
@@ -288,64 +232,4 @@ export function getFallbackQuestion(
   const questions = FALLBACK_QUESTIONS[locale];
   if (!questions) return null;
   return questions[answerCount] ?? null;
-}
-
-function answerFor(answers: OnboardingAnswer[], id: string): OnboardingAnswer | undefined {
-  return answers.find((answer) => answer.questionId === id);
-}
-
-function answerValue(answer: OnboardingAnswer | undefined): string {
-  if (!answer) return '';
-  return answer.freeText.trim() || answer.selectedLabels.join(', ') || answer.displayText;
-}
-
-export function buildFallbackProfile(
-  answers: OnboardingAnswer[],
-  locale: OnboardingLocale,
-): OnboardingProfileSignals {
-  // Position fallbacks also support a partially AI-generated interview whose
-  // question IDs differ from the guided safety-net IDs. Index 0 is always age.
-  const goal = answerFor(answers, 'progress_goal') ?? answers[1];
-  const outcome = answerFor(answers, 'success_picture') ?? answers[2];
-  const experience = answerFor(answers, 'experience_level') ?? answers[3];
-  const style = answerFor(answers, 'learning_style') ?? answers[4];
-  const commitment = answerFor(answers, 'commitment') ?? answers[5];
-  const barriers = answerFor(answers, 'barriers') ?? answers[6];
-  const interests = goal?.selectedLabels.length
-    ? goal.selectedLabels
-    : [answerValue(goal)].filter(Boolean);
-  const desiredOutcome = answerValue(outcome);
-  const primaryGoal = interests[0] ?? (locale === 'ka' ? 'AI-ის პრაქტიკულად სწავლა' : 'Learn AI practically');
-  const barrierValues = barriers?.selectedLabels.length
-    ? barriers.selectedLabels
-    : [answerValue(barriers)].filter(Boolean);
-  const segmentByGoal: Record<string, [string, string]> = {
-    work_smarter: ['Workflow optimizer', 'პროცესების გამარტივება'],
-    grow_business: ['Business builder', 'ბიზნესის განვითარება'],
-    create: ['Creative maker', 'კრეატიული შემქმნელი'],
-    build: ['AI builder', 'AI შემქმნელი'],
-    career: ['Career accelerator', 'კარიერული წინსვლა'],
-    confidence: ['Confident explorer', 'თავდაჯერებული მკვლევარი'],
-  };
-  const segment =
-    segmentByGoal[goal?.selectedOptionIds[0] ?? '']?.[locale === 'ka' ? 1 : 0] ??
-    (locale === 'ka' ? 'პრაქტიკული მკვლევარი' : 'Practical explorer');
-  const summary = locale === 'ka'
-    ? `${primaryGoal} არის მთავარი მიმართულება. სასურველი შედეგია: ${desiredOutcome || 'AI-ის პრაქტიკულ ამოცანებში თავდაჯერებით გამოყენება'}.`
-    : `${primaryGoal} is the main direction. The desired result is: ${desiredOutcome || 'using AI confidently for practical tasks'}.`;
-
-  return {
-    interests,
-    primaryGoal,
-    desiredOutcome,
-    experienceLevel: answerValue(experience),
-    learningPreferences: style?.selectedLabels ?? [],
-    weeklyCommitment: answerValue(commitment),
-    barriers: barrierValues,
-    motivation: desiredOutcome || primaryGoal,
-    summary,
-    segmentLabel: segment,
-    opportunitySignals: barrierValues.filter((value) => !/nothing|არ მაქვს/i.test(value)),
-    verbatimQuote: desiredOutcome.slice(0, 220),
-  };
 }
