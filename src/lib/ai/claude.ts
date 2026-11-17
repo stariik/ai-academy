@@ -14,15 +14,15 @@ import { logAiUsage, type UsageMeta } from '@/lib/ai/usage';
 
 const client = new Anthropic();
 
-/** Report a non-streaming Claude response to the usage log. */
+/** Report a Claude response to the usage log. Never rejects; callers may skip awaiting. */
 function logClaudeUsage(
   meta: UsageMeta | undefined,
   fallbackFeature: UsageMeta['feature'],
   startedAt: number,
   usage: Anthropic.Usage | undefined,
   success = true,
-): void {
-  void logAiUsage({
+): Promise<void> {
+  return logAiUsage({
     feature: fallbackFeature,
     ...meta,
     provider: 'anthropic',
@@ -818,7 +818,9 @@ export async function* streamChat(
 
   try {
     const final = await stream.finalMessage();
-    logClaudeUsage(usageMeta, 'tutor_chat', startedAt, final.usage);
+    // Awaited so the row exists before the response closes — the chat panel
+    // re-reads the free-trial meter right after a reply ends.
+    await logClaudeUsage(usageMeta, 'tutor_chat', startedAt, final.usage);
   } catch {
     // Usage accounting must never break the chat stream.
   }

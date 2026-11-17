@@ -56,6 +56,7 @@ const STRINGS: Record<TutorLocale, {
   toggleLabel: string;
   trialOver: string;
   trialOverCta: string;
+  trialMeter: (pct: number) => string;
 }> = {
   ka: {
     teacher: 'AI მასწავლებელი',
@@ -86,6 +87,7 @@ const STRINGS: Record<TutorLocale, {
     trialOver:
       'შენი უფასო ცდა აქ სრულდება. შეიძინე კურსი, რომ Walle-სთან სწავლა გააგრძელო და ყველა გაკვეთილი გაიხსნას.',
     trialOverCta: 'შეიძინე ეს კურსი',
+    trialMeter: (pct) => `უფასო ცდა: დარჩა ${pct}%`,
   },
   en: {
     teacher: 'AI Teacher',
@@ -116,6 +118,7 @@ const STRINGS: Record<TutorLocale, {
     trialOver:
       "That's the end of your free trial. Buy the course to keep learning with Walle and unlock every lesson.",
     trialOverCta: 'Buy this course',
+    trialMeter: (pct) => `Free trial: ${pct}% left`,
   },
 };
 
@@ -195,9 +198,16 @@ export function ChatPanelV2({
   const [input, setInput] = React.useState('');
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [historyLoaded, setHistoryLoaded] = React.useState(false);
-  // Set when /api/chat answers 402: the free trial budget is spent, so the
-  // input is swapped for a buy CTA.
-  const [trialOver, setTrialOver] = React.useState(false);
+  // Free-trial meter, 0–100 % left; null = not on the trial (enrolled/admin).
+  // At 0 the input is swapped for a buy CTA.
+  const [trialLeft, setTrialLeft] = React.useState<number | null>(null);
+  const refreshTrial = React.useCallback(() => {
+    fetch(`/api/chat?lessonId=${lessonId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setTrialLeft(d.trialLeft))
+      .catch(() => {});
+  }, [lessonId]);
+  React.useEffect(refreshTrial, [refreshTrial]);
 
   // Walle state + key (key forces re-mount for one-shot animations)
   const [walleState, setWalleState] = React.useState<WalleState>('wave');
@@ -311,7 +321,7 @@ export function ChatPanelV2({
       })
         .then(async (res) => {
           if (!cancelled && res.status === 402) {
-            setTrialOver(true);
+            setTrialLeft(0);
             setMessages((prev) =>
               prev.map((m) => (m.id === assistantId ? { ...m, content: S.trialOver } : m)),
             );
@@ -352,7 +362,10 @@ export function ChatPanelV2({
           }
         })
         .finally(() => {
-          if (!cancelled) setIsStreaming(false);
+          if (!cancelled) {
+            setIsStreaming(false);
+            refreshTrial();
+          }
         });
     }
 
@@ -379,7 +392,7 @@ export function ChatPanelV2({
   /* ─── send message ─── */
   const sendMessage = React.useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming || trialOver) return;
+      if (!text.trim() || isStreaming || trialLeft === 0) return;
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -412,7 +425,7 @@ export function ChatPanelV2({
           }),
         });
         if (res.status === 402) {
-          setTrialOver(true);
+          setTrialLeft(0);
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, content: S.trialOver } : m)),
           );
@@ -455,9 +468,10 @@ export function ChatPanelV2({
       } finally {
         setIsStreaming(false);
         inputRef.current?.focus();
+        if (trialLeft !== null) refreshTrial();
       }
     },
-    [messages, isStreaming, trialOver, lessonId, pageNumber, onUnlockCheck],
+    [messages, isStreaming, trialLeft, refreshTrial, lessonId, pageNumber, onUnlockCheck],
   );
 
   /* ─── per-message Walle reaction ───
@@ -717,7 +731,18 @@ export function ChatPanelV2({
         className="shrink-0 px-3 sm:px-4 pt-2 pb-3 border-t border-border bg-card"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0), 12px)' }}
       >
-        {trialOver ? (
+        {trialLeft !== null && (
+          <div className="mb-2 flex items-center gap-2.5 px-1 text-[11px] font-semibold text-muted-foreground">
+            <span className="shrink-0">{T.trialMeter(trialLeft)}</span>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden>
+              <div
+                className="h-full rounded-full bg-pulse transition-[width] duration-500"
+                style={{ width: `${trialLeft}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {trialLeft === 0 ? (
           <a
             href={`/${teacherLocale}/courses/${lesson.courseId}#buy`}
             className="flex h-11 w-full items-center justify-center rounded-full bg-pulse text-sm font-bold text-primary-foreground shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-all active:scale-[0.98]"

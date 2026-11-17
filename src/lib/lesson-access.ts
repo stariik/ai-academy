@@ -41,16 +41,16 @@ export async function getLessonAccess(
 }
 
 /**
- * True once the current user's trial budget is used up. Fails closed: if
- * usage can't be read, the trial is treated as spent rather than unlimited.
+ * Trial tokens the current user has left (0 = spent). Fails closed: if usage
+ * can't be read, the trial counts as spent rather than unlimited.
  *
  * ponytail: usage is logged after each reply finishes, so a reply already in
  * flight can overshoot the cap by one. Fine at this size; move to an atomic
  * per-user counter if the budget grows or abuse shows up.
  */
-export async function isTrialSpent(): Promise<boolean> {
+export async function trialTokensLeft(): Promise<number> {
   const user = await getAuthUser();
-  if (!user) return true;
+  if (!user) return 0;
   const used = await sumOutputTokens(user.id, 'tutor_trial');
-  return used === null || used >= TRIAL_OUTPUT_TOKENS;
+  return used === null ? 0 : Math.max(0, TRIAL_OUTPUT_TOKENS - used);
 }
