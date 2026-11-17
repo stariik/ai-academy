@@ -139,6 +139,16 @@ export default async function LandingPage({
           'build': ['ai-coding', 'ai-agents', 'ai-foundations'],
           'career': ['ai-foundations', 'prompt-engineering', 'ai-coding'],
           'confidence': ['ai-foundations', 'prompt-engineering', 'ai-business'],
+          // ponytail: ids above are the old Q2 answers, kept for users who signed up before 2026-11-17.
+          'design': ['ai-creative', 'ai-marketing', 'prompt-engineering'],
+          'video': ['ai-creative', 'ai-marketing'],
+          'audio': ['ai-creative'],
+          'social': ['ai-marketing', 'ai-creative'],
+          'copy': ['ai-marketing', 'prompt-engineering', 'ai-business'],
+          'web': ['ai-coding', 'ai-agents'],
+          'automation': ['ai-agents', 'ai-business', 'ai-coding'],
+          'data': ['ai-business', 'ai-coding'],
+          'unsure': ['ai-foundations', 'prompt-engineering'],
         };
 
         const scoredCategories = categories.map(category => {
