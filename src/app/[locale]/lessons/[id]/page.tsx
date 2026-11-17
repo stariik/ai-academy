@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import LessonClient from './_components/LessonClient';
 import { getDict, isLocale, type Locale } from '@/lib/v2/i18n';
-import { getLessonMetadata, FREE_LESSON_ID } from '@/lib/v2/db';
-import { isCurrentUserEnrolled } from '@/lib/enrollments';
-import { isAdmin } from '@/lib/admin-auth';
+import { getLessonMetadata } from '@/lib/v2/db';
+import { getLessonAccess } from '@/lib/lesson-access';
 import { localizedAlternates, SITE_URL } from '@/lib/seo';
 
 // force-dynamic: the access check below reads the signed-in user, so this
@@ -50,15 +49,16 @@ export default async function LessonPage({
   if (!isLocale(localeParam)) notFound();
   const locale: Locale = localeParam;
 
-  // Paywall. The single free lesson is open to everyone; everything else needs
-  // an enrollment on the owning course. Anyone else is sent to the course page,
-  // which is where they can buy it.
-  if (id !== FREE_LESSON_ID) {
-    const meta = await getLessonMetadata(id, locale);
-    if (!meta) notFound();
-    const allowed = (await isCurrentUserEnrolled(meta.courseId)) || (await isAdmin());
-    if (!allowed) redirect(`/${locale}/courses/${meta.courseId}#buy`);
+  // Paywall. Enrolled users get the whole lesson; any course's opening lesson
+  // is on the free tutor trial for signed-in users, so guests are sent to sign
+  // up first. Anyone else is sent to the course page, where they can buy it.
+  const meta = await getLessonMetadata(id, locale);
+  if (!meta) notFound();
+  const access = await getLessonAccess(id, meta.courseId);
+  if (access === 'signin') {
+    redirect(`/${locale}/register?next=${encodeURIComponent(`/${locale}/lessons/${id}`)}`);
   }
+  if (access === 'none') redirect(`/${locale}/courses/${meta.courseId}#buy`);
 
   const dict = getDict(locale);
   return <LessonClient lessonId={id} dict={dict} locale={locale} />;

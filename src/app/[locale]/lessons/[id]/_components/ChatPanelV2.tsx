@@ -54,6 +54,8 @@ const STRINGS: Record<TutorLocale, {
   suggestExampleShort: string;
   suggestExplainDetail: (t: string) => string;
   toggleLabel: string;
+  trialOver: string;
+  trialOverCta: string;
 }> = {
   ka: {
     teacher: 'AI მასწავლებელი',
@@ -81,6 +83,9 @@ const STRINGS: Record<TutorLocale, {
     suggestExampleShort: 'მომიყვანე მაგალითი',
     suggestExplainDetail: (t) => `ამიხსენი "${t}" დეტალურად`,
     toggleLabel: 'მასწავლებლის ენა',
+    trialOver:
+      'შენი უფასო ცდა აქ სრულდება. შეიძინე კურსი, რომ Walle-სთან სწავლა გააგრძელო და ყველა გაკვეთილი გაიხსნას.',
+    trialOverCta: 'შეიძინე ეს კურსი',
   },
   en: {
     teacher: 'AI Teacher',
@@ -108,6 +113,9 @@ const STRINGS: Record<TutorLocale, {
     suggestExampleShort: 'Give me an example',
     suggestExplainDetail: (t) => `Explain "${t}" in detail`,
     toggleLabel: 'Teacher language',
+    trialOver:
+      "That's the end of your free trial. Buy the course to keep learning with Walle and unlock every lesson.",
+    trialOverCta: 'Buy this course',
   },
 };
 
@@ -187,6 +195,9 @@ export function ChatPanelV2({
   const [input, setInput] = React.useState('');
   const [isStreaming, setIsStreaming] = React.useState(false);
   const [historyLoaded, setHistoryLoaded] = React.useState(false);
+  // Set when /api/chat answers 402: the free trial budget is spent, so the
+  // input is swapped for a buy CTA.
+  const [trialOver, setTrialOver] = React.useState(false);
 
   // Walle state + key (key forces re-mount for one-shot animations)
   const [walleState, setWalleState] = React.useState<WalleState>('wave');
@@ -299,6 +310,13 @@ export function ChatPanelV2({
         }),
       })
         .then(async (res) => {
+          if (!cancelled && res.status === 402) {
+            setTrialOver(true);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, content: S.trialOver } : m)),
+            );
+            return;
+          }
           if (cancelled || !res.ok) throw new Error('failed');
           const reader = res.body?.getReader();
           if (!reader) throw new Error('no body');
@@ -361,7 +379,7 @@ export function ChatPanelV2({
   /* ─── send message ─── */
   const sendMessage = React.useCallback(
     async (text: string) => {
-      if (!text.trim() || isStreaming) return;
+      if (!text.trim() || isStreaming || trialOver) return;
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -393,6 +411,13 @@ export function ChatPanelV2({
             locale: activeLocale,
           }),
         });
+        if (res.status === 402) {
+          setTrialOver(true);
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: S.trialOver } : m)),
+          );
+          return;
+        }
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: S.requestFailed }));
           throw new Error(err.error ?? 'chat failed');
@@ -432,7 +457,7 @@ export function ChatPanelV2({
         inputRef.current?.focus();
       }
     },
-    [messages, isStreaming, lessonId, pageNumber, onUnlockCheck],
+    [messages, isStreaming, trialOver, lessonId, pageNumber, onUnlockCheck],
   );
 
   /* ─── per-message Walle reaction ───
@@ -692,6 +717,14 @@ export function ChatPanelV2({
         className="shrink-0 px-3 sm:px-4 pt-2 pb-3 border-t border-border bg-card"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0), 12px)' }}
       >
+        {trialOver ? (
+          <a
+            href={`/${teacherLocale}/courses/${lesson.courseId}#buy`}
+            className="flex h-11 w-full items-center justify-center rounded-full bg-pulse text-sm font-bold text-primary-foreground shadow-[0_4px_16px_var(--pulse-glow)] hover:shadow-[0_8px_24px_var(--pulse-glow)] transition-all active:scale-[0.98]"
+          >
+            {T.trialOverCta}
+          </a>
+        ) : (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -718,6 +751,7 @@ export function ChatPanelV2({
             <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </form>
+        )}
       </div>
     </>
   );

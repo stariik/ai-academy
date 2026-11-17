@@ -25,6 +25,9 @@ import {
   type TutorLocale,
 } from '@/lib/ai/claude';
 import { getSessionId } from '@/lib/session';
+import { getAuthUser } from '@/lib/auth';
+import { getLessonAccess, isTrialSpent } from '@/lib/lesson-access';
+import type { UsageMeta } from '@/lib/ai/usage';
 import { ChatMessage } from '@/types';
 
 export const runtime = 'nodejs';
@@ -57,6 +60,16 @@ export async function POST(request: NextRequest) {
     const lesson = await getLesson(supabase, lessonId);
     if (!lesson) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+    }
+
+    // Paywall + free trial. Not-enrolled users may only use the tutor on a
+    // course's opening lesson, until their trial token budget runs out.
+    const access = await getLessonAccess(lessonId, lesson.courseId);
+    if (access !== 'full' && access !== 'trial') {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+    if (access === 'trial' && (await isTrialSpent())) {
+      return NextResponse.json({ error: 'trial_exhausted' }, { status: 402 });
     }
 
     let systemPrompt: string;
@@ -220,9 +233,12 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     let fullResponse = '';
 
-    const usageMeta = {
-      feature: 'tutor_chat' as const,
+    // Trial replies are logged as 'tutor_trial' with the user id — that's the
+    // ledger isTrialSpent() sums.
+    const usageMeta: UsageMeta = {
+      feature: access === 'trial' ? 'tutor_trial' : 'tutor_chat',
       sessionId,
+      userId: (await getAuthUser())?.id ?? null,
       lessonId,
       locale,
     };
