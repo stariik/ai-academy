@@ -230,6 +230,33 @@ export type LessonLite = {
   status: string;
 };
 
+/** Just enough per lesson for catalog counts, durations, level and ordering. */
+export type LessonStat = Pick<
+  LessonLite,
+  'id' | 'difficulty' | 'estimatedDurationMinutes' | 'courseId' | 'positionInCourse'
+>;
+
+/**
+ * Every published lesson, without its text. The full rows with descriptions
+ * and learning objectives are ~1.7 MB; loading them for the whole catalog
+ * overloaded the free-tier DB under traffic bursts.
+ */
+export async function getPublishedLessonStats(supabase: SupabaseClient): Promise<LessonStat[]> {
+  const { data, error } = await supabase
+    .from('lessons')
+    .select('id, course_id, difficulty, estimated_duration_minutes, position_in_course')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return (data as Array<Record<string, unknown>>).map((r) => ({
+    id: r.id as string,
+    difficulty: r.difficulty as Lesson['difficulty'],
+    estimatedDurationMinutes: (r.estimated_duration_minutes as number) ?? 0,
+    courseId: (r.course_id as string | null) ?? undefined,
+    positionInCourse: (r.position_in_course as number | null) ?? undefined,
+  }));
+}
+
 export async function getAllLessonsLite(
   supabase: SupabaseClient,
   filters?: { status?: string; courseId?: string }

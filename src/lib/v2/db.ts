@@ -13,8 +13,10 @@ import {
   getAllCourses,
   getAllLessonsLite,
   getCategoryMeta,
+  getPublishedLessonStats,
   type CategoryImage,
   type LessonLite,
+  type LessonStat,
 } from '@/lib/supabase/db';
 import { CATEGORIES as CANONICAL_CATEGORIES } from '@/lib/constants/categories';
 import {
@@ -34,9 +36,9 @@ import type {
 import { getDict, type Locale } from './i18n';
 import type { Course as RealCourse } from '@/types';
 
-// The storefront only needs the lightweight lesson shape (counts, titles,
-// durations) — never content blocks or quiz questions.
-type RealLesson = LessonLite;
+// The catalog-wide load only carries lesson stats (counts, durations, level,
+// order). Lesson text is loaded per course — see loadCourseLessons.
+type RealLesson = LessonStat;
 
 function firstCanonicalTag(tags: string[]): string | null {
   for (const tag of tags) {
@@ -151,25 +153,55 @@ function buildCourse(
 //
 // revalidate: 300s window; admin writes to courses/pricing can call
 // revalidateTag('catalog') to bust it immediately (not wired yet).
+const anonClient = () =>
+  createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } },
+  );
+
+type CatalogData = {
+  courses: RealCourse[];
+  lessons: LessonStat[];
+  categoryMeta: Record<string, CategoryImage>;
+};
+
+async function fetchCatalog(): Promise<CatalogData> {
+  const supabase = anonClient();
+  const [courses, lessons, categoryMeta] = await Promise.all([
+    getAllCourses(supabase),
+    getPublishedLessonStats(supabase),
+    getCategoryMeta(supabase),
+  ]);
+  // The getters return [] on a DB error. Caching that would show an empty
+  // "coming soon" storefront to everyone for 5 min; throwing makes Next keep
+  // serving the last good catalog and retry on the next request.
+  if (courses.length === 0 || lessons.length === 0) {
+    throw new Error(`catalog load failed: ${courses.length} courses, ${lessons.length} lessons`);
+  }
+  return { courses, lessons, categoryMeta };
+}
+
+// unstable_cache only dedupes within one request, so when the entry goes stale
+// every request in a traffic burst runs its own refresh — 600 in 5 min took
+// the DB down on 2026-11-17. Requests on the same instance share one fetch.
+let inflight: Promise<CatalogData> | null = null;
 const loadCatalog = unstable_cache(
-  async () => {
-    const supabase = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          persistSession: false,
-        },
-      }
-    );
-    const [courses, lessons, categoryMeta] = await Promise.all([
-      getAllCourses(supabase),
-      getAllLessonsLite(supabase, { status: 'published' }),
-      getCategoryMeta(supabase),
-    ]);
-    return { courses, lessons, categoryMeta };
-  },
+  () => (inflight ??= fetchCatalog().finally(() => (inflight = null))),
   ['v2-catalog'],
+  { revalidate: 300, tags: ['catalog'] },
+);
+
+// Lesson text (titles, descriptions, objectives) for one course — the course
+// page curriculum and lesson metadata. Only called for courses the catalog
+// says have published lessons, so [] here means a DB error: throw, don't cache.
+const loadCourseLessons = unstable_cache(
+  async (courseId: string) => {
+    const lessons = await getAllLessonsLite(anonClient(), { status: 'published', courseId });
+    if (lessons.length === 0) throw new Error(`lesson load failed for course ${courseId}`);
+    return lessons;
+  },
+  ['v2-course-lessons'],
   { revalidate: 300, tags: ['catalog'] },
 );
 
@@ -224,10 +256,12 @@ export async function getLessonMetadata(
   locale: Locale,
 ): Promise<LessonMetadata | null> {
   const { courses, lessons } = await loadAll();
-  const lesson = lessons.find((item) => item.id === id);
-  if (!lesson?.courseId) return null;
-  const course = courses.find((item) => item.id === lesson.courseId);
+  const courseId = lessons.find((item) => item.id === id)?.courseId;
+  if (!courseId) return null;
+  const course = courses.find((item) => item.id === courseId);
   if (!course) return null;
+  const lesson = (await loadCourseLessons(courseId)).find((item) => item.id === id);
+  if (!lesson) return null;
   const title = pickLocale(locale, lesson.title, lesson.titleEn ?? undefined);
   const courseTitle = pickLocale(locale, course.title, course.titleEn ?? undefined);
   return {
@@ -269,7 +303,7 @@ export async function isOpeningLesson(id: string): Promise<boolean> {
 function lessonsAsModule(
   courseSlug: string,
   locale: Locale,
-  lessons: RealLesson[],
+  lessons: LessonLite[],
 ): Module[] {
   if (lessons.length === 0) return [];
   const dict = getDict(locale);
@@ -294,7 +328,7 @@ function lessonsAsModule(
 
 function deriveOutcomes(
   locale: Locale,
-  lessons: RealLesson[],
+  lessons: LessonLite[],
 ): { title: string; description: string }[] {
   const objectives = lessons
     .flatMap((l) =>
@@ -319,6 +353,7 @@ export async function getCoursePayload(
   const courseLessons = lessonsByCourse.get(real.id) ?? [];
   const course = buildCourse(real, locale, courseLessons);
   if (!course) return null;
+  const lessonText = courseLessons.length > 0 ? await loadCourseLessons(real.id) : [];
 
   const sameCatCourses = courses.filter(
     (c) => c.id !== real.id && firstCanonicalTag(c.tags ?? []) === tag,
@@ -345,7 +380,7 @@ export async function getCoursePayload(
     walleQuote: isEn
       ? 'I am your tutor for this course. No rush — your pace runs the show. If something is unclear, tap "Explain more simply" and we start over, a different way.'
       : 'მე ვიქნები შენი მასწავლებელი ამ კურსში. არ ვჩქარობ — შენი ტემპი მართავს. თუ რამე გაუგებარია, ვაჭერთ "ახსენი უფრო მარტივად" და ვიწყებთ თავიდან, ახლებურად.',
-    outcomes: deriveOutcomes(locale, courseLessons),
+    outcomes: deriveOutcomes(locale, lessonText),
     prerequisites: [
       course.level === 'advanced'
         ? isEn
@@ -372,7 +407,7 @@ export async function getCoursePayload(
           'პრაქტიკული სავარჯიშოები ყოველი გაკვეთილის ბოლოს',
           'ციფრული სერთიფიკატი დასრულების შემდეგ',
         ],
-    modules: lessonsAsModule(real.id, locale, courseLessons),
+    modules: lessonsAsModule(real.id, locale, lessonText),
     retailPrice:
       real.retailPriceCents != null ? real.retailPriceCents / 100 : undefined,
   };
