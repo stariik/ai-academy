@@ -368,8 +368,8 @@ function CoursePage({
   const completedCount = progress.size;
   const progressPct = totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
 
-  // Only the designated course has a genuinely free lesson. Its preview CTAs
-  // open that lesson directly, matching every other free-learning CTA.
+  // Every course's opening lesson is on the free tutor trial; its preview CTAs
+  // open it directly (guests are sent to sign up first by the lesson page).
   const previewLessonId = React.useMemo(() => {
     for (const m of detail.modules) {
       for (const l of m.lessons) {
@@ -378,7 +378,7 @@ function CoursePage({
     }
     return null;
   }, [detail.modules]);
-  const previewHref = previewLessonId ? localeHref(FREE_LESSON_PATH) : null;
+  const previewHref = previewLessonId ? localeHref(`lessons/${previewLessonId}`) : null;
 
   // --- render ---------------------------------------------------------------
   // overflow-x-clip, not -hidden: `hidden` on one axis makes this a scroll
@@ -418,8 +418,6 @@ function CoursePage({
                 isLoggedIn={isLoggedIn}
                 progress={progress}
                 onToggleLesson={toggleLessonComplete}
-                onEnroll={toggleEnrollment}
-                enrollBusy={busy}
               />
               <RelatedCoursesSection related={related} category={category} />
             </div>
@@ -1065,8 +1063,6 @@ function CurriculumSection({
   isEnrolled,
   progress,
   onToggleLesson,
-  onEnroll,
-  enrollBusy,
 }: {
   course: Course;
   category: Category;
@@ -1075,8 +1071,6 @@ function CurriculumSection({
   isLoggedIn: boolean;
   progress: Set<string>;
   onToggleLesson: (lessonId: string) => void;
-  onEnroll: () => void;
-  enrollBusy: boolean;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -1089,22 +1083,15 @@ function CurriculumSection({
   const pct = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
   const finished = totalLessons > 0 && completed === totalLessons;
 
-  // Every course's opening lesson presents as startable even when it isn't
-  // free, so the curriculum reads the same across the catalogue. Clicking it
-  // scrolls to the purchase rail instead of opening the lesson — and the
-  // server guards reject it too, so this is presentation only, not access.
-  const teaserId =
-    !isEnrolled && lessons[0] && !lessons[0].isFree ? lessons[0].id : null;
-
   // The next actionable lesson — the first one the viewer can open and hasn't
-  // completed. For guests that's the free preview (or the teaser above); for
-  // enrolled students it's where they left off. Drives the "Next up" marker.
+  // completed. For guests that's the free preview; for enrolled students it's
+  // where they left off. Drives the "Next up" marker.
   const nextUpId = React.useMemo(() => {
     for (const l of lessons) {
-      if ((isEnrolled || l.isFree || l.id === teaserId) && !progress.has(l.id)) return l.id;
+      if ((isEnrolled || l.isFree) && !progress.has(l.id)) return l.id;
     }
     return null;
-  }, [lessons, isEnrolled, progress, teaserId]);
+  }, [lessons, isEnrolled, progress]);
 
   // Pair the real lesson chunks with the foundations → practice → project
   // narrative, keeping a running global lesson number across chapters.
@@ -1164,10 +1151,7 @@ function CurriculumSection({
             isEnrolled={isEnrolled}
             progress={progress}
             nextUpId={nextUpId}
-            teaserId={teaserId}
             onToggleLesson={onToggleLesson}
-            onEnroll={onEnroll}
-            enrollBusy={enrollBusy}
           />
         ))}
 
@@ -1231,10 +1215,7 @@ function PhaseBlock({
   isEnrolled,
   progress,
   nextUpId,
-  teaserId,
   onToggleLesson,
-  onEnroll,
-  enrollBusy,
 }: {
   roman: string;
   meta: { Icon: typeof BookOpen; title: string };
@@ -1244,10 +1225,7 @@ function PhaseBlock({
   isEnrolled: boolean;
   progress: Set<string>;
   nextUpId: string | null;
-  teaserId: string | null;
   onToggleLesson: (lessonId: string) => void;
-  onEnroll: () => void;
-  enrollBusy: boolean;
 }) {
   const { dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
@@ -1293,10 +1271,7 @@ function PhaseBlock({
             isEnrolled={isEnrolled}
             isCompleted={progress.has(l.id)}
             isNextUp={l.id === nextUpId}
-            isTeaser={l.id === teaserId}
             onToggleComplete={() => onToggleLesson(l.id)}
-            onEnroll={onEnroll}
-            enrollBusy={enrollBusy}
           />
         ))}
       </ol>
@@ -1315,10 +1290,7 @@ function LessonCard({
   isEnrolled,
   isCompleted,
   isNextUp,
-  isTeaser,
   onToggleComplete,
-  onEnroll,
-  enrollBusy,
 }: {
   lesson: Lesson;
   number: number;
@@ -1328,19 +1300,12 @@ function LessonCard({
   isEnrolled: boolean;
   isCompleted: boolean;
   isNextUp: boolean;
-  isTeaser: boolean;
   onToggleComplete: () => void;
-  onEnroll: () => void;
-  enrollBusy: boolean;
 }) {
   const { href, dict } = useV2Locale();
   const t = TONE_CLASSES[category.tone];
-  // `accessible` = may actually open the lesson. `presentsOpen` = renders as
-  // startable. They differ only for the teaser (a course's first lesson when
-  // the viewer hasn't bought it): it looks startable but routes to #buy.
   const accessible = isEnrolled || lesson.isFree;
-  const presentsOpen = accessible || isTeaser;
-  const isLocked = !presentsOpen;
+  const isLocked = !accessible;
   const isPreview = lesson.isFree && !isEnrolled;
 
   const cardShell = cn(
@@ -1365,7 +1330,7 @@ function LessonCard({
             {lesson.title}
           </p>
         </div>
-        {presentsOpen ? (
+        {accessible ? (
           <span
             className={cn(
               'grid h-8 w-8 shrink-0 place-items-center rounded-full transition-all duration-300 group-hover:scale-110 group-hover:brightness-105',
@@ -1373,9 +1338,7 @@ function LessonCard({
             )}
             aria-hidden
           >
-            {isTeaser && enrollBusy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : isPreview || isTeaser ? (
+            {isPreview ? (
               <Play className="h-3.5 w-3.5 fill-current" />
             ) : (
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -1405,18 +1368,10 @@ function LessonCard({
             {dict.courseDetail.freeLessonBadge}
           </span>
         )}
-        {presentsOpen && (
+        {accessible && (
           <span className={cn('ml-auto inline-flex shrink-0 items-center gap-1 font-bold transition-all group-hover:gap-1.5', isCompleted ? t.text : 'text-foreground')}>
-            {isTeaser && enrollBusy
-              ? dict.catalog.bundleRedirecting
-              : isCompleted
-                ? dict.courseDetail.lessonReview
-                : dict.courseDetail.lessonStart}
-            {isTeaser && enrollBusy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5" />
-            )}
+            {isCompleted ? dict.courseDetail.lessonReview : dict.courseDetail.lessonStart}
+            <ChevronRight className="h-3.5 w-3.5" />
           </span>
         )}
       </div>
@@ -1469,26 +1424,10 @@ function LessonCard({
         </button>
       </div>
 
-      {/* Card — the teaser reuses the open card shell so the row looks
-          identical to a real lesson; only its destination differs. */}
       {accessible ? (
         <Link href={href(`lessons/${lesson.id}`)} className={cardShell}>
           {card}
         </Link>
-      ) : isTeaser ? (
-        // Goes straight to checkout — the same handler the Buy button uses, so
-        // guests still get routed through login first and paid courses land on
-        // the BOG page. Disabled while in flight so a second tap can't open a
-        // second order.
-        <button
-          type="button"
-          onClick={onEnroll}
-          disabled={enrollBusy}
-          aria-busy={enrollBusy}
-          className={cn(cardShell, 'w-full text-left disabled:cursor-wait')}
-        >
-          {card}
-        </button>
       ) : (
         <div className="my-1.5 min-w-0 flex-1 rounded-2xl border border-dashed border-border bg-card/40 p-3 sm:p-4">
           {card}

@@ -22,7 +22,6 @@ import {
   pickLocale,
   getCategoryDisplay,
 } from './data';
-import { FREE_LESSON_ID } from './routes';
 import { COURSE_PITCH } from './course-pitch';
 import type {
   Category,
@@ -251,19 +250,21 @@ export type V2CoursePayload = {
   related: Course[];
 };
 
+function byPosition(a: RealLesson, b: RealLesson): number {
+  return (a.positionInCourse ?? 0) - (b.positionInCourse ?? 0);
+}
+
 /**
- * The one genuinely free lesson on the platform — the opening lesson of
- * "AI ინსტრუმენტები პრაქტიკაში: ChatGPT, Claude და Gemini". It is the only
- * lesson a signed-out visitor may open.
- *
- * Every other course's first lesson still *presents* as startable in the
- * curriculum (see LessonCard's `isTeaser`), but clicking it opens the purchase
- * rail instead of the lesson, and the server guards reject it outright.
- *
- * ponytail: one hardcoded id beats a schema change for a single row. Promote
- * this to a `lessons.is_free` column the moment a second free lesson is wanted.
+ * True for each course's opening lesson — the one a signed-in user may start
+ * on the free tutor trial (see `src/lib/lesson-access.ts`). Same ordering as
+ * the curriculum below, so the lesson badged "free" is the one that's open.
  */
-export { FREE_LESSON_ID };
+export async function isOpeningLesson(id: string): Promise<boolean> {
+  const { lessons, lessonsByCourse } = await loadAll();
+  const courseId = lessons.find((l) => l.id === id)?.courseId;
+  if (!courseId) return false;
+  return [...(lessonsByCourse.get(courseId) ?? [])].sort(byPosition)[0]?.id === id;
+}
 
 function lessonsAsModule(
   courseSlug: string,
@@ -272,15 +273,13 @@ function lessonsAsModule(
 ): Module[] {
   if (lessons.length === 0) return [];
   const dict = getDict(locale);
-  const sorted = [...lessons].sort(
-    (a, b) => (a.positionInCourse ?? 0) - (b.positionInCourse ?? 0),
-  );
+  const sorted = [...lessons].sort(byPosition);
   const moduleLessons: V2Lesson[] = sorted.map((l, idx) => ({
     id: l.id,
     numberLabel: (idx + 1).toString().padStart(2, '0'),
     title: pickLocale(locale, l.title, l.titleEn ?? undefined),
     durationMin: l.estimatedDurationMinutes ?? 15,
-    isFree: l.id === FREE_LESSON_ID,
+    isFree: idx === 0,
     description: pickLocale(locale, l.description, l.descriptionEn ?? undefined),
   }));
   return [

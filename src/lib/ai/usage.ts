@@ -18,6 +18,8 @@ export type AiProvider = 'anthropic' | 'gemini' | 'google-translate' | 'replicat
 
 export type AiFeature =
   | 'tutor_chat'
+  /** Tutor replies spent from a not-enrolled user's free trial budget. */
+  | 'tutor_trial'
   | 'english_guard'
   | 'quiz_grading'
   | 'review_explanation'
@@ -124,6 +126,22 @@ function getServiceClient(): SupabaseClient | null {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return serviceClient;
+}
+
+/** Total output tokens a user has spent on one feature. null when unreadable. */
+export async function sumOutputTokens(userId: string, feature: AiFeature): Promise<number | null> {
+  const supabase = getServiceClient();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('ai_usage')
+    .select('output_tokens')
+    .eq('user_id', userId)
+    .eq('feature', feature);
+  if (error) {
+    console.warn('[ai-usage] read failed:', error.message);
+    return null;
+  }
+  return (data ?? []).reduce((sum, r) => sum + (r.output_tokens ?? 0), 0);
 }
 
 /**

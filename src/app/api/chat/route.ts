@@ -25,12 +25,32 @@ import {
   type TutorLocale,
 } from '@/lib/ai/claude';
 import { getSessionId } from '@/lib/session';
+import { getAuthUser } from '@/lib/auth';
+import { getLessonAccess, trialTokensLeft, TRIAL_OUTPUT_TOKENS } from '@/lib/lesson-access';
+import { getLessonMetadata } from '@/lib/v2/db';
+import type { UsageMeta } from '@/lib/ai/usage';
 import { ChatMessage } from '@/types';
 
 export const runtime = 'nodejs';
 
 function coerceLocale(raw: unknown): TutorLocale {
   return raw === 'en' ? 'en' : 'ka';
+}
+
+// GET /api/chat?lessonId=… — the free-trial meter for the chat panel.
+// trialLeft is a 0–100 percentage, or null when the viewer isn't on the trial.
+export async function GET(request: NextRequest) {
+  const lessonId = request.nextUrl.searchParams.get('lessonId');
+  const meta = lessonId ? await getLessonMetadata(lessonId, 'ka') : null;
+  if (!lessonId || !meta) {
+    return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+  }
+  if ((await getLessonAccess(lessonId, meta.courseId)) !== 'trial') {
+    return NextResponse.json({ trialLeft: null });
+  }
+  // ceil: any tokens left show as ≥1%, so the client's "0 = spent" matches the server.
+  const left = await trialTokensLeft();
+  return NextResponse.json({ trialLeft: Math.ceil((left / TRIAL_OUTPUT_TOKENS) * 100) });
 }
 
 export async function POST(request: NextRequest) {
@@ -57,6 +77,16 @@ export async function POST(request: NextRequest) {
     const lesson = await getLesson(supabase, lessonId);
     if (!lesson) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
+    }
+
+    // Paywall + free trial. Not-enrolled users may only use the tutor on a
+    // course's opening lesson, until their trial token budget runs out.
+    const access = await getLessonAccess(lessonId, lesson.courseId);
+    if (access !== 'full' && access !== 'trial') {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+    if (access === 'trial' && (await trialTokensLeft()) <= 0) {
+      return NextResponse.json({ error: 'trial_exhausted' }, { status: 402 });
     }
 
     let systemPrompt: string;
@@ -220,9 +250,12 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     let fullResponse = '';
 
-    const usageMeta = {
-      feature: 'tutor_chat' as const,
+    // Trial replies are logged as 'tutor_trial' with the user id — that's the
+    // ledger isTrialSpent() sums.
+    const usageMeta: UsageMeta = {
+      feature: access === 'trial' ? 'tutor_trial' : 'tutor_chat',
       sessionId,
+      userId: (await getAuthUser())?.id ?? null,
       lessonId,
       locale,
     };
