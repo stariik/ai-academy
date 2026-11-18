@@ -1,3 +1,4 @@
 {
+  "regions": ["fra1"],
   "crons": [{ "path": "/api/cron/tool-radar", "schedule": "0 6 * * *" }]
 }
